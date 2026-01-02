@@ -1,0 +1,23 @@
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+app = FastAPI(title="pyupload")
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    return """
+    <html>
+        <head>
+            <title>pyupload</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head>
+        <body class="container mt-5">
+            <h1 class="text-primary">Welcome to pyupload</h1>
+            <p class="lead">Development environment is successfully established.</p>
+            <ul>
+                <li>API Docs: <a href="/docs" target="_blank">/docs</a></li>
+                <li>Adminer (DB): <a href="http://localhost:8080" target="_blank">http://localhost:8080</a></li>
+            </ul>
+        </body>
+    </html>
+    """
