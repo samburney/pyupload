@@ -6,17 +6,17 @@ The purpose of this application is to serve as a modern replacement for `simpleg
 
 Initially, `pyupload` will adopt the underlying database and filesystem structure of `simplegallery` to ensure a smooth transition and maintain compatibility with existing data, while providing a foundation for future enhancements.
 
-### Basic project technical specifications (Candidates)
+### Basic project technical specifications
 
-The specific frameworks for `pyupload` are currently under evaluation. The following are candidate technologies based on modern standards:
+The following technologies have been selected for `pyupload` to ensure a modern, testable, and maintainable codebase:
 
-| Component            | Candidate Options             |
+| Component            | Selected Technology           |
 | -------------------- | ----------------------------- |
 | Programming language | Python 3.13                   |
-| Web/API framework    | FastAPI, Flask, or Django     |
-| GUI/Frontend         | NiceGUI, React, or Vanilla JS |
-| Database backend     | MariaDB (Legacy compatibility)|
-| Database ORM         | Tortoise ORM or SQLAlchemy    |
+| Web/API framework    | FastAPI                       |
+| Front-end Strategy   | HTMX + Jinja2 + Bootstrap 5   |
+| Database backend     | MariaDB 11.8.x                |
+| Database ORM         | Tortoise ORM                  |
 | Template engine      | Jinja2                        |
 
 ### Feature Parity Goals
@@ -36,7 +36,7 @@ This roadmap outlines the milestones for the initial development phase.
 
 #### v0.1 Preliminary Planning & Setup
 
-1.  **Tech Stack Selection**: Finalize the selection of Python frameworks (API and UI).
+1.  **Core Feature Design**: Define core business logic and file processing workflows in a framework-agnostic library layer.
 2.  **Environment Configuration**: Establish `.env` based configuration.
 3.  **Dockerization**: Create Docker Compose definitions for development (Database, App).
 4.  **Legacy Schema Mapping**: Document and implement models mapping to the `simplegallery` database.
