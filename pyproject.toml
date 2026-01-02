@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyupload"
+version = "0.1.0"
+description = "A minimal project description"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+dependencies = [
+    "tortoise-orm[asyncmy]>=0.25.3, <0.26.0",
+]
+
+[project.scripts]
+generate_users = "app.cli.generate_users:cli"
+
+[project.optional-dependencies]
+dev = [
+]
+test = [
+    "pytest>=9.0.2, <10.0.0",
+    "pytest-asyncio>=1.3.0, <2.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.aerich]
+tortoise_orm = "app.models.TORTOISE_ORM"
+location = "./app/models/migrations"
+src_folder = "."
