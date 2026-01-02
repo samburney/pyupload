@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>
+            {# FIXME: Use app_name from config #}
+            pyUpload
+        </title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+            crossorigin="anonymous"></script>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+            integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <link href="/static/css/style.css" rel="stylesheet" media="screen">
+    </head>
+
+    <body>
+        <div id="wrap">
+            <div class="container" id="header">
+                <div id="title-nav" class="row">
+                    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-2">
+                        <div class="container-fluid">
+                            <a class="navbar-brand" href="/ui">sU</a>
+                            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false"
+                                aria-label="Toggle navigation">
+                                <span class="navbar-toggler-icon"></span>
+                            </button>
+                            <div class="collapse navbar-collapse" id="navbarContent">
+                                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                                    <li class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle" href="#" id="browseDropdown" role="button"
+                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                            Browse
+                                        </a>
+                                        <ul class="dropdown-menu" aria-labelledby="browseDropdown">
+                                            <li><a class="dropdown-item" href="#random">Random</a></li>
+                                            <li><a class="dropdown-item" href="#popular">Popular</a></li>
+                                            <li><a class="dropdown-item" href="#all">All</a></li>
+                                        </ul>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#tags">Tags</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#uploads">Your Uploads</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#collections">Your Collections</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#search">Search</a>
+                                    </li>
+                                </ul>
+                                <div class="d-flex align-items-center">
+                                    <a href="#upload" class="btn btn-primary me-3 d-none d-lg-block">Upload</a>
+                                    <ul class="navbar-nav">
+                                        <li class="nav-item dropdown">
+                                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                Not Logged In
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                                <li><a class="dropdown-item" href="#login">Log in</a></li>
+                                                <li><a class="dropdown-item" href="#register">Register</a></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item" href="#upload">Upload</a></li>
+                                                <li><a class="dropdown-item" href="#collections">Collections</a></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item" href="#logout">Log out</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+            <div id="content" class="container">
+                <div class="row">
+                    Some content!
+                </div>
+            </div>
+            <div id="push">
+            </div>
+        </div>
+        <div class="container" id="footer">
+            <div class="row text-center">
+                <small>
+                    <p>
+                        <a href="https://github.com/samburney/pyupload/issues">Report a Bug or Request a Feature</a>
+                    </p>
+                    <p>
+                        pyupload is Copyright &copy;2025 <a href="http://www.sifnt.net.au/">sifnt</a>.<br />
+                        Use of this software is licensed under the General Public License (GPL) version 2.
+                    </p>
+                </small>
+            </div>
+        </div>
+    </body>
+</html>

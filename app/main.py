@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.lib.config import get_app_config
+
+from app import ui
 
 
 app_config = get_app_config()
@@ -10,6 +13,10 @@ app = FastAPI(title="pyupload")
 
 adminer_host = 'localhost' if '0.0.0.0' == app_config.adminer_host else app_config.adminer_host
 adminer_port = app_config.adminer_port
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.include_router(ui.main.router)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -29,3 +36,4 @@ async def read_root():
         </body>
     </html>
     """
+
