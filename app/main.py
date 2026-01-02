@@ -1,11 +1,19 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
+from app.lib.config import get_app_config
+
+
+app_config = get_app_config()
+
 app = FastAPI(title="pyupload")
+
+adminer_host = 'localhost' if '0.0.0.0' == app_config.adminer_host else app_config.adminer_host
+adminer_port = app_config.adminer_port
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    return """
+    return f"""
     <html>
         <head>
             <title>pyupload</title>
@@ -16,7 +24,7 @@ async def read_root():
             <p class="lead">Development environment is successfully established.</p>
             <ul>
                 <li>API Docs: <a href="/docs" target="_blank">/docs</a></li>
-                <li>Adminer (DB): <a href="http://localhost:8080" target="_blank">http://localhost:8080</a></li>
+                <li>Adminer (DB): <a href="http://{adminer_host}:{adminer_port}" target="_blank">http://{adminer_host}:{adminer_port}</a></li>
             </ul>
         </body>
     </html>

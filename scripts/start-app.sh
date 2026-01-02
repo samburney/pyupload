@@ -124,6 +124,14 @@ start_database() {
     echo " Database is ready."
 }
 
+# Initialise database and run migrations
+initialise_database() {
+    echo "Initialising database and running migrations..."
+
+    # TODO: Support running in app container in prod mode
+    aerich upgrade
+}
+
 seed_app() {
     if [ "$SEED_DB" = true ]; then
         echo "Seeding database and filesystem..."
@@ -149,6 +157,7 @@ run() {
     check_prerequisites
     check_config
     start_database
+    initialise_database
 
     seed_app
 
