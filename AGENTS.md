@@ -23,3 +23,10 @@ Instructions
  3. All test cases are maintained by an LLM, with tests updated at each commit.
  4. It is currently required that an LLM maintain the `TODO` file, including removing items that are no longer required, desired, or have been completed.
  5. *simplegallery* may be referred to for feature and implementation details, but should not be considered as a reference for code quality or style.  *simplegallery* is found in the `simplegallery` directory of the parent directory of this project, and also on GitHub at https://github.com/samburney/simplegallery.git.
+
+
+Python tooling
+--------------
+
+ 1. Use `uv` for Python package management, to run pytest etc...
+ 2. Use the Python virtual environment at `.venv` for all Python development.
