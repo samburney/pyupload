@@ -24,13 +24,13 @@ Implement a session‑based authentication system using the legacy simplegallery
    - File: `app/lib/security.py` with `hash_password` and `verify_password`.
    - *AC*: `verify_password('plain', <existing bcrypt hash>)` returns `True` for known user.
 
-4. **Add Session Middleware**
-   - In `app/main.py`, add `SessionMiddleware` from `starlette-sessions` with secret key and file path.
+4. **Add Session Middleware** COMPLETED
+   - In `app/main.py`, add `SessionMiddleware` from `starlette.middleware.sessions` with secret key and file path. DONE
    - *AC*: Starting the app (`uvicorn app.main:app --reload`) sets a session cookie on login.
 
-5. **Update Config**
-   - Add `SESSION_SECRET_KEY`, `SESSION_MAX_AGE_DAYS` to `app/lib/config.py`.
-   - *AC*: Reading the environment variables via `os.getenv` returns non‑empty values.
+5. **Update Config**: COMPLETED
+   - Add `SESSION_SECRET_KEY`, `SESSION_MAX_AGE_DAYS`, and `SESSION_FILE_PATH` to `app/lib/config.py`.
+   - *AC*: Reading the environment variables via dotenv in `app/lib/config.py` returns non‑empty values.
 
 6. **Create Auth Router**
    - File: `app/api/auth.py` with endpoints:

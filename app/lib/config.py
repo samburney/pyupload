@@ -31,6 +31,13 @@ class AppConfig:
     db_pool_max_size: int = int(os.getenv("DB_POOL_MAX_SIZE", "20"))
     db_connect_timeout: int = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
 
+    # Authentication configuration
+    session_secret_key: str = os.getenv("SESSION_SECRET_KEY", "")
+    if not session_secret_key:
+        raise ValueError("SESSION_SECRET_KEY environment variable must be set for session security.")
+    session_max_age_days: int = int(os.getenv("SESSION_MAX_AGE_DAYS", "7"))
+    session_file_path: str = os.getenv("SESSION_FILE_PATH", "./data/sessions")
+
     # Adminer configuration - only really for dev use
     adminer_host: str = os.getenv("ADMINER_HOST", "localhost")
     adminer_port: int = int(os.getenv("ADMINER_HOST_PORT", "8082"))

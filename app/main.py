@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.lib.config import get_app_config
 
@@ -11,15 +12,26 @@ app_config = get_app_config()
 
 app = FastAPI(title="pyupload")
 
-adminer_host = 'localhost' if '0.0.0.0' == app_config.adminer_host else app_config.adminer_host
-adminer_port = app_config.adminer_port
+# Middleware
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=app_config.session_secret_key,
+    session_cookie="pyupload_session",
+    max_age=app_config.session_max_age_days * 24 * 60 * 60,  # days to seconds
+    path=app_config.session_file_path,
+)
 
+# App routes
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(ui.main.router)
 
 
+# Development environment links
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
+    adminer_host = 'localhost' if '0.0.0.0' == app_config.adminer_host else app_config.adminer_host
+    adminer_port = app_config.adminer_port
+    
     return f"""
     <html>
         <head>
@@ -32,6 +44,7 @@ async def read_root():
             <ul>
                 <li>API Docs: <a href="/docs" target="_blank">/docs</a></li>
                 <li>Adminer (DB): <a href="http://{adminer_host}:{adminer_port}" target="_blank">http://{adminer_host}:{adminer_port}</a></li>
+                <li>App UI: <a href="/ui" target="_blank">/ui</a></li>
             </ul>
         </body>
     </html>
