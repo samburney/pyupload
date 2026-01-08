@@ -1,3 +1,3 @@
-from app.ui import main
+from app.ui import main, auth
 
-__all__ = ["main"]
+__all__ = ["main", "auth"]

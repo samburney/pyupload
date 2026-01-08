@@ -1,12 +1,12 @@
-from fastapi import FastAPI, APIRouter, Request
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from app.ui.common import templates
 
-router = APIRouter(prefix="/ui", tags=["ui"])
-templates = Jinja2Templates(directory="app/ui/templates")
+
+router = APIRouter(tags=["main"])
 
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.j2", {"request": request})
+    return templates.TemplateResponse("index.html.j2", {"request": request})

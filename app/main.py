@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -5,12 +7,33 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.lib.config import get_app_config
 
+from app.models import init_db
+
 from app import ui
 
 
 app_config = get_app_config()
 
-app = FastAPI(title="pyupload")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # App startup
+    # Initialize Tortoise ORM
+    await init_db()
+
+
+    # App running
+    yield
+
+    # App shutdown
+    # App cleanup code can be added here if needed
+
+
+# Init FastAPI app
+app = FastAPI(
+    title="pyupload",
+    lifespan=lifespan,
+)
 
 # Middleware
 app.add_middleware(
@@ -22,8 +45,12 @@ app.add_middleware(
 )
 
 # App routes
+# Static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# UI routes
 app.include_router(ui.main.router)
+app.include_router(ui.auth.router)
 
 
 # Development environment links
