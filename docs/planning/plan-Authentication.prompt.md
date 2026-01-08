@@ -33,10 +33,11 @@ Implement a session‑based authentication system using the legacy simplegallery
    - *AC*: Reading the environment variables via dotenv in `app/lib/config.py` returns non‑empty values.
 
 6. **Create Auth Router**
-   - File: `app/api/auth.py` with endpoints:
+   - File: `app/api/auth.py` with endpoints: PARTIALLY IMPLEMENTED
         * `POST /api/auth/login`
-        * `POST /api/auth/register`
+        * `POST /api/auth/register` DONE
         * `POST /api/auth/logout`
+        * Add success confirmation flash messages.
    - *AC*: Login returns 200 and sets a cookie; registration redirects to `/login` and creates a new user; logout clears the cookie.
 
 7. **Create User Helper Methods**
