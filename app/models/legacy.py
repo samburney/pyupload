@@ -1,16 +1,5 @@
 from tortoise import fields, models
 
-class User(models.Model):
-    id = fields.IntField(pk=True)
-    username = fields.CharField(max_length=64)
-    email = fields.CharField(max_length=255)
-    password = fields.CharField(max_length=60)
-    created_at = fields.DatetimeField() # Manual timestamp to match legacy behavior
-    updated_at = fields.DatetimeField()
-    remember_token = fields.CharField(max_length=100)
-
-    class Meta:
-        table = "users"
 
 class Upload(models.Model):
     id = fields.IntField(pk=True)
@@ -32,6 +21,7 @@ class Upload(models.Model):
     class Meta:
         table = "uploads"
 
+
 class Image(models.Model):
     id = fields.IntField(pk=True)
     upload_id = fields.IntField() # Using raw int
@@ -46,6 +36,7 @@ class Image(models.Model):
     class Meta:
         table = "images"
 
+
 class Collection(models.Model):
     id = fields.IntField(pk=True)
     user_id = fields.IntField()
@@ -57,6 +48,7 @@ class Collection(models.Model):
     class Meta:
         table = "collections"
 
+
 class Tag(models.Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255)
@@ -66,12 +58,14 @@ class Tag(models.Model):
     class Meta:
         table = "tags"
 
+
 class CollectionUpload(models.Model):
     collection_id = fields.IntField()
     upload_id = fields.IntField()
 
     class Meta:
         table = "collection_upload"
+
 
 class TagUpload(models.Model):
     tag_id = fields.IntField()

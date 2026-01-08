@@ -6,6 +6,7 @@ app_config = get_app_config()
 
 MODEL_MODULES = [
     "app.models.legacy",
+    "app.models.users",
 ]
 
 TORTOISE_ORM = {
