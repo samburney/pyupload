@@ -6,6 +6,7 @@ from app.models.users import User, UserRegistrationForm
 from app.lib.security import hash_password
 
 from app.ui.common import templates
+from app.ui.common.session import flash_message
 
 
 router = APIRouter(tags=["auth"])
@@ -94,47 +95,15 @@ async def register_post(request: Request):
     new_user = await User.create(**new_user_data)
     await new_user.save()
 
+    # Set flash message and redirect to login page
+    flash_message(request, "Registration successful! Please log in.", "info")
     response = Response(status_code=201)
     response.headers["HX-Redirect"] = "/login"
 
     return response
 
-    
-#    
-#    # Create 
 
-#    # Check if username is an email address
-#    try:
-#        username_email = EmailStr.validate(data.get("username"))
-#    except ValueError:
-#        username_email = None
-#
-#    if username_email is not None and data.get("email") != username_email:
-#        return {"error": "When using an email as username, the email field must match"}
-#    
-#    # Validate email address
-#    try:
-#        EmailStr.validate(data.get("email"))
-#    except ValueError:
-#        return {"error": "Invalid email address"}
-#
-#    existing_user = await User.get_or_none(email=data.get("email"))
-#    if existing_user:
-#        return {"error": "Email already exists"}
-#    
-#    # Validate password (simple length check for now)
-#    if len(str(data.get("password", ""))) < 8:
-#        return {"error": "Password must be at least 8 characters long"}
-#    
-#    # Ensure password and password confirmation match
-#    if data.get("password") != data.get("confirm_password"):
-#        return {"error": "Password and confirmation do not match"}
-
-
-
-#    return {"message": "Register endpoint"}
-
-
+# Logout endpoint
 @router.get("/logout")
 async def logout():
     return {"message": "Logout endpoint"}

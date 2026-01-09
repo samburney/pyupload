@@ -37,7 +37,7 @@ Implement a session‑based authentication system using the legacy simplegallery
         * `POST /api/auth/login`
         * `POST /api/auth/register` DONE
         * `POST /api/auth/logout`
-        * Add success confirmation flash messages.
+        * Add success confirmation flash messages. DONE
    - *AC*: Login returns 200 and sets a cookie; registration redirects to `/login` and creates a new user; logout clears the cookie.
 
 7. **Create User Helper Methods**

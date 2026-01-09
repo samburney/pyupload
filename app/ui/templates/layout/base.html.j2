@@ -12,9 +12,11 @@
 </head>
 <body hx-ext="response-targets">
     <main>
-        <div class="container" id="messages"></div>
+        <div class="container" id="messages">
+            {% include "common/messages.html.j2" %}
+        </div>
         {% block content %}
-        {{ super() }}
+            {{ super() }}
         {% endblock %}
     </main>
 </body>

@@ -1,9 +1,19 @@
+{% set info_messages, error_messages = get_flashed_messages(request) %}
 <div>
+    {% if info_messages is defined and info_messages | length > 0 %}
+    <span class="info-header">Info:</span>
+    <ul class="info-messages">
+        {% for message in info_messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
     {% if error_messages is defined and error_messages | length > 0 %}
-        <ul class="error-messages">
-            {% for message in error_messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
+    <span class="error-header">Error:</span>
+    <ul class="error-messages">
+        {% for message in error_messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
     {% endif %}
 </div>
