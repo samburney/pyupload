@@ -1,8 +1,9 @@
 from typing_extensions import Self
 from tortoise import fields, models
-from pydantic import BaseModel, ValidationInfo, model_validator, EmailStr
+from pydantic import BaseModel, model_validator, EmailStr
 from email_validator import validate_email, EmailNotValidError
 
+from app.lib.security import verify_password
 from app.models.base import TimestampMixin
 
 
@@ -19,10 +20,60 @@ class User(models.Model, TimestampMixin):
 
 # Pydantic models for Users
 # Base User model
-class UserPydantic(BaseModel):
+class UserPydanticBase(BaseModel):
     username: str
-    email: EmailStr
     remember_token: str = ""
+
+# User model for general use
+class UserPydantic(UserPydanticBase):
+    id: int
+    email: EmailStr
+
+    @classmethod
+    async def from_orm(cls, user: User) -> Self:
+        return cls(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            remember_token=user.remember_token,
+        )
+    
+    @classmethod
+    def anonymous_user(cls) -> Self:
+        return cls(
+            id=-1,
+            username='anonymous',
+            email='anonymous@pyupload.local',
+            remember_token='',
+        )
+
+# User login form model
+class UserLoginForm(UserPydanticBase):
+    password: str
+    remember_login: bool = False
+
+    # Authenticate user against database
+    async def authenticate(self):
+        # Confirm user exists
+        user = await User.get_or_none(username=self.username)
+        if not user:
+            raise ValueError('Invalid username or password')
+
+        # Verify password
+        valid_password = verify_password(
+            self.password,
+            user.password,
+        )
+        if not valid_password:
+            raise ValueError('Invalid username or password')
+
+        return self
+
+# User registration form model
+class UserRegistrationForm(UserPydanticBase):
+    email: EmailStr
+    password: str
+    confirm_password: str
 
     @model_validator(mode='after')
     def check_email_username(self) -> Self:
@@ -40,12 +91,6 @@ class UserPydantic(BaseModel):
         except EmailNotValidError:
             # Username is not an email, which is acceptable
             return self
-
-
-# User registration form model
-class UserRegistrationForm(UserPydantic):
-    password: str
-    confirm_password: str
 
     # Validator to confirm password and confirmation match
     @model_validator(mode='after')

@@ -2,13 +2,15 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response, HTMLResponse
 from pydantic import ValidationError
 
-from app.models.users import User, UserRegistrationForm
-from app.lib.security import hash_password
+from app.lib.config import get_app_config
+from app.lib.security import hash_password, session_encode
+from app.models.users import User, UserLoginForm, UserRegistrationForm
 
-from app.ui.common import templates
+from app.ui.common import templates, error_response
 from app.ui.common.session import flash_message
 
 
+config = get_app_config()
 router = APIRouter(tags=["auth"])
 
 
@@ -19,11 +21,39 @@ async def login(request: Request):
 
 
 # Login form submission
-@router.post("/login")
+@router.post("/login", response_class=HTMLResponse)
 async def login_post(request: Request):
-    data = await request.form()
+    try:
+        # Make user login form model from form data
+        user_data = UserLoginForm(**await request.form()) # type:ignore
 
-    return {"message": "Login endpoint"}
+        # Authenticate user
+        try:
+            await user_data.authenticate()
+        except ValueError as e:
+            error_messages = [str(e)]
+            return error_response(request, error_messages, status_code=401)
+
+        # Get validated data
+        data = user_data.model_dump()
+
+    except ValidationError as e:
+        error_messages = []
+
+        for err in e.errors():
+            error_messages.append(err['msg'])
+            return error_response(request, error_messages, status_code=400)
+
+    # Set login session
+    user = await User.get(username=data.get("username"))
+    request.session["user"] = session_encode(user.id, config.session_secret_key)
+
+    # Set flash message and redirect
+    flash_message(request, "Login successful!", "info")
+    response = Response(status_code=200)
+    response.headers["HX-Redirect"] = "/"
+
+    return response
 
 
 # Register page

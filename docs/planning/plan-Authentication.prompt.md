@@ -34,10 +34,11 @@ Implement a session‑based authentication system using the legacy simplegallery
 
 6. **Create Auth Router**
    - File: `app/api/auth.py` with endpoints: PARTIALLY IMPLEMENTED
-        * `POST /api/auth/login`
+        * `POST /api/auth/login` PARTIALLY IMPLEMENTED
         * `POST /api/auth/register` DONE
         * `POST /api/auth/logout`
         * Add success confirmation flash messages. DONE
+        * Add support for `Remember login` checkbox using a database-stored token.
    - *AC*: Login returns 200 and sets a cookie; registration redirects to `/login` and creates a new user; logout clears the cookie.
 
 7. **Create User Helper Methods**

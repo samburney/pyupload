@@ -1,4 +1,6 @@
-{% set info_messages, error_messages = get_flashed_messages(request) %}
+{% set flashed_info_messages, flashed_error_messages = get_flashed_messages(request) %}
+{% set info_messages = info_messages | default([]) + flashed_info_messages %}
+{% set error_messages = error_messages | default([]) + flashed_error_messages %}
 <div>
     {% if info_messages is defined and info_messages | length > 0 %}
     <span class="info-header">Info:</span>
