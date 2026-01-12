@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import Response, HTMLResponse
+from fastapi.responses import Response, HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 
 from app.lib.config import get_app_config
@@ -134,7 +134,13 @@ async def register_post(request: Request):
 
 
 # Logout endpoint
-@router.get("/logout")
-async def logout():
-    return {"message": "Logout endpoint"}
+@router.get("/logout", response_class=RedirectResponse)
+async def logout(request: Request):
+    # Clear user session
+    request.session.pop("user", None)
 
+    # Set flash message and redirect to login page
+    flash_message(request, "Logout successful.", "info")
+    response = RedirectResponse(url="/", status_code=302)
+
+    return response

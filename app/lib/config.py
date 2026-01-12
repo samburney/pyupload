@@ -18,6 +18,7 @@ class AppConfig:
     # Web server configuration
     app_host: str = os.getenv("APP_HOST", "0.0.0.0")
     app_port: int = int(os.getenv("APP_PORT", "8000"))
+    app_default_domain: str = str(os.getenv("APP_DEFAULT_DOMAIN", "example.com"))
     app_reload: bool = is_bool(os.getenv("APP_RELOAD", "false")) == True
     app_base_url: str = os.getenv("APP_BASE_URL", f"http://localhost:{app_port}")
 

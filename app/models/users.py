@@ -3,8 +3,12 @@ from tortoise import fields, models
 from pydantic import BaseModel, model_validator, EmailStr
 from email_validator import validate_email, EmailNotValidError
 
+from app.lib.config import get_app_config
 from app.lib.security import verify_password
 from app.models.base import TimestampMixin
+
+
+config = get_app_config()
 
 
 # User database model
@@ -31,6 +35,7 @@ class UserPydantic(UserPydanticBase):
 
     @classmethod
     async def from_orm(cls, user: User) -> Self:
+        print('Creating UserPydantic from ORM user:', user)
         return cls(
             id=user.id,
             username=user.username,
@@ -40,10 +45,11 @@ class UserPydantic(UserPydanticBase):
     
     @classmethod
     def anonymous_user(cls) -> Self:
+        print('Creating anonymous user')
         return cls(
             id=-1,
             username='anonymous',
-            email='anonymous@pyupload.local',
+            email=f'anonymous@{config.app_default_domain}',
             remember_token='',
         )
 

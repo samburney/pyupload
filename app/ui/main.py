@@ -18,4 +18,6 @@ async def index(
     request: Request,
     current_user: Annotated[UserPydantic, Depends(session_auth.get_current_user)]):
 
+    print("Current user in index:", current_user)
+
     return templates.TemplateResponse("index.html.j2", {"request": request, "current_user": current_user})

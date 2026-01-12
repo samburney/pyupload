@@ -27,7 +27,6 @@ class SessionAuthHandler:
                 user = await User.get_or_none(id=user_id)
                 if user:
                     return await UserPydantic.from_orm(user)
-                
-            # Anonymous user
-            else:
-                return UserPydantic.anonymous_user()
+
+        # Return anonymous user
+        return UserPydantic.anonymous_user()
