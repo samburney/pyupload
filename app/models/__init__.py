@@ -2,7 +2,7 @@ from tortoise import Tortoise
 
 from app.lib.config import get_app_config
 
-app_config = get_app_config()
+config = get_app_config()
 
 MODEL_MODULES = [
     "app.models.legacy",
@@ -10,7 +10,7 @@ MODEL_MODULES = [
 ]
 
 TORTOISE_ORM = {
-    "connections": {"default": app_config.db_url},
+    "connections": {"default": config.db_url},
     "apps": {
         "models": {
             "models": MODEL_MODULES,

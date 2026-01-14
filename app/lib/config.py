@@ -22,6 +22,9 @@ class AppConfig:
     app_reload: bool = is_bool(os.getenv("APP_RELOAD", "false")) == True
     app_base_url: str = os.getenv("APP_BASE_URL", f"http://localhost:{app_port}")
 
+    # Session storage
+    session_file_path: str = os.getenv("SESSION_FILE_PATH", "./data/sessions")
+
     # Database configuration
     db_host = os.getenv("DB_HOST", "db")
     db_port = int(os.getenv("DB_PORT", "3306"))
@@ -33,11 +36,11 @@ class AppConfig:
     db_connect_timeout: int = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
 
     # Authentication configuration
-    session_secret_key: str = os.getenv("SESSION_SECRET_KEY", "")
-    if not session_secret_key:
-        raise ValueError("SESSION_SECRET_KEY environment variable must be set for session security.")
-    session_max_age_days: int = int(os.getenv("SESSION_MAX_AGE_DAYS", "7"))
-    session_file_path: str = os.getenv("SESSION_FILE_PATH", "./data/sessions")
+    auth_token_secret_key: str = os.getenv("AUTH_TOKEN_SECRET_KEY", "")
+    if not auth_token_secret_key:
+        raise ValueError("AUTH_TOKEN_SECRET_KEY environment variable must be set for session security.")
+    auth_token_age_minutes: int = int(os.getenv("AUTH_TOKEN_AGE_MINUTES", "30"))
+    auth_token_algorithm: str = os.getenv("AUTH_TOKEN_ALGORITHM", "HS256")
 
     # Adminer configuration - only really for dev use
     adminer_host: str = os.getenv("ADMINER_HOST", "localhost")

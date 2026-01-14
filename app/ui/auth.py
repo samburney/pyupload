@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Request
+from typing import Annotated
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import Response, HTMLResponse, RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 
 from app.lib.config import get_app_config
-from app.lib.security import hash_password, session_encode
-from app.models.users import User, UserLoginForm, UserRegistrationForm
+from app.lib.security import hash_password
+from app.lib.auth import create_access_token, create_token_cookie
+from app.models.users import User, UserRegistrationForm, authenticate_user
 
 from app.ui.common import templates, error_response
 from app.ui.common.session import flash_message
@@ -17,49 +20,41 @@ router = APIRouter(tags=["auth"])
 # Login page
 @router.get("/login", response_class=HTMLResponse)
 async def login(request: Request):
-    return templates.TemplateResponse("login.html.j2", {"request": request})
+    return templates.TemplateResponse(request, "login.html.j2")
 
 
 # Login form submission
 @router.post("/login", response_class=HTMLResponse)
-async def login_post(request: Request):
-    try:
-        # Make user login form model from form data
-        user_data = UserLoginForm(**await request.form()) # type:ignore
+async def login_for_access_token(
+    request: Request,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+):
+    user = await authenticate_user(
+        username=form_data.username,
+        password=form_data.password,
+    )
+    if not user:
+        error_messages = ["Invalid username or password"]
+        return error_response(request, error_messages, status_code=401)
 
-        # Authenticate user
-        try:
-            await user_data.authenticate()
-        except ValueError as e:
-            error_messages = [str(e)]
-            return error_response(request, error_messages, status_code=401)
-
-        # Get validated data
-        data = user_data.model_dump()
-
-    except ValidationError as e:
-        error_messages = []
-
-        for err in e.errors():
-            error_messages.append(err['msg'])
-            return error_response(request, error_messages, status_code=400)
-
-    # Set login session
-    user = await User.get(username=data.get("username"))
-    request.session["user"] = session_encode(user.id, config.session_secret_key)
+    # Make login token and set to cookie
+    access_token = create_access_token(
+        data={"sub": user.username} # type: ignore
+    )
+    access_token_cookie = create_token_cookie(token=access_token, token_type="access")
+    response = Response(status_code=200)
+    response.set_cookie(**access_token_cookie)
 
     # Set flash message and redirect
     flash_message(request, "Login successful!", "info")
-    response = Response(status_code=200)
     response.headers["HX-Redirect"] = "/"
-
     return response
 
 
 # Register page
 @router.get("/register", response_class=HTMLResponse)
 async def register(request: Request):
-    return templates.TemplateResponse("register.html.j2", {"request": request})
+    return templates.TemplateResponse(request, "register.html.j2")
 
 
 # Register form submission
@@ -136,11 +131,11 @@ async def register_post(request: Request):
 # Logout endpoint
 @router.get("/logout", response_class=RedirectResponse)
 async def logout(request: Request):
-    # Clear user session
-    request.session.pop("user", None)
-
-    # Set flash message and redirect to login page
+    # Set flash message
     flash_message(request, "Logout successful.", "info")
+
+    # Delete access token cookie and redirect
     response = RedirectResponse(url="/", status_code=302)
+    response.delete_cookie(key="access_token")
 
     return response

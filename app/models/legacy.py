@@ -2,7 +2,7 @@ from tortoise import fields, models
 
 
 class Upload(models.Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     user_id = fields.IntField() # Using raw int to match legacy FK behavior
     filegroup_id = fields.IntField(default=0)
     description = fields.CharField(max_length=255)
@@ -23,7 +23,7 @@ class Upload(models.Model):
 
 
 class Image(models.Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     upload_id = fields.IntField() # Using raw int
     type = fields.CharField(max_length=255)
     width = fields.IntField()
@@ -38,7 +38,7 @@ class Image(models.Model):
 
 
 class Collection(models.Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     user_id = fields.IntField()
     name = fields.CharField(max_length=255)
     name_unique = fields.CharField(max_length=255)
@@ -50,7 +50,7 @@ class Collection(models.Model):
 
 
 class Tag(models.Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255)
     created_at = fields.DatetimeField()
     updated_at = fields.DatetimeField()

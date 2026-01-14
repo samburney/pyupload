@@ -12,7 +12,7 @@ from app.models import init_db
 from app import ui
 
 
-app_config = get_app_config()
+config = get_app_config()
 
 
 @asynccontextmanager
@@ -38,10 +38,10 @@ app = FastAPI(
 # Middleware
 app.add_middleware(
     SessionMiddleware,
-    secret_key=app_config.session_secret_key,
+    secret_key=config.auth_token_secret_key,
     session_cookie="pyupload_session",
-    max_age=app_config.session_max_age_days * 24 * 60 * 60,  # days to seconds
-    path=app_config.session_file_path,
+    max_age=24 * 60 * 60,  # days to seconds
+    path=config.session_file_path,
 )
 
 # App routes
@@ -56,8 +56,8 @@ app.include_router(ui.auth.router)
 # Development environment links
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    adminer_host = 'localhost' if '0.0.0.0' == app_config.adminer_host else app_config.adminer_host
-    adminer_port = app_config.adminer_port
+    adminer_host = 'localhost' if '0.0.0.0' == config.adminer_host else config.adminer_host
+    adminer_port = config.adminer_port
     
     return f"""
     <html>

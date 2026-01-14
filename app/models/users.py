@@ -13,7 +13,7 @@ config = get_app_config()
 
 # User database model
 class User(models.Model, TimestampMixin):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     username = fields.CharField(max_length=64)
     email = fields.CharField(max_length=255)
     password = fields.CharField(max_length=60)
@@ -34,8 +34,8 @@ class UserPydantic(UserPydanticBase):
     email: EmailStr
 
     @classmethod
-    async def from_orm(cls, user: User) -> Self:
-        print('Creating UserPydantic from ORM user:', user)
+    async def from_tortoise_orm(cls, user: User) -> Self:
+        """Create UserPydantic from Tortoise ORM User model."""
         return cls(
             id=user.id,
             username=user.username,
@@ -45,7 +45,6 @@ class UserPydantic(UserPydanticBase):
     
     @classmethod
     def anonymous_user(cls) -> Self:
-        print('Creating anonymous user')
         return cls(
             id=-1,
             username='anonymous',
@@ -115,3 +114,13 @@ class UserRegistrationForm(UserPydanticBase):
                 raise ValueError('Password must be at least 8 characters long')
         
         return self
+
+
+async def authenticate_user(username: str, password: str):
+    """Return authenticated User instance"""
+    user = await User.get_or_none(username=username) or await User.get_or_none(email=username)
+
+    if user and verify_password(plain_password=password, hashed_password=user.password):
+        return user
+    else:
+        return None
