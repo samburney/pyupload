@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.lib.config import get_app_config
+from app.lib.scheduler import scheduler
 
 from app.models import init_db
 
@@ -21,12 +22,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize Tortoise ORM
     await init_db()
 
+    # Start scheduler
+    scheduler.start()
 
     # App running
     yield
 
     # App shutdown
-    # App cleanup code can be added here if needed
+    # Stop scheduler
+    scheduler.shutdown()
 
 
 # Init FastAPI app

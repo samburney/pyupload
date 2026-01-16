@@ -1,6 +1,5 @@
 import hashlib
 import bcrypt
-import base64
 
 
 def hash_password(password: str) -> str:

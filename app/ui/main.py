@@ -6,7 +6,7 @@ from app.lib.config import get_app_config
 from app.lib.auth import get_current_user
 from app.ui.common import templates
 
-from app.models.users import UserPydantic, authenticate_user
+from app.models.users import UserPydantic, RefreshToken
 
 config = get_app_config()
 router = APIRouter(tags=["main"])
@@ -16,5 +16,7 @@ router = APIRouter(tags=["main"])
 async def index(
     request: Request,
     current_user: Annotated[UserPydantic, Depends(get_current_user)]):
+
+    await RefreshToken.cleanup_orphaned()
 
     return templates.TemplateResponse(request, "index.html.j2", {"current_user": current_user})

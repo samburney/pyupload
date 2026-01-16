@@ -1,13 +1,27 @@
+import jwt
+
 from typing import Annotated
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import Response, HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 
-from app.lib.config import get_app_config
+from app.lib.config import get_app_config, logger
 from app.lib.security import hash_password
-from app.lib.auth import create_access_token, create_token_cookie
-from app.models.users import User, UserRegistrationForm, authenticate_user
+from app.lib.auth import (
+    get_current_user,
+    set_token_cookies,
+    delete_token_cookies,
+    validate_refresh_token,
+    revoke_refresh_token,
+    revoke_user_refresh_tokens,
+)
+from app.models.users import (
+    User,
+    UserPydantic,
+    UserRegistrationForm,
+    authenticate_user,
+)
 
 from app.ui.common import templates, error_response
 from app.ui.common.session import flash_message
@@ -37,13 +51,11 @@ async def login_for_access_token(
         error_messages = ["Invalid username or password"]
         return error_response(request, error_messages, status_code=401)
 
-    # Make login token and set to cookie
-    access_token = create_access_token(
-        data={"sub": user.username} # type: ignore
-    )
-    access_token_cookie = create_token_cookie(token=access_token, token_type="access")
+    # Set response status and cookies
     response = Response(status_code=200)
-    response.set_cookie(**access_token_cookie)
+
+    # Update cookies
+    await set_token_cookies(request, response, user)
 
     # Set flash message and redirect
     flash_message(request, "Login successful!", "info")
@@ -130,12 +142,109 @@ async def register_post(request: Request):
 
 # Logout endpoint
 @router.get("/logout", response_class=RedirectResponse)
-async def logout(request: Request):
+async def do_logout(request: Request,
+                 current_user: User = Depends(get_current_user)):
+    # Check if user is authenticated
+    if current_user is None or current_user.id < 1:
+        response = RedirectResponse(url="/", status_code=403)
+        return response
+
     # Set flash message
     flash_message(request, "Logout successful.", "info")
 
-    # Delete access token cookie and redirect
+    # Set up redirect response
     response = RedirectResponse(url="/", status_code=302)
-    response.delete_cookie(key="access_token")
+
+    # Revoke refresh token
+    try:
+        refresh_token_payload = request.cookies.get("refresh_token")
+        if refresh_token_payload:
+            await revoke_refresh_token(refresh_token_payload, current_user.id)
+
+    # Continue even if error occurs
+    except Exception as e:
+        logger.error("An error occured attempting to revoke refresh token.")
+    
+    # Delete cookies
+    delete_token_cookies(response)
+
+    return response
+
+
+# Logout all endpoint
+@router.get("/logout-all", response_class=RedirectResponse)
+async def do_logout_all(request: Request,
+                 current_user: User = Depends(get_current_user)):
+    # Check if user is authenticated
+    if current_user is None or current_user.id < 1:
+        response = RedirectResponse(url="/", status_code=403)
+        return response
+
+    # Set flash message
+    flash_message(request, "Logout successful.", "info")
+
+    # Set up redirect response
+    response = RedirectResponse(url="/", status_code=302)
+
+    # Revoke refresh token
+    try:
+        await revoke_user_refresh_tokens(current_user.id)
+
+    # Continue even if error occurs
+    except Exception as e:
+        logger.error("An error occured attempting to revoke refresh tokens.")
+    
+    # Delete cookies
+    delete_token_cookies(response)
+
+    return response
+
+
+# Access token refresh endpoint
+@router.post("/refresh", response_class=HTMLResponse)
+async def refresh_access_token(request: Request):
+    refresh_token = None
+
+    # Get refresh token from cookie
+    payload = request.cookies.get("refresh_token")
+    if not payload:
+        error_messages = ["Missing refresh token"]
+        return error_response(request, error_messages, status_code=401)
+
+    # Decode token to get user ID (don't need current_user dependency)
+    try:
+        decoded = jwt.decode(
+            payload,
+            config.auth_token_secret_key,
+            algorithms=[config.auth_token_algorithm]
+        )
+        user_id = int(decoded.get("sub"))
+    except (jwt.InvalidTokenError, ValueError, TypeError):
+        error_messages = ["Invalid refresh token supplied"]
+        return error_response(request, error_messages, status_code=401)
+
+    # Get user
+    current_user = await User.get_or_none(id=user_id)
+    if not current_user:
+        error_messages = ["User not found"]
+        return error_response(request, error_messages, status_code=401)
+
+    # Validate refresh token
+    try:
+        refresh_token = await validate_refresh_token(payload, user_id)
+
+    except Exception as e:
+        logger.error("An error occured attempting to refresh access token.")
+        error_messages = ["Invalid refresh token supplied"]
+        return error_response(request, error_messages, status_code=401)
+
+    if refresh_token is None:
+        logger.error("User refresh token validation failed.")
+        error_messages = ["Invalid refresh token supplied"]
+        return error_response(request, error_messages, status_code=401)
+    
+    # Set response status and cookies
+    response = Response(status_code=200)
+    await set_token_cookies(request, response, current_user, refresh_token)
 
     return response

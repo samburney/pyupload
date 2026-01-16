@@ -1,4 +1,5 @@
 import os
+import logging
 
 from dotenv import load_dotenv
 from pathlib import Path
@@ -11,6 +12,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 ENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(dotenv_path=ENV_PATH)
 
+logger = logging.getLogger(__name__)
 
 class AppConfig:
     """Application configuration loader."""
@@ -39,8 +41,13 @@ class AppConfig:
     auth_token_secret_key: str = os.getenv("AUTH_TOKEN_SECRET_KEY", "")
     if not auth_token_secret_key:
         raise ValueError("AUTH_TOKEN_SECRET_KEY environment variable must be set for session security.")
-    auth_token_age_minutes: int = int(os.getenv("AUTH_TOKEN_AGE_MINUTES", "30"))
     auth_token_algorithm: str = os.getenv("AUTH_TOKEN_ALGORITHM", "HS256")
+    auth_token_age_minutes: int = int(os.getenv("AUTH_TOKEN_AGE_MINUTES", "30"))
+    if auth_token_age_minutes <= 0:
+        raise ValueError("AUTH_TOKEN_AGE_MINUTES must be a positive integer.")
+    auth_refresh_token_age_days: int = int(os.getenv("AUTH_REFRESH_TOKEN_AGE_DAYS", "7"))
+    if auth_refresh_token_age_days <= 0:
+        raise ValueError("AUTH_REFRESH_TOKEN_AGE_DAYS must be a positive integer.")
 
     # Adminer configuration - only really for dev use
     adminer_host: str = os.getenv("ADMINER_HOST", "localhost")
