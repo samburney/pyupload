@@ -30,3 +30,12 @@ Python tooling
 
  1. Use `uv` for Python package management, to run pytest etc...
  2. Use the Python virtual environment at `.venv` for all Python development.
+
+
+Development database access
+---------------------------
+
+ 1. The development database will usually be running locally in a docker container
+ 2. The details for the container should be found in `.env`, `docker-compose.yaml` and `docker-compose.override.yaml`
+ 3. An example database command might be:
+    `docker compose exec db sh -c 'mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -D"${MYSQL_DATABASE}"'`
