@@ -1,8 +1,14 @@
-"""Tests for app.lib.security module."""
+"""Tests for app/lib/security.py - Password hashing and verification.
+
+This module tests cryptographic functions for password security:
+- hash_password(): bcrypt password hashing
+- verify_password(): bcrypt password verification
+
+JWT functions are tested in test_lib_auth.py.
+"""
 
 import pytest
 from app.lib.security import hash_password, verify_password
-from app.lib.auth import create_access_token, create_token_cookie, get_current_user
 
 
 class TestHashPassword:
@@ -201,39 +207,3 @@ class TestPasswordIntegration:
         # Cross-verification should fail
         assert verify_password("a" * 10, long) is False
         assert verify_password("a" * 1000, short) is False
-
-
-class TestJWTAuthFunctions:
-    """Test JWT authentication helper functions from app.lib.auth."""
-
-    def test_create_access_token_function_exists(self):
-        """Test that create_access_token function is importable."""
-        assert callable(create_access_token)
-
-    def test_create_token_cookie_function_exists(self):
-        """Test that create_token_cookie function is importable."""
-        assert callable(create_token_cookie)
-
-    def test_get_current_user_function_exists(self):
-        """Test that get_current_user function is importable."""
-        assert callable(get_current_user)
-
-    def test_create_access_token_basic_usage(self):
-        """Test basic usage of create_access_token."""
-        token = create_access_token(data={"sub": "testuser"})
-        
-        assert isinstance(token, str)
-        assert len(token) > 0
-        
-        # JWT has three parts separated by dots
-        assert token.count('.') == 2
-
-    def test_create_token_cookie_basic_usage(self):
-        """Test basic usage of create_token_cookie."""
-        cookie = create_token_cookie(token="test_token_value")
-        
-        assert isinstance(cookie, dict)
-        assert cookie["key"] == "access_token"
-        assert cookie["value"] == "test_token_value"
-        assert cookie["httponly"] is True
-        assert cookie["secure"] is True
