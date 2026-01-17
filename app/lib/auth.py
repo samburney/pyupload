@@ -13,44 +13,58 @@ from app.models.users import User, UserPydantic, RefreshToken
 config = get_app_config()
 
 
-async def get_current_user(request: Request) -> None | User | UserPydantic:
+async def get_current_user_from_request(request: Request) -> None | User | UserPydantic:
     """Dependency to get the current authenticated user from the session."""
     
     # Validate access token from cookie
     access_token = request.cookies.get("access_token")
-
-    if access_token:
-        try:
-            payload = jwt.decode(
-                access_token,
-                config.auth_token_secret_key,
-                algorithms=[config.auth_token_algorithm]
-            )
-            username = payload.get("sub")
-
-            # Get user from DB
-            if type(username) is str:
-                user = await User.get_or_none(username=username)
-                if user is not None:
-                    return user
-
-        # Return anonymous user on token errors
-        except jwt.ExpiredSignatureError:
-            # Token has expired
-            return UserPydantic.anonymous_user()
-        except jwt.DecodeError:
-            # Token is invalid or malformed
-            return UserPydantic.anonymous_user()
-        except jwt.InvalidTokenError:
-            # Catch-all for other JWT errors
-            return UserPydantic.anonymous_user()
-
-    # Return anonymous user
-    return UserPydantic.anonymous_user()
+    if not access_token:
+        return None
+    
+    return await get_current_user_from_token(access_token)
 
 
-async def set_token_cookies(request: Request,
-                            response: Response,
+async def get_current_user_from_token(token: str) -> None | User | UserPydantic:
+    """Get the current authenticated user from the access token."""
+    try:
+        # Decode JWT token
+        payload = jwt.decode(
+            token,
+            config.auth_token_secret_key,
+            algorithms=[config.auth_token_algorithm]
+        )
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+
+        # Get user instance
+        user = await User.get_or_none(username=username)
+
+        # Attempt to get by user.id if username lookup failed and is numeric
+        if user is None and username.isnumeric():
+            user = await User.get_or_none(id=int(username))
+        return user
+
+    except jwt.InvalidTokenError:
+        return None
+
+
+async def get_current_user_from_refresh_token(request: Request) -> User | None:
+    """Get the current authenticated user from the refresh token."""
+    # Get refresh token from header or cookie
+    payload = get_refresh_token_payload(request)
+    if payload is None:
+        return None
+    
+    # Get current user from refresh token payload
+    current_user = await get_current_user_from_token(payload)
+    if current_user is None or not isinstance(current_user, User):
+        return None
+
+    return current_user
+
+
+async def set_token_cookies(response: Response,
                             user: User,
                             refresh_token: RefreshToken | None = None) -> None:
     # Handle access token
@@ -69,11 +83,11 @@ async def set_token_cookies(request: Request,
         
         # Otherwise rotate existing refresh token
         else:
-            refresh_token.update_from_dict({
-                "token_hash": hashlib.sha256(refresh_token_payload.encode('utf-8')).hexdigest(),
-                "expires_at": datetime.now(timezone.utc) + timedelta(days=config.auth_refresh_token_age_days),
-            })
-            await refresh_token.save()
+            await update_stored_refresh_token(
+                refresh_token=refresh_token,
+                refresh_token_payload=refresh_token_payload,
+                user=user
+            )
         
         # Update refresh token cookie
         refresh_token_cookie = create_token_cookie(token=refresh_token_payload, token_type="refresh")
@@ -170,6 +184,32 @@ async def store_refresh_token(token: str, user: User) -> RefreshToken:
     return refresh_token
 
 
+async def create_and_store_refresh_token(user: User) -> str:
+    """Create and store a refresh token for the user."""
+    refresh_token_payload = create_refresh_token(user)
+    try:
+        # Store in database
+        await store_refresh_token(refresh_token_payload, user)
+    except (jwt.InvalidTokenError, IntegrityError, OperationalError) as e:
+        # Errors already logged by store_refresh_token method.
+        raise
+
+    return refresh_token_payload
+
+
+async def update_stored_refresh_token(refresh_token: RefreshToken,
+                                      refresh_token_payload: str,
+                                      user: User) -> RefreshToken:
+    """Update an existing stored refresh token with a new token value."""
+    # Update stored token hash and expiration
+    refresh_token.update_from_dict({
+        "token_hash": hashlib.sha256(refresh_token_payload.encode('utf-8')).hexdigest(),
+        "expires_at": datetime.now(timezone.utc) + timedelta(days=config.auth_refresh_token_age_days),
+    })
+    await refresh_token.save()
+    return refresh_token
+
+
 async def validate_refresh_token(token: str, user: User | int) -> RefreshToken | None:
     """Validate a refresh token against the database.
     
@@ -249,3 +289,14 @@ async def revoke_user_refresh_tokens(user: User | int) -> int:
         logger.error(f"Database error revoking refresh tokens for user {user_id}: {e}")
         # Re-raise - let the caller decide how to handle
         raise
+
+
+def get_refresh_token_payload(request: Request) -> str | None:
+    """Get the refresh token payload from the request headers or cookies."""
+    # Check Authorization header first
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header.split(" ", 1)[1]
+    
+    # Fallback to cookie
+    return request.cookies.get("refresh_token")

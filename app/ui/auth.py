@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from app.lib.config import get_app_config, logger
 from app.lib.security import hash_password
 from app.lib.auth import (
-    get_current_user,
+    get_current_user_from_request,
     set_token_cookies,
     delete_token_cookies,
     validate_refresh_token,
@@ -55,7 +55,7 @@ async def login_for_access_token(
     response = Response(status_code=200)
 
     # Update cookies
-    await set_token_cookies(request, response, user)
+    await set_token_cookies(response, user)
 
     # Set flash message and redirect
     flash_message(request, "Login successful!", "info")
@@ -143,7 +143,7 @@ async def register_post(request: Request):
 # Logout endpoint
 @router.get("/logout", response_class=RedirectResponse)
 async def do_logout(request: Request,
-                 current_user: User = Depends(get_current_user)):
+                 current_user: User = Depends(get_current_user_from_request)):
     # Check if user is authenticated
     if current_user is None or current_user.id < 1:
         response = RedirectResponse(url="/", status_code=403)
@@ -174,7 +174,7 @@ async def do_logout(request: Request,
 # Logout all endpoint
 @router.get("/logout-all", response_class=RedirectResponse)
 async def do_logout_all(request: Request,
-                 current_user: User = Depends(get_current_user)):
+                 current_user: User = Depends(get_current_user_from_request)):
     # Check if user is authenticated
     if current_user is None or current_user.id < 1:
         response = RedirectResponse(url="/", status_code=403)
@@ -245,6 +245,6 @@ async def refresh_access_token(request: Request):
     
     # Set response status and cookies
     response = Response(status_code=200)
-    await set_token_cookies(request, response, current_user, refresh_token)
+    await set_token_cookies(response, current_user, refresh_token)
 
     return response

@@ -10,6 +10,7 @@ from app.lib.scheduler import scheduler
 
 from app.models import init_db
 
+from app import api
 from app import ui
 
 
@@ -52,9 +53,12 @@ app.add_middleware(
 # Static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
+# API routes
+app.include_router(api.auth.router, prefix='/api/v1')
+
 # UI routes
-app.include_router(ui.main.router)
-app.include_router(ui.auth.router)
+app.include_router(ui.main.router, include_in_schema=False)
+app.include_router(ui.auth.router, include_in_schema=False)
 
 
 # Development environment links
