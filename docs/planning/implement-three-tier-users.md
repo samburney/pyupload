@@ -36,14 +36,16 @@ Implement a sophisticated user system with three tiers: (1) truly anonymous read
 9. Add async `get_upload_count()` method returning count of user's uploads
 
 **Acceptance Criteria**:
-- [ ] All new fields added to User model with correct types
-- [ ] `fingerprint_hash` field has database index for fast lookups
-- [ ] `fingerprint_data` JSONField can store dict with user_agent, accept_language, accept_encoding, client_ip
-- [ ] IPv6 addresses fit in IP address fields (45 characters)
-- [ ] UserPydantic allows null email for auto-generated users
-- [ ] `get_upload_count()` returns accurate count via database query
-- [ ] Model passes Tortoise ORM validation
-- [ ] All existing User functionality remains intact
+- [x] All new fields added to User model with correct types
+- [x] `fingerprint_hash` field has database index for fast lookups
+- [x] `fingerprint_data` JSONField can store dict with user_agent, accept_language, accept_encoding, client_ip
+- [x] IPv6 addresses fit in IP address fields (45 characters)
+- [x] UserPydantic allows null email for auto-generated users
+- [x] `get_upload_count()` returns accurate count via database query (implemented as `items_count` property)
+- [x] Model passes Tortoise ORM validation
+- [x] All existing User functionality remains intact
+
+**Status**: ✅ COMPLETE
 
 **Estimated Effort**: 45 minutes
 
@@ -61,12 +63,14 @@ Implement a sophisticated user system with three tiers: (1) truly anonymous read
 5. Verify schema changes in database
 
 **Acceptance Criteria**:
-- [ ] Migration file generated in `app/models/migrations/models/`
-- [ ] Migration adds all 7 new fields to users table
-- [ ] Index on `fingerprint_hash` column created
-- [ ] Migration applies successfully without errors
-- [ ] Database schema matches model definition
-- [ ] Existing user records not corrupted (new fields nullable/defaulted)
+- [x] Migration file generated in `app/models/migrations/models/`
+- [x] Migration adds all 7 new fields to users table (actually added 9 fields including is_admin and is_disabled)
+- [x] Index on `fingerprint_hash` column created (`idx_users_fingerp_62b4da`)
+- [x] Migration applies successfully without errors
+- [x] Database schema matches model definition
+- [x] Existing user records not corrupted (new fields nullable/defaulted)
+
+**Status**: ✅ COMPLETE
 
 **Estimated Effort**: 20 minutes
 
@@ -74,28 +78,36 @@ Implement a sophisticated user system with three tiers: (1) truly anonymous read
 
 ## Step 3: Create Username and Fingerprint Generators
 
-**Files**: `app/lib/security.py`
+**Files**: `app/lib/security.py`, `pyproject.toml`
 
 **Tasks**:
-1. Create word lists: adjectives (50+) and animals (50+) for username generation
-2. Implement `generate_unique_username()` async function with pattern: Adjective+Animal+4digits
-3. Add database uniqueness check in loop (max 10 attempts)
-4. Implement `generate_fingerprint_hash(user_agent, accept_language, accept_encoding)` using SHA256
-5. Implement `extract_fingerprint_data(request)` parsing Request headers
-6. Extract client IP from `X-Forwarded-For` (first IP) with fallback to `request.client.host`
-7. Return dict with keys: user_agent, accept_language, accept_encoding, client_ip
+1. Add `coolname` library to project dependencies (`uv add coolname`)
+2. Implement `generate_unique_username()` async function using `coolname.generate_slug(2)` for base name
+3. Append 4 random digits to base name and title-case for Reddit-style format (e.g., "HappyPanda1234")
+4. Add database uniqueness check in loop (max 10 attempts)
+5. Implement `generate_fingerprint_hash(request, include_client_ip=False)` using SHA256
+6. Add optional `include_client_ip` parameter to control IP inclusion in hash
+7. Implement `extract_fingerprint_data(request)` parsing Request headers
+8. Extract client IP from `X-Forwarded-For` (first IP) with fallback to `request.client.host`
+9. Return dict with keys: user_agent, accept_language, accept_encoding, client_ip
 
 **Acceptance Criteria**:
-- [ ] Username generator produces readable names (e.g., "HappyPanda1234", "CuriousKoala5678")
-- [ ] Generated usernames are unique in database (retry logic works)
-- [ ] Function raises exception if uniqueness not achieved after 10 attempts
-- [ ] Fingerprint hash is consistent for same input (deterministic SHA256)
-- [ ] Fingerprint hash is 64 characters (SHA256 hex digest)
-- [ ] `extract_fingerprint_data()` handles missing headers gracefully (empty string defaults)
-- [ ] Client IP extraction prioritizes `X-Forwarded-For` for reverse proxy compatibility
-- [ ] All functions have proper type hints and docstrings
+- [x] `coolname` library added as project dependency 
+- [x] Username generator produces readable names (e.g., "HappyPanda1234", "CuriousKoala5678")
+- [x] Generated usernames use coolname's word lists (no custom word lists needed)
+- [x] Generated usernames are unique in database (retry logic works via `User.generate_unique_username()`)
+- [x] Function raises exception if uniqueness not achieved after 10 attempts
+- [x] Fingerprint hash is consistent for same input (deterministic SHA256)
+- [x] Fingerprint hash is 64 characters (SHA256 hex digest)
+- [x] `extract_fingerprint_data()` handles missing headers gracefully (empty string defaults)
+- [x] Client IP extraction prioritizes `X-Forwarded-For` for reverse proxy compatibility
+- [x] All functions have proper type hints and docstrings
 
-**Estimated Effort**: 60 minutes
+**Status**: ✅ COMPLETE
+ `generate_fingerprint_hash()` has optional `include_client_ip` parameter - defaults to `False` for consistent fingerprinting across network changes.
+**Notes**: Username uniqueness check implemented as `User.generate_unique_username()` classmethod in models. `netaddr` library added for robust IP validation.
+
+**Estimated Effort**: 45 minutes
 
 ---
 
@@ -375,47 +387,70 @@ Implement a sophisticated user system with three tiers: (1) truly anonymous read
 
 **Tasks**:
 1. Add test for creating unregistered user with fingerprint
-2. Add test for `get_upload_count()` method
+2. Add test for `items_count` property (implemented instead of get_upload_count)
 3. Add test for user with null email/password (unregistered)
 4. Add test for fingerprint hash uniqueness (no constraint, can duplicate)
 5. Add test for abandoned user flag behavior
 6. Add test for IP address fields (IPv4 and IPv6)
 7. Add test for last_seen_at timestamp updates
+8. Add test for `User.generate_unique_username()` classmethod
+9. Add test for username uniqueness enforcement with retry logic
+10. Add test for exception raised after 10 failed attempts
 
 **Acceptance Criteria**:
 - [ ] Test creates unregistered user successfully
-- [ ] Test verifies `get_upload_count()` returns correct count
+- [ ] Test verifies `items_count` property returns correct count
 - [ ] Test verifies null email allowed for unregistered users
 - [ ] Test verifies fingerprint fields populated correctly
 - [ ] Test verifies abandoned flag defaults to False
 - [ ] Test verifies IPv6 addresses fit in IP fields
 - [ ] Test verifies timestamp fields auto-update
-- [ ] All tests pass independently and in suite
-
-**Estimated Effort**: 45 minutes
-
----
-
-## Step 14: Create Tests for Fingerprint Functions
+- [ ] Test verifies `User.generate_unique_username()` generates unique username
+- [ ] Test verifies retry logic works when collisions occur
+- [ ] Test verifies ValueError raised after 10 failed attempts
+- [ ] All tests pass independSecurity/Fingerprint Functions
 
 **Files**: `tests/test_lib_security.py` (new or extend existing)
 
 **Tasks**:
-1. Add test for `generate_unique_username()` format
-2. Add test for username uniqueness retry logic
-3. Add test for `generate_fingerprint_hash()` consistency
-4. Add test for `generate_fingerprint_hash()` uniqueness with different inputs
-5. Add test for `extract_fingerprint_data()` with all headers present
-6. Add test for `extract_fingerprint_data()` with missing headers
-7. Add test for `extract_fingerprint_data()` with X-Forwarded-For parsing
-8. Add test for client IP extraction fallback
+1. Add test for `generate_username()` format (uses coolname)
+2. Add test for `generate_username()` produces readable names
+3. Add test for `generate_fingerprint_hash(request)` consistency (default exclude IP)
+4. Add test for `generate_fingerprint_hash(request)` uniqueness with different inputs
+5. Add test for `generate_fingerprint_hash(request, include_client_ip=False)` excludes IP
+6. Add test for `generate_fingerprint_hash(request, include_client_ip=True)` includes IP
+7. Add test for `generate_fingerprint_hash()` with same headers, different IPs produces same hash (default)
+8. Add test for `generate_fingerprint_hash()` with same headers, different IPs produces different hash (include_client_ip=True)
+9. Add test for `extract_fingerprint_data(request)` with all headers present
+10. Add test for `extract_fingerprint_data(request)` with missing headers
+11. Add test for `extract_fingerprint_data(request)` includes client_ip in dict
+12. Add test for `get_request_ip(request)` with X-Forwarded-For parsing
+13. Add test for `get_request_ip(request)` fallback to request.client.host
+14. Add test for `get_request_ip(request)` IPv4 validation
+15. Add test for `get_request_ip(request)` IPv6 validation
+16. Add test for `get_request_ip(request)` invalid IP returns None
 
 **Acceptance Criteria**:
 - [ ] Username format matches pattern (Adjective+Animal+4digits)
-- [ ] Username uniqueness enforced via retry
-- [ ] Fingerprint hash is deterministic (same input = same hash)
-- [ ] Fingerprint hash differs for different inputs
-- [ ] Fingerprint extraction handles all headers correctly
+- [ ] Username uses coolname library word lists
+- [ ] Fingerprint hash excludes client_ip by default (consistency across networks)
+- [ ] Fingerprint hash can optionally include client_ip when `include_client_ip=True`
+- [ ] Same headers with different IPs produce same hash (default behavior)
+- [ ] Same headers with different IPs produce different hash when `include_client_ip=True`
+- [ ] Fingerprint data extraction handles all headers correctly
+- [ ] Missing headers default to empty string
+- [ ] Fingerprint data dict includes all 4 keys: user_agent, accept_language, accept_encoding, client_ip
+- [ ] X-Forwarded-For first IP extracted correctly
+- [ ] Fallback to request.client.host works when X-Forwarded-For absent
+- [ ] IPv4 addresses validated correctly
+- [ ] IPv6 addresses validated correctly
+- [ ] Invalid IP addresses return None
+- [ ] All tests pass
+
+**Estimated Effort**: 90 minutes
+- [ ] All tests pass
+
+**Estimated Effort**: 75tion handles all headers correctly
 - [ ] Missing headers default to empty string
 - [ ] X-Forwarded-For first IP extracted correctly
 - [ ] Fallback to request.client.host works

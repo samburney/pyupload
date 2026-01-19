@@ -1,12 +1,12 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
-from typing_extensions import Self
+from typing_extensions import Self, Optional
 from tortoise import fields, models
 from pydantic import BaseModel, model_validator, EmailStr
 from email_validator import validate_email, EmailNotValidError
 
 from app.lib.config import get_app_config
-from app.lib.security import verify_password
+from app.lib.security import verify_password, generate_username
 from app.models.base import TimestampMixin
 
 
@@ -20,9 +20,52 @@ class User(models.Model, TimestampMixin):
     email = fields.CharField(max_length=255)
     password = fields.CharField(max_length=60)
     remember_token = fields.CharField(max_length=100)
+    is_registered = fields.BooleanField(default=False)
+    is_abandoned = fields.BooleanField(default=False)
+    is_admin = fields.BooleanField(default=False)
+    is_disabled = fields.BooleanField(default=False)
+    fingerprint_hash = fields.CharField(max_length=64, null=True, db_index=True)
+    fingerprint_data = fields.JSONField(null=True)
+    registration_ip = fields.CharField(max_length=45, null=True)
+    last_login_ip = fields.CharField(max_length=45, null=True)
+    last_seen_at = fields.DatetimeField(null=True)
 
     class Meta:
         table = "users"
+    
+    @property
+    async def items_count(self) -> int:
+        """Return count of items owned by this user."""
+        images = await self.images_count
+        uploads = await self.uploads_count
+        return images + uploads
+    
+    @property
+    async def images_count(self) -> int:
+        """Return count of images owned by this user."""
+        # Placeholder for now, will list owned items in `images` table.
+        return 0
+    
+    @property
+    async def uploads_count(self) -> int:
+        """Return count of images owned by this user."""
+        # Placeholder for now, will list owned items in `uploads` table.
+        return 0
+
+
+    @classmethod
+    async def generate_unique_username(cls, num_words: int = 2) -> str:
+        """Generate a unique username not already in the database."""
+        seq = 0
+
+        while seq < 10:
+            username = generate_username(num_words=num_words)
+            existing_user = await cls.get_or_none(username=username)
+            if not existing_user:
+                return username
+            
+        raise ValueError("Failed to generate a unique username after multiple attempts.")
+
 
 # Refresh Token database model
 class RefreshToken(models.Model, TimestampMixin):
@@ -107,7 +150,7 @@ class UserPydanticBase(BaseModel):
 # User model for general use
 class UserPydantic(UserPydanticBase):
     id: int
-    email: EmailStr
+    email: Optional[EmailStr]
     is_authenticated: bool = False
 
     @classmethod
