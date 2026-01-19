@@ -21,7 +21,7 @@ from unittest.mock import Mock, AsyncMock
 
 from app.main import app
 from app.lib.config import get_app_config
-from app.lib.auth import create_access_token, create_token_cookie, get_current_user
+from app.lib.auth import create_access_token, create_token_cookie, get_current_user_from_request
 from app.models.users import User, UserPydantic, authenticate_user
 
 
@@ -156,12 +156,12 @@ class TestJWTTokenCookie:
         assert cookie["max_age"] is not None
 
 
-class TestGetCurrentUser:
-    """Test get_current_user function for token validation."""
+class TestGetCurrentUserFromRequest:
+    """Test get_current_user_from_request function for token validation."""
 
     @pytest.mark.asyncio
-    async def test_get_current_user_with_valid_token(self, monkeypatch):
-        """Test that get_current_user returns user with valid token."""
+    async def test_get_current_user_from_request_with_valid_token(self, monkeypatch):
+        """Test that get_current_user_from_request returns user with valid token."""
         config = get_app_config()
         
         # Create a valid token
@@ -185,41 +185,38 @@ class TestGetCurrentUser:
         
         monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
         
-        # Call get_current_user
-        result = await get_current_user(mock_request)
+        # Call get_current_user_from_request
+        result = await get_current_user_from_request(mock_request)
         
         # Should return User instance (not UserPydantic) with valid token
         assert isinstance(result, User)
         assert result.username == "testuser"
 
     @pytest.mark.asyncio
-    async def test_get_current_user_without_token(self):
-        """Test that get_current_user returns anonymous user without token."""
+    async def test_get_current_user_from_request_without_token(self):
+        """Test that get_current_user_from_request returns None without token."""
         # Mock request without token
         mock_request = Mock(spec=Request)
         mock_request.cookies = {}
         
-        result = await get_current_user(mock_request)
+        result = await get_current_user_from_request(mock_request)
         
-        assert isinstance(result, UserPydantic)
-        assert result.username == "anonymous"
-        assert result.id == -1
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_current_user_with_invalid_token(self):
-        """Test that get_current_user returns anonymous user with invalid token."""
+    async def test_get_current_user_from_request_with_invalid_token(self):
+        """Test that get_current_user_from_request returns None with invalid token."""
         # Mock request with invalid token
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": "invalid.token.here"}
         
-        result = await get_current_user(mock_request)
+        result = await get_current_user_from_request(mock_request)
         
-        assert isinstance(result, UserPydantic)
-        assert result.username == "anonymous"
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_current_user_with_expired_token(self):
-        """Test that get_current_user returns anonymous user with expired token."""
+    async def test_get_current_user_from_request_with_expired_token(self):
+        """Test that get_current_user_from_request returns anonymous user with expired token."""
         config = get_app_config()
         
         # Create an expired token (exp in the past)
@@ -238,14 +235,13 @@ class TestGetCurrentUser:
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": expired_token}
         
-        result = await get_current_user(mock_request)
+        result = await get_current_user_from_request(mock_request)
         
-        assert isinstance(result, UserPydantic)
-        assert result.username == "anonymous"
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_current_user_with_nonexistent_user(self, monkeypatch):
-        """Test that get_current_user returns anonymous when user not in DB."""
+    async def test_get_current_user_from_request_with_nonexistent_user(self, monkeypatch):
+        """Test that get_current_user_from_request returns anonymous when user not in DB."""
         config = get_app_config()
         
         # Create a valid token for non-existent user
@@ -261,10 +257,9 @@ class TestGetCurrentUser:
         
         monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
         
-        result = await get_current_user(mock_request)
+        result = await get_current_user_from_request(mock_request)
         
-        assert isinstance(result, UserPydantic)
-        assert result.username == "anonymous"
+        assert result is None
 
 
 class TestLoginEndpoint:
@@ -551,248 +546,9 @@ class TestAuthenticateUser:
         assert result is None
 
 
-class TestRefreshEndpoint:
-    """Test /refresh endpoint for token refresh."""
-
-    @pytest.mark.asyncio
-    async def test_refresh_endpoint_exists(self):
-        """Test that /refresh endpoint is accessible."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        response = client.post("/refresh")
-        # Should return 401 without token, not 404
-        assert response.status_code == 401
-
-    @pytest.mark.asyncio
-    async def test_refresh_with_valid_token(self, monkeypatch):
-        """Test that valid refresh token returns new access token."""
-        from app.main import app as fastapi_app
-        from app.lib.auth import create_refresh_token
-        from app.models.users import RefreshToken
-        import hashlib
-        
-        client = TestClient(fastapi_app)
-        
-        # Create mock user
-        mock_user = Mock(spec=User)
-        mock_user.id = 1
-        mock_user.username = "testuser"
-        mock_user._saved_in_db = True
-        
-        async def mock_get_user(**kwargs):
-            if kwargs.get("id") == 1:
-                return mock_user
-            return None
-        
-        # Create real refresh token
-        from app.lib.auth import create_refresh_token as real_create_refresh
-        refresh_token_str = real_create_refresh(mock_user)
-        
-        # Create mock RefreshToken instance
-        mock_refresh_token = Mock(spec=RefreshToken)
-        mock_refresh_token.user_id = 1
-        mock_refresh_token.revoked = False
-        mock_refresh_token.id = 1
-        mock_refresh_token.token_hash = hashlib.sha256(refresh_token_str.encode()).hexdigest()
-        mock_refresh_token.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-        
-        async def mock_save():
-            pass
-        
-        mock_refresh_token.save = mock_save
-        mock_refresh_token.update_from_dict = Mock()
-        
-        # Mock validate_refresh_token
-        async def mock_validate(token, user):
-            return mock_refresh_token
-        
-        # Mock store_refresh_token  
-        async def mock_store(token, user):
-            pass
-        
-        #Mock set_token_cookies to avoid refresh token rotation complexity
-        async def mock_set_cookies(request, response, user, refresh_token=None):
-            # Just set the access token cookie
-            from app.lib.auth import create_access_token, create_token_cookie
-            access_token = create_access_token(data={"sub": user.username})
-            access_cookie = create_token_cookie(token=access_token, token_type="access")
-            response.set_cookie(**access_cookie)
-        
-        import app.ui.auth
-        import app.lib.auth
-        monkeypatch.setattr(User, "get_or_none", mock_get_user)
-        monkeypatch.setattr(app.ui.auth, "validate_refresh_token", mock_validate)
-        monkeypatch.setattr(app.ui.auth, "set_token_cookies", mock_set_cookies)
-        
-        # Make request with refresh token cookie
-        client.cookies.set("refresh_token", refresh_token_str)
-        response = client.post("/refresh")
-        
-        assert response.status_code == 200
-        # Should set new access_token cookie
-        assert "access_token" in response.cookies
-
-    @pytest.mark.asyncio
-    async def test_refresh_without_token_returns_401(self):
-        """Test that refresh without token returns 401."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        response = client.post("/refresh")
-        
-        assert response.status_code == 401
-
-    @pytest.mark.asyncio
-    async def test_refresh_with_expired_token_returns_401(self, monkeypatch):
-        """Test that expired refresh token returns 401."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        # Mock validate to return None (expired)
-        async def mock_validate(token, user):
-            return None
-        
-        async def mock_get_user(**kwargs):
-            mock_user = Mock(spec=User)
-            mock_user.id = 1
-            return mock_user
-        
-        import app.lib.auth
-        monkeypatch.setattr(app.lib.auth, "validate_refresh_token", mock_validate)
-        monkeypatch.setattr(User, "get_or_none", mock_get_user)
-        
-        client.cookies.set("refresh_token", "expired_token")
-        response = client.post("/refresh")
-        
-        assert response.status_code == 401
-
-    @pytest.mark.asyncio
-    async def test_refresh_with_revoked_token_returns_401(self, monkeypatch):
-        """Test that revoked refresh token returns 401."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        # Mock validate to return None (revoked)
-        async def mock_validate(token, user):
-            return None
-        
-        async def mock_get_user(**kwargs):
-            mock_user = Mock(spec=User)
-            mock_user.id = 1
-            return mock_user
-        
-        import app.lib.auth
-        monkeypatch.setattr(app.lib.auth, "validate_refresh_token", mock_validate)
-        monkeypatch.setattr(User, "get_or_none", mock_get_user)
-        
-        client.cookies.set("refresh_token", "revoked_token")
-        response = client.post("/refresh")
-        
-        assert response.status_code == 401
-
-    @pytest.mark.asyncio
-    async def test_refresh_with_invalid_token_returns_401(self, monkeypatch):
-        """Test that invalid refresh token returns 401."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        # Mock validate to return None (invalid)
-        async def mock_validate(token, user):
-            return None
-        
-        async def mock_get_user(**kwargs):
-            mock_user = Mock(spec=User)
-            mock_user.id = 1
-            return mock_user
-        
-        import app.lib.auth
-        monkeypatch.setattr(app.lib.auth, "validate_refresh_token", mock_validate)
-        monkeypatch.setattr(User, "get_or_none", mock_get_user)
-        
-        client.cookies.set("refresh_token", "invalid_token")
-        response = client.post("/refresh")
-        
-        assert response.status_code == 401
-
-    @pytest.mark.asyncio
-    async def test_refresh_rotates_tokens(self, monkeypatch):
-        """Test that refresh endpoint rotates refresh token."""
-        from app.main import app as fastapi_app
-        from app.models.users import RefreshToken
-        import hashlib
-        
-        client = TestClient(fastapi_app)
-        
-        # Create mock user
-        mock_user = Mock(spec=User)
-        mock_user.id = 1
-        mock_user.username = "testuser"
-        mock_user._saved_in_db = True
-        
-        async def mock_get_user(**kwargs):
-            if kwargs.get("id") == 1:
-                return mock_user
-            return None
-        
-        # Create real refresh token
-        from app.lib.auth import create_refresh_token as real_create_refresh
-        refresh_token_str = real_create_refresh(mock_user)
-        
-        # Track if update_from_dict was called (token rotation)
-        rotation_called = {"value": False}
-        
-        # Create mock RefreshToken instance
-        mock_refresh_token = Mock(spec=RefreshToken)
-        mock_refresh_token.user_id = 1
-        mock_refresh_token.revoked = False
-        mock_refresh_token.id = 1
-        
-        async def mock_save():
-            pass
-        
-        def mock_update(data):
-            rotation_called["value"] = True
-            mock_refresh_token.token_hash = data.get("token_hash")
-            mock_refresh_token.expires_at = data.get("expires_at")
-        
-        mock_refresh_token.save = mock_save
-        mock_refresh_token.update_from_dict = mock_update
-        
-        # Mock validate_refresh_token
-        async def mock_validate(token, user):
-            return mock_refresh_token
-        
-        # Mock set_token_cookies to verify rotation
-        async def mock_set_cookies(request, response, user, refresh_token=None):
-            if refresh_token:
-                rotation_called["value"] = True
-            # Set both cookies
-            from app.lib.auth import create_access_token, create_refresh_token, create_token_cookie
-            access_token = create_access_token(data={"sub": user.username})
-            access_cookie = create_token_cookie(token=access_token, token_type="access")
-            response.set_cookie(**access_cookie)
-            
-            refresh_token_str = create_refresh_token(user)
-            refresh_cookie = create_token_cookie(token=refresh_token_str, token_type="refresh")
-            response.set_cookie(**refresh_cookie)
-        
-        import app.ui.auth
-        import app.lib.auth
-        monkeypatch.setattr(User, "get_or_none", mock_get_user)
-        monkeypatch.setattr(app.ui.auth, "validate_refresh_token", mock_validate)
-        monkeypatch.setattr(app.ui.auth, "set_token_cookies", mock_set_cookies)
-        
-        # Make request
-        client.cookies.set("refresh_token", refresh_token_str)
-        response = client.post("/refresh")
-        
-        assert response.status_code == 200
-        # Should have rotated the token
-        assert rotation_called["value"] is True
-        # Should set both cookies
-        assert "access_token" in response.cookies
-        assert "refresh_token" in response.cookies
+# Tests for /refresh endpoint removed - endpoint replaced by TokenRefreshMiddleware
+# Token refresh now happens automatically via middleware in app/middleware/token_refresh.py
+# See tests/test_middleware_token_refresh.py for middleware tests
 
 
 class TestLoginRefreshTokenIntegration:

@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.lib.config import get_app_config
 from app.lib.scheduler import scheduler
+from app.middleware.token_refresh import TokenRefreshMiddleware
 
 from app.models import init_db
 
@@ -41,6 +42,7 @@ app = FastAPI(
 )
 
 # Middleware
+# Session middleware
 app.add_middleware(
     SessionMiddleware,
     secret_key=config.auth_token_secret_key,
@@ -48,6 +50,9 @@ app.add_middleware(
     max_age=24 * 60 * 60,  # days to seconds
     path=config.session_file_path,
 )
+
+# Token refresh middleware
+app.add_middleware(TokenRefreshMiddleware)
 
 # App routes
 # Static files

@@ -24,7 +24,7 @@ from app.lib.auth import (
     create_access_token,
     create_refresh_token,
     create_token_cookie,
-    get_current_user,
+    get_current_user_from_request,
     store_refresh_token,
     validate_refresh_token,
     revoke_refresh_token,
@@ -804,11 +804,11 @@ class TestCreateTokenCookie:
 
 
 # ============================================================================
-# get_current_user Tests
+# get_current_user_from_request Tests
 # ============================================================================
 
-class TestGetCurrentUser:
-    """Test get_current_user() dependency function."""
+class TestGetCurrentUserFromRequest:
+    """Test get_current_user_from_request() dependency function."""
 
     @pytest.mark.asyncio
     async def test_with_valid_token(self, monkeypatch):
@@ -831,31 +831,29 @@ class TestGetCurrentUser:
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": token}
         
-        user = await get_current_user(mock_request)
+        user = await get_current_user_from_request(mock_request)
         
         assert user == mock_user
 
     @pytest.mark.asyncio
     async def test_without_token(self):
-        """Test that missing token returns anonymous user."""
+        """Test that missing token returns None."""
         mock_request = Mock(spec=Request)
         mock_request.cookies = {}
         
-        user = await get_current_user(mock_request)
+        user = await get_current_user_from_request(mock_request)
         
-        assert isinstance(user, UserPydantic)
-        assert user.username == "anonymous"
+        assert user is None
 
     @pytest.mark.asyncio
     async def test_with_invalid_token(self):
-        """Test that invalid token returns anonymous user."""
+        """Test that invalid token returns None."""
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": "invalid_token"}
         
-        user = await get_current_user(mock_request)
+        user = await get_current_user_from_request(mock_request)
         
-        assert isinstance(user, UserPydantic)
-        assert user.username == "anonymous"
+        assert user is None
 
     @pytest.mark.asyncio
     async def test_with_expired_token(self):
@@ -873,10 +871,9 @@ class TestGetCurrentUser:
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": expired_token}
         
-        user = await get_current_user(mock_request)
+        user = await get_current_user_from_request(mock_request)
         
-        assert isinstance(user, UserPydantic)
-        assert user.username == "anonymous"
+        assert user is None
 
     @pytest.mark.asyncio
     async def test_with_nonexistent_user(self, monkeypatch):
@@ -892,10 +889,9 @@ class TestGetCurrentUser:
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": token}
         
-        user = await get_current_user(mock_request)
+        user = await get_current_user_from_request(mock_request)
         
-        assert isinstance(user, UserPydantic)
-        assert user.username == "anonymous"
+        assert user is None
 
 
 # ============================================================================
