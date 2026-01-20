@@ -2,5 +2,18 @@
 
 {% block content %}
 <h1>Index</h1>
-<p>You're currently logged in as: <strong>{{ current_user.username }}</strong></p>
+{% if current_user == None %}
+<p>You are not logged in.</p>
+<ul>
+    <li><a href="/login">Login</a></li>
+    <li><a href="/register">Register</a></li>
+    <li><a href="/users/me">Continue as unregistered user</a></li>
+</ul>
+{% else %}
+<p>You're currently logged in as: <strong>{{ current_user.username }}</strong></p>     
+<ul>
+    <li><a href="/logout">Logout</a></li>
+    <li><a href="/users/me">My Profile</a></li>
+</ul>
+{% endif %}
 {% endblock %}

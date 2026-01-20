@@ -1,5 +1,6 @@
 from fastapi.templating import Jinja2Templates
 
+from app.ui.common import security, session
 from app.ui.common.session import get_flashed_messages
 
 
@@ -15,3 +16,6 @@ def error_response(request, error_messages, status_code=400):
         context={"error_messages": error_messages},
         status_code=status_code,
     )
+
+
+__all__ = ["security", "session"]

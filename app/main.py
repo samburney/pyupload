@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.lib.config import get_app_config
 from app.lib.scheduler import scheduler
 from app.middleware.token_refresh import TokenRefreshMiddleware
+from app.middleware.fingerprint_auto_login import FingerprintAutoLoginMiddleware
 
 from app.models import init_db
 
@@ -45,6 +46,9 @@ app = FastAPI(
 # Token refresh middleware
 app.add_middleware(TokenRefreshMiddleware)
 
+# Fingerprint auto-login middleware
+app.add_middleware(FingerprintAutoLoginMiddleware)
+
 # Session middleware
 app.add_middleware(
     SessionMiddleware,
@@ -64,6 +68,14 @@ app.include_router(api.auth.router, prefix='/api/v1')
 # UI routes
 app.include_router(ui.main.router, include_in_schema=False)
 app.include_router(ui.auth.router, include_in_schema=False)
+app.include_router(ui.users.router, include_in_schema=False)
+
+
+# Exception handlers
+@app.exception_handler(ui.common.security.LoginRequiredException)
+async def login_required_exception_handler(request: Request, exc: ui.common.security.LoginRequiredException):
+    ui.common.session.flash_message(request, "Please log in to access this page.", "error")
+    return RedirectResponse(url="/login", status_code=303)
 
 
 # Development environment links

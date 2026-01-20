@@ -12,13 +12,11 @@ from app.lib.auth import (
     get_current_user_from_request,
     set_token_cookies,
     delete_token_cookies,
-    validate_refresh_token,
     revoke_refresh_token,
     revoke_user_refresh_tokens,
 )
 from app.models.users import (
     User,
-    UserPydantic,
     UserRegistrationForm,
     authenticate_user,
 )
@@ -176,7 +174,7 @@ async def do_logout(request: Request,
 async def do_logout_all(request: Request,
                  current_user: User = Depends(get_current_user_from_request)):
     # Check if user is authenticated
-    if current_user is None or current_user.id < 1:
+    if current_user is None or current_user.id < 1:  # FIXME: Adjust check as needed
         response = RedirectResponse(url="/", status_code=403)
         return response
 

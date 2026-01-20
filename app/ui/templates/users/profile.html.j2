@@ -1,0 +1,11 @@
+{% extends "layout/base.html.j2" %}
+
+{% block content %}
+<h1>Profile</h1>
+<h2>{{ current_user.username }}</h2>
+<p><strong>Actions</strong></p>
+<ul>
+    <li><a href="/logout">Logout</a></li>
+    <li><a href="/logout-all">Logout All Sessions</a></li>
+</ul>
+{% endblock %}

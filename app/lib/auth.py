@@ -6,6 +6,11 @@ from fastapi import Request, Response
 from tortoise.exceptions import IntegrityError, OperationalError
 
 from app.lib.config import get_app_config, logger
+from app.lib.security import (
+    extract_fingerprint_data,
+    generate_fingerprint_hash,
+    get_request_ip,
+)
 
 from app.models.users import User, UserPydantic, RefreshToken
 
@@ -38,11 +43,19 @@ async def get_current_user_from_token(token: str) -> None | User | UserPydantic:
             return None
 
         # Get user instance
-        user = await User.get_or_none(username=username)
+        user = await User.get_or_none(
+            username=username,
+            is_disabled=False,
+            is_abandoned=False,
+        )
 
         # Attempt to get by user.id if username lookup failed and is numeric
         if user is None and username.isnumeric():
-            user = await User.get_or_none(id=int(username))
+            user = await User.get_or_none(
+                id=int(username),
+                is_disabled=False,
+                is_abandoned=False,
+            )
         return user
 
     except jwt.InvalidTokenError:
@@ -58,6 +71,16 @@ async def get_current_user_from_refresh_token(request: Request) -> User | None:
     
     # Get current user from refresh token payload
     current_user = await get_current_user_from_token(payload)
+    if current_user is None or not isinstance(current_user, User):
+        return None
+
+    return current_user
+
+
+async def get_current_authenticated_user(request: Request) -> User | None:
+    """Dependency to get the current authenticated user or redirect to login page."""
+    current_user = await get_current_user_from_request(request)
+
     if current_user is None or not isinstance(current_user, User):
         return None
 
@@ -300,3 +323,49 @@ def get_refresh_token_payload(request: Request) -> str | None:
     
     # Fallback to cookie
     return request.cookies.get("refresh_token")
+
+
+async def get_unregistered_user_by_fingerprint(request: Request) -> User | None:
+    """Get an unregistered user by client fingerprint."""
+    
+    # Get fingerprint hash
+    fingerprint_hash = generate_fingerprint_hash(request)
+
+    # Attempt to find existing unregistered user by fingerprint hash
+    existing_user = await User.get_or_none(
+        fingerprint_hash=fingerprint_hash,
+        is_registered=False,
+        is_abandoned=False,
+        is_disabled=False,
+    )
+    return existing_user
+
+
+async def get_or_create_unregistered_user(request: Request) -> User:
+    """
+    Using client fingerprint, get matching unregistered user or create a new
+     one.
+    """
+    
+    # Check for existing unregistered user by fingerprint
+    existing_user = await get_unregistered_user_by_fingerprint(request)
+    if existing_user is not None:
+        return existing_user
+    
+    # Create new unregistered user
+    fingerprint_data = extract_fingerprint_data(request)
+    fingerprint_hash = generate_fingerprint_hash(request)
+
+    new_user_data = {
+        "username": await User.generate_unique_username(),
+        "email": "",
+        "password": "",
+        "is_registered": False,
+        "fingerprint_hash": fingerprint_hash,
+        "fingerprint_data": fingerprint_data,
+        "registration_ip": str(get_request_ip(request)) if get_request_ip(request) else None,
+    }
+
+    new_user = await User.create(**new_user_data)
+    
+    return new_user
