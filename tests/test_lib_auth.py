@@ -30,7 +30,8 @@ from app.lib.auth import (
     revoke_refresh_token,
     revoke_user_refresh_tokens,
 )
-from app.models.users import User, RefreshToken, UserPydantic, authenticate_user
+from app.models.users import User, UserPydantic, authenticate_user
+from app.models.refresh_tokens import RefreshToken
 
 
 # ============================================================================

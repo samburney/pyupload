@@ -1,5 +1,5 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.models.users import RefreshToken
+from app.models.refresh_tokens import RefreshToken
 
 scheduler = AsyncIOScheduler()
 

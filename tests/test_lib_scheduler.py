@@ -16,7 +16,8 @@ import pytest
 from datetime import datetime, timedelta, timezone
 
 from app.lib.scheduler import cleanup_tokens
-from app.models.users import User, RefreshToken
+from app.models.users import User
+from app.models.refresh_tokens import RefreshToken
 import hashlib
 
 

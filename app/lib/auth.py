@@ -12,7 +12,8 @@ from app.lib.security import (
     get_request_ip,
 )
 
-from app.models.users import User, UserPydantic, RefreshToken
+from app.models.users import User
+from app.models.refresh_tokens import RefreshToken
 
 
 config = get_app_config()

@@ -16,7 +16,8 @@ from starlette.testclient import TestClient
 import hashlib
 
 from app.main import app
-from app.models.users import User, RefreshToken
+from app.models.users import User
+from app.models.refresh_tokens import RefreshToken
 from app.lib.auth import create_access_token, create_refresh_token
 from app.lib.config import get_app_config
 
