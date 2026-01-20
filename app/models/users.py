@@ -62,6 +62,8 @@ class User(models.Model, TimestampMixin):
             if not existing_user:
                 return username
             
+            seq += 1
+            
         raise ValueError("Failed to generate a unique username after multiple attempts.")
 
 
