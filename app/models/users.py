@@ -19,7 +19,6 @@ class User(models.Model, TimestampMixin):
     username = fields.CharField(max_length=64)
     email = fields.CharField(max_length=255)
     password = fields.CharField(max_length=60)
-    remember_token = fields.CharField(max_length=100)
     is_registered = fields.BooleanField(default=False)
     is_abandoned = fields.BooleanField(default=False)
     is_admin = fields.BooleanField(default=False)
@@ -145,7 +144,6 @@ class RefreshToken(models.Model, TimestampMixin):
 # Base User model
 class UserPydanticBase(BaseModel):
     username: str
-    remember_token: str = ""
 
 # User model for general use
 class UserPydantic(UserPydanticBase):
@@ -160,7 +158,6 @@ class UserPydantic(UserPydanticBase):
             id=user.id,
             username=user.username,
             email=user.email,
-            remember_token=user.remember_token,
         )
     
     @classmethod
@@ -169,7 +166,6 @@ class UserPydantic(UserPydanticBase):
             id=-1,
             username='anonymous',
             email=f'anonymous@{config.app_default_domain}',
-            remember_token='',
         )
 
 
