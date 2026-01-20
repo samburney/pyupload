@@ -24,9 +24,6 @@ class AppConfig:
     app_reload: bool = is_bool(os.getenv("APP_RELOAD", "false")) == True
     app_base_url: str = os.getenv("APP_BASE_URL", f"http://localhost:{app_port}")
 
-    # Session storage
-    session_file_path: str = os.getenv("SESSION_FILE_PATH", "./data/sessions")
-
     # Database configuration
     db_host = os.getenv("DB_HOST", "db")
     db_port = int(os.getenv("DB_PORT", "3306"))

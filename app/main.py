@@ -41,18 +41,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Middleware
+# Middleware - Note: Applied to request in reverse order
+# Token refresh middleware
+app.add_middleware(TokenRefreshMiddleware)
+
 # Session middleware
 app.add_middleware(
     SessionMiddleware,
     secret_key=config.auth_token_secret_key,
     session_cookie="pyupload_session",
     max_age=24 * 60 * 60,  # days to seconds
-    path=config.session_file_path,
+    path="/",  # Cookie path - should be "/" for site-wide access
 )
-
-# Token refresh middleware
-app.add_middleware(TokenRefreshMiddleware)
 
 # App routes
 # Static files

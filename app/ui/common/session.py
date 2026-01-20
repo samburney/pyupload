@@ -2,14 +2,24 @@ from fastapi import Request
 
 
 def flash_message(request: Request, message: str, message_type: str = "info") -> None:
-    """Store a flash message in the session."""
-    if "_flashes" not in request.session:
-        request.session["_flashes"] = []
+    """
+        Store a flash message in the session.
 
-    request.session["_flashes"].append({
+        Args:
+            request (Request): The incoming request object.
+            message (str): The message to be flashed.
+            message_type (str): The type of the message, e.g., "info" or "error".
+    """
+
+    # Get existing flashes or create new list
+    flashes = request.session.get("_flashes", [])
+    flashes.append({
         "message": message,
         "message_type": message_type,
     })
+    
+    # Reassign to trigger session modification tracking
+    request.session["_flashes"] = flashes
 
 
 def get_flashed_messages(request: Request) -> tuple[list[str], list[str]]:
@@ -17,10 +27,12 @@ def get_flashed_messages(request: Request) -> tuple[list[str], list[str]]:
     info_messages = []
     error_messages = []
 
-    messages = request.session.pop("_flashes", []) if "_flashes" in request.session else []
+    # Get messages from session and clear them by setting to empty list
+    messages = request.session.get("_flashes", [])
+    request.session["_flashes"] = []
 
-    while len(messages) > 0:
-        message = messages.pop()
+    # Add to appropriate lists
+    for message in messages:
         if message["message_type"] == "error":
             error_messages.append(message["message"])
         else:
