@@ -30,6 +30,20 @@ The following technologies have been selected for `pyupload` to ensure a modern,
 5.  **Direct Access & View Pages**: Providing both direct links to files and formatted "view" pages with metadata.
 6.  **Legacy Integration**: Direct compatibility with the existing `simplegallery` database schema and file storage layout.
 
+### Authentication & User System
+
+`pyupload` implements a three-tier user system to balance ease of access with security:
+
+1. **Anonymous Users**: Truly anonymous browsing with no database record. Limited to viewing public content.
+
+2. **Unregistered Auto-Generated Accounts**: Created automatically via server-side fingerprinting (User-Agent, Accept headers, without IP to allow network changes). Users receive a Reddit-style auto-generated username (e.g., "HappyPanda1234") and JWT authentication. Fingerprint-based auto-login allows returning users to access their account seamlessly. These accounts have tiered upload restrictions and are marked abandoned after 90 days of inactivity (configurable via `UNREGISTERED_ACCOUNT_ABANDONMENT_DAYS`).
+
+3. **Registered Accounts**: Full accounts with email/password authentication. Unregistered users can upgrade to registered status via the `/register` page, which clears their fingerprint and issues fresh tokens. Registered accounts have no upload restrictions and are never abandoned.
+
+**Configuration**: Upload limits, allowed file types, and abandonment policy are configurable via environment variables (see `.env.example`). Fingerprints are cleared upon abandonment, allowing reuse on the same device.
+
+**Security**: JWT tokens with refresh token rotation. Abandoned/disabled users cannot authenticate. API access restricted to registered users only (future feature).
+
 ### Roadmap
 
 This roadmap outlines the milestones for the initial development phase.
