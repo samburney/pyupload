@@ -19,7 +19,7 @@ from app.models.refresh_tokens import RefreshToken
 config = get_app_config()
 
 
-async def get_current_user_from_request(request: Request) -> None | User | UserPydantic:
+async def get_current_user_from_request(request: Request) -> User | None:
     """Dependency to get the current authenticated user from the session."""
     
     # Validate access token from cookie
@@ -30,7 +30,7 @@ async def get_current_user_from_request(request: Request) -> None | User | UserP
     return await get_current_user_from_token(access_token)
 
 
-async def get_current_user_from_token(token: str) -> None | User | UserPydantic:
+async def get_current_user_from_token(token: str) -> User | None:
     """Get the current authenticated user from the access token."""
     try:
         # Decode JWT token

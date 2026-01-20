@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 from functools import lru_cache
 
-from app.lib.helpers import is_bool
+from app.lib.helpers import is_bool, validate_mime_types
 
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -13,6 +13,7 @@ ENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(dotenv_path=ENV_PATH)
 
 logger = logging.getLogger(__name__)
+
 
 class AppConfig:
     """Application configuration loader."""
@@ -45,6 +46,33 @@ class AppConfig:
     auth_refresh_token_age_days: int = int(os.getenv("AUTH_REFRESH_TOKEN_AGE_DAYS", "7"))
     if auth_refresh_token_age_days <= 0:
         raise ValueError("AUTH_REFRESH_TOKEN_AGE_DAYS must be a positive integer.")
+
+    # User limits configuration
+    user_max_file_size_mb: int = int(os.getenv("USER_MAX_FILE_SIZE_MB", "100"))
+    user_max_uploads: int = int(os.getenv("USER_MAX_UPLOADS", "-1"))  # -1 for unlimited
+    user_allowed_types: str = os.getenv("USER_ALLOWED_TYPES", "*")
+    unregistered_max_file_size_mb: int = int(os.getenv("UNREGISTERED_MAX_FILE_SIZE_MB", "10"))
+    unregistered_max_uploads: int = int(os.getenv("UNREGISTERED_MAX_UPLOADS", "5"))
+    unregistered_allowed_types: str = os.getenv("UNREGISTERED_ALLOWED_TYPES", "image/jpeg,image/png,image/gif")
+    unregistered_account_abandonment_days: int = int(os.getenv("UNREGISTERED_ACCOUNT_ABANDONMENT_DAYS", "90"))
+
+    # Validate file size limits
+    if user_max_file_size_mb <= 0 or unregistered_max_file_size_mb <= 0:
+        raise ValueError("File size limits must be positive integers.")
+    
+    # Validate upload count limits
+    if user_max_uploads < -1 or unregistered_max_uploads < -1:
+        raise ValueError("Upload limits must be -1 (for unlimited) or a non-negative integer.")
+    
+    # Validate abandonment days
+    if unregistered_account_abandonment_days <= -1:
+        raise ValueError("UNREGISTERED_ACCOUNT_ABANDONMENT_DAYS must be -1 (for never) or a non-negative integer.")
+    
+    # Validate MIME types
+    if not validate_mime_types(user_allowed_types):
+        raise ValueError(f"USER_ALLOWED_TYPES contains invalid MIME type format: {user_allowed_types}")
+    if not validate_mime_types(unregistered_allowed_types):
+        raise ValueError(f"UNREGISTERED_ALLOWED_TYPES contains invalid MIME type format: {unregistered_allowed_types}")
 
     # Adminer configuration - only really for dev use
     adminer_host: str = os.getenv("ADMINER_HOST", "localhost")

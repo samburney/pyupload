@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing_extensions import Self, Optional
 from tortoise import fields, models
 from pydantic import BaseModel, model_validator, EmailStr
@@ -165,3 +166,24 @@ async def authenticate_user(username: str, password: str):
         return user
     else:
         return None
+
+
+async def mark_abandoned():
+    """Clean up abandoned auto-created unregistered users"""
+    abandoned_last_seen_cutoff = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days)
+
+    # Count and get abandoned users
+    abandoned_users = await User.filter(
+        is_registered=False,
+        is_abandoned=False,
+        last_seen_at__lt=abandoned_last_seen_cutoff,
+    )
+    abandoned_count = len(abandoned_users)
+
+    # Mark users as abandoned
+    for user in abandoned_users:
+        user.is_abandoned = True
+        user.fingerprint_hash = None # type: ignore
+        await user.save()
+
+    return abandoned_count

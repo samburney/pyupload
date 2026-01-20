@@ -5,6 +5,9 @@
 <h2>{{ current_user.username }}</h2>
 <p><strong>Actions</strong></p>
 <ul>
+{% if not current_user.is_registered %}
+    <li><a href="/register">Complete Registration</a></li>
+{% endif %}
     <li><a href="/logout">Logout</a></li>
     <li><a href="/logout-all">Logout All Sessions</a></li>
 </ul>

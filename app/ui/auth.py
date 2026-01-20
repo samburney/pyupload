@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 
 from app.lib.config import get_app_config, logger
-from app.lib.security import hash_password
+from app.lib.security import hash_password, get_request_ip
 from app.lib.auth import (
     get_current_user_from_request,
     set_token_cookies,
@@ -64,12 +64,32 @@ async def login_for_access_token(
 # Register page
 @router.get("/register", response_class=HTMLResponse)
 async def register(request: Request):
-    return templates.TemplateResponse(request, "register.html.j2")
+    # Check for existing user session
+    current_user = await get_current_user_from_request(request)
+
+    # Redirect to home page if user is already registered
+    if current_user and (current_user.is_registered or current_user.is_abandoned or current_user.is_disabled):
+        flash_message(request, "You are already registered and logged in.", "info")
+        response = RedirectResponse(url="/", status_code=302)
+        return response
+    else:
+        flash_message(request, "The registration form has been pre-filled with your username, change it if you wish.", "info")
+
+    return templates.TemplateResponse(request, "register.html.j2", context={"current_user": current_user})
 
 
 # Register form submission
 @router.post("/register", response_class=HTMLResponse)
 async def register_post(request: Request):
+    # Check for existing user session
+    current_user = await get_current_user_from_request(request)
+
+    # Redirect to home page if user is already registered
+    if current_user and (current_user.is_registered or current_user.is_abandoned or current_user.is_disabled):
+        flash_message(request, "You are already registered and logged in.", "info")
+        response = RedirectResponse(url="/", status_code=302)
+        return response
+
     # Create user registration form model from form data and handle validation
     try:
         user_data = UserRegistrationForm(**await request.form()) # type:ignore
@@ -90,9 +110,8 @@ async def register_post(request: Request):
         return response
 
     # Validate username
-    # Check if user exists
     existing_user = await User.get_or_none(username=data.get("username"))
-    if existing_user:
+    if existing_user and existing_user.id != (current_user.id if current_user else 0):
         error_message = "Username already exists"
         response = templates.TemplateResponse(
             request=request,
@@ -120,20 +139,46 @@ async def register_post(request: Request):
     password = str(data.get("password"))
     password_hash = hash_password(password)
 
-    # Create user in database
+    # New user registration
     new_user_data = {
         "username": data.get("username"),
         "email": data.get("email"),
         "password": password_hash,
         "remember_token": data.get("remember_token"),
+        "is_registered": True,
+        "fingerprint_hash": None,
+        "fingerprint_data": None,
+        "registration_ip": str(get_request_ip(request)) if get_request_ip(request) else None
     }
-    new_user = await User.create(**new_user_data)
-    await new_user.save()
+
+    # Create new user
+    if not current_user:
+        new_user = await User.create(**new_user_data)
+        await new_user.save()
+
+    # Upgrade existing unregistered user
+    else:
+        current_user.update_from_dict(new_user_data)
+        current_user.is_registered = True
+        await current_user.save()
 
     # Set flash message and redirect to login page
     flash_message(request, "Registration successful! Please log in.", "info")
     response = Response(status_code=201)
     response.headers["HX-Redirect"] = "/login"
+
+    # Invalidate existing session to force a new login
+    if current_user:
+        # Revoke refresh token
+        try:
+            await revoke_user_refresh_tokens(current_user.id)
+
+        # Continue even if error occurs
+        except Exception as e:
+            logger.error("An error occured attempting to revoke refresh tokens.")
+        
+        # Delete cookies
+        delete_token_cookies(response)
 
     return response
 
