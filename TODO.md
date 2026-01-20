@@ -13,3 +13,8 @@
 - [x] Implement automatic token refresh middleware
 - [ ] Implement basic file upload and storage logic
 - [ ] Implement basic file viewing and delivery logic
+
+## Future Authentication Enhancements
+- [ ] Migrate to pwdlib recommended password hashing algorithms
+- [ ] Implement configurable password complexity requirements (uppercase/lowercase/numbers/special chars)
+- [ ] Implement two-factor authentication (2FA) support
