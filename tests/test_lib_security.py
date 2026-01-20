@@ -1,14 +1,28 @@
-"""Tests for app/lib/security.py - Password hashing and verification.
+"""Tests for app/lib/security.py - Password hashing, verification, and fingerprinting.
 
-This module tests cryptographic functions for password security:
+This module tests cryptographic and security functions:
 - hash_password(): bcrypt password hashing
 - verify_password(): bcrypt password verification
+- generate_username(): random username generation
+- generate_fingerprint_hash(): browser fingerprint hashing
+- extract_fingerprint_data(): fingerprint data extraction
+- get_request_ip(): client IP extraction
 
 JWT functions are tested in test_lib_auth.py.
 """
 
 import pytest
-from app.lib.security import hash_password, verify_password
+from unittest.mock import Mock
+from fastapi import Request
+
+from app.lib.security import (
+    hash_password,
+    verify_password,
+    generate_username,
+    generate_fingerprint_hash,
+    extract_fingerprint_data,
+    get_request_ip,
+)
 
 
 class TestHashPassword:
@@ -207,3 +221,388 @@ class TestPasswordIntegration:
         # Cross-verification should fail
         assert verify_password("a" * 10, long) is False
         assert verify_password("a" * 1000, short) is False
+
+
+# ============================================================================
+# Username Generation Tests
+# ============================================================================
+
+class TestGenerateUsername:
+    """Test generate_username() function."""
+
+    def test_returns_string(self):
+        """Test that generate_username returns a string."""
+        username = generate_username()
+        
+        assert isinstance(username, str)
+        assert len(username) > 0
+
+    def test_produces_readable_format(self):
+        """Test that username follows readable pattern with digits."""
+        username = generate_username()
+        
+        # Should have at least one digit
+        assert any(char.isdigit() for char in username)
+        # Should have at least one letter
+        assert any(char.isalpha() for char in username)
+        # Should be capitalized (title case)
+        assert username[0].isupper()
+
+    def test_uses_coolname_words(self):
+        """Test that username uses coolname library for word generation."""
+        # Generate multiple usernames
+        usernames = [generate_username() for _ in range(5)]
+        
+        # All should be non-empty strings
+        for username in usernames:
+            assert isinstance(username, str)
+            assert len(username) > 0
+            # Should have capitalized words
+            assert any(char.isupper() for char in username)
+
+    def test_produces_varied_usernames(self):
+        """Test that generate_username produces different usernames."""
+        usernames = [generate_username() for _ in range(10)]
+        
+        # Should produce at least some variety (not all the same)
+        unique_usernames = set(usernames)
+        assert len(unique_usernames) > 1
+
+
+# ============================================================================
+# Fingerprint Hash Generation Tests
+# ============================================================================
+
+class TestGenerateFingerprintHash:
+    """Test generate_fingerprint_hash() function."""
+
+    def test_returns_64_character_hash(self):
+        """Test that fingerprint hash is 64 characters (SHA256 hex)."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        hash_value = generate_fingerprint_hash(mock_request)
+        
+        assert isinstance(hash_value, str)
+        assert len(hash_value) == 64
+        # Should be hex characters
+        assert all(c in '0123456789abcdef' for c in hash_value)
+
+    def test_same_headers_produce_same_hash(self):
+        """Test that same headers produce consistent hash (excludes IP by default)."""
+        mock_request1 = Mock(spec=Request)
+        mock_request1.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request1.client = Mock()
+        mock_request1.client.host = "192.168.1.1"
+        
+        mock_request2 = Mock(spec=Request)
+        mock_request2.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request2.client = Mock()
+        mock_request2.client.host = "192.168.1.1"
+        
+        hash1 = generate_fingerprint_hash(mock_request1)
+        hash2 = generate_fingerprint_hash(mock_request2)
+        
+        assert hash1 == hash2
+
+    def test_different_headers_produce_different_hash(self):
+        """Test that different headers produce different hashes."""
+        mock_request1 = Mock(spec=Request)
+        mock_request1.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request1.client = Mock()
+        mock_request1.client.host = "192.168.1.1"
+        
+        mock_request2 = Mock(spec=Request)
+        mock_request2.headers = {
+            "User-Agent": "Chrome/91.0",  # Different user agent
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request2.client = Mock()
+        mock_request2.client.host = "192.168.1.1"
+        
+        hash1 = generate_fingerprint_hash(mock_request1)
+        hash2 = generate_fingerprint_hash(mock_request2)
+        
+        assert hash1 != hash2
+
+    def test_excludes_client_ip_by_default(self):
+        """Test that client IP is excluded from hash by default."""
+        mock_request1 = Mock(spec=Request)
+        mock_request1.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request1.client = Mock()
+        mock_request1.client.host = "192.168.1.1"
+        
+        mock_request2 = Mock(spec=Request)
+        mock_request2.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request2.client = Mock()
+        mock_request2.client.host = "10.0.0.100"  # Different IP
+        
+        hash1 = generate_fingerprint_hash(mock_request1, include_client_ip=False)
+        hash2 = generate_fingerprint_hash(mock_request2, include_client_ip=False)
+        
+        # Same hash despite different IPs
+        assert hash1 == hash2
+
+    def test_includes_client_ip_when_requested(self):
+        """Test that client IP is included when include_client_ip=True."""
+        mock_request1 = Mock(spec=Request)
+        mock_request1.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request1.client = Mock()
+        mock_request1.client.host = "192.168.1.1"
+        
+        mock_request2 = Mock(spec=Request)
+        mock_request2.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request2.client = Mock()
+        mock_request2.client.host = "10.0.0.100"  # Different IP
+        
+        hash1 = generate_fingerprint_hash(mock_request1, include_client_ip=True)
+        hash2 = generate_fingerprint_hash(mock_request2, include_client_ip=True)
+        
+        # Different hash because of different IPs
+        assert hash1 != hash2
+
+    def test_same_headers_different_ips_with_include_ip_false(self):
+        """Test explicit verification that IPs don't affect hash when include_client_ip=False."""
+        mock_request1 = Mock(spec=Request)
+        mock_request1.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request1.client = Mock()
+        mock_request1.client.host = "1.2.3.4"
+        
+        mock_request2 = Mock(spec=Request)
+        mock_request2.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request2.client = Mock()
+        mock_request2.client.host = "5.6.7.8"
+        
+        # Default behavior (include_client_ip=False)
+        hash1 = generate_fingerprint_hash(mock_request1)
+        hash2 = generate_fingerprint_hash(mock_request2)
+        
+        assert hash1 == hash2
+
+    def test_same_headers_different_ips_with_include_ip_true(self):
+        """Test that different IPs produce different hashes when include_client_ip=True."""
+        mock_request1 = Mock(spec=Request)
+        mock_request1.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request1.client = Mock()
+        mock_request1.client.host = "1.2.3.4"
+        
+        mock_request2 = Mock(spec=Request)
+        mock_request2.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request2.client = Mock()
+        mock_request2.client.host = "5.6.7.8"
+        
+        hash1 = generate_fingerprint_hash(mock_request1, include_client_ip=True)
+        hash2 = generate_fingerprint_hash(mock_request2, include_client_ip=True)
+        
+        assert hash1 != hash2
+
+
+# ============================================================================
+# Fingerprint Data Extraction Tests
+# ============================================================================
+
+class TestExtractFingerprintData:
+    """Test extract_fingerprint_data() function."""
+
+    def test_extracts_all_headers(self):
+        """Test that all fingerprint headers are extracted."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip, deflate"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        data = extract_fingerprint_data(mock_request)
+        
+        assert data["user_agent"] == "Mozilla/5.0"
+        assert data["accept_language"] == "en-US"
+        assert data["accept_encoding"] == "gzip, deflate"
+        assert data["client_ip"] is not None
+
+    def test_handles_missing_headers(self):
+        """Test that missing headers default to empty string."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}  # No headers
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        data = extract_fingerprint_data(mock_request)
+        
+        assert data["user_agent"] == ""
+        assert data["accept_language"] == ""
+        assert data["accept_encoding"] == ""
+        # client_ip should still be present
+        assert "client_ip" in data
+
+    def test_includes_client_ip_in_dict(self):
+        """Test that client_ip is included in returned dict."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "10.0.0.1"
+        
+        data = extract_fingerprint_data(mock_request)
+        
+        assert "client_ip" in data
+        assert data["client_ip"] is not None
+
+    def test_returns_dict_with_all_keys(self):
+        """Test that returned dict contains all expected keys."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        data = extract_fingerprint_data(mock_request)
+        
+        expected_keys = {"user_agent", "accept_language", "accept_encoding", "client_ip"}
+        assert set(data.keys()) == expected_keys
+
+
+# ============================================================================
+# IP Address Extraction Tests
+# ============================================================================
+
+class TestGetRequestIP:
+    """Test get_request_ip() function."""
+
+    def test_extracts_from_x_forwarded_for(self):
+        """Test that X-Forwarded-For header is prioritized."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "X-Forwarded-For": "203.0.113.1, 198.51.100.1"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        ip = get_request_ip(mock_request)
+        
+        # Should extract first IP from X-Forwarded-For
+        assert str(ip) == "203.0.113.1"
+
+    def test_fallback_to_client_host(self):
+        """Test fallback to request.client.host when X-Forwarded-For absent."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = Mock()
+        mock_request.client.host = "10.0.0.5"
+        
+        ip = get_request_ip(mock_request)
+        
+        assert str(ip) == "10.0.0.5"
+
+    def test_validates_ipv4_address(self):
+        """Test that IPv4 addresses are validated correctly."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.100"
+        
+        ip = get_request_ip(mock_request)
+        
+        assert ip is not None
+        assert str(ip) == "192.168.1.100"
+
+    def test_validates_ipv6_address(self):
+        """Test that IPv6 addresses are validated correctly."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = Mock()
+        mock_request.client.host = "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+        
+        ip = get_request_ip(mock_request)
+        
+        assert ip is not None
+        # netaddr normalizes IPv6 addresses
+        assert "2001:db8:85a3" in str(ip).lower()
+
+    def test_invalid_ip_returns_none(self):
+        """Test that invalid IP address returns None."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = Mock()
+        mock_request.client.host = "not.a.valid.ip"
+        
+        ip = get_request_ip(mock_request)
+        
+        assert ip is None
+
+    def test_no_client_returns_none(self):
+        """Test that missing client returns None."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = None
+        
+        ip = get_request_ip(mock_request)
+        
+        assert ip is None
+
+    def test_x_forwarded_for_strips_whitespace(self):
+        """Test that X-Forwarded-For IPs have whitespace stripped."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "X-Forwarded-For": "  203.0.113.1  , 198.51.100.1  "
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        ip = get_request_ip(mock_request)
+        
+        assert str(ip) == "203.0.113.1"
+

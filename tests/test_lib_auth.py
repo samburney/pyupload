@@ -29,8 +29,10 @@ from app.lib.auth import (
     validate_refresh_token,
     revoke_refresh_token,
     revoke_user_refresh_tokens,
+    get_or_create_unregistered_user,
+    get_unregistered_user_by_fingerprint,
 )
-from app.models.users import User, UserPydantic, authenticate_user
+from app.models.users import User, UserPydantic, authenticate_user, mark_abandoned
 from app.models.refresh_tokens import RefreshToken
 
 
@@ -985,3 +987,543 @@ class TestAuthenticateUser:
         user = await authenticate_user(username="nonexistent", password="password")
         
         assert user is None
+
+
+# ============================================================================
+# Auto-Registration Tests
+# ============================================================================
+
+class TestGetOrCreateUnregisteredUser:
+    """Test get_or_create_unregistered_user() function."""
+
+    @pytest.mark.asyncio
+    async def test_creates_new_user_on_new_fingerprint(self, db):
+        """Test that new fingerprint creates new user."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        user = await get_or_create_unregistered_user(mock_request)
+        
+        assert user is not None
+        assert user.id is not None
+        assert user.username is not None
+        assert user.is_registered is False
+        assert user.is_abandoned is False
+        assert user.fingerprint_hash is not None
+
+    @pytest.mark.asyncio
+    async def test_returns_existing_user_on_fingerprint_match(self, db):
+        """Test that existing fingerprint returns same user."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        # Create first user
+        user1 = await get_or_create_unregistered_user(mock_request)
+        
+        # Same fingerprint should return same user
+        user2 = await get_or_create_unregistered_user(mock_request)
+        
+        assert user1.id == user2.id
+        assert user1.username == user2.username
+
+    @pytest.mark.asyncio
+    async def test_skips_abandoned_users(self, db):
+        """Test that abandoned users are skipped and new user created."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        # Create and abandon a user
+        user1 = await get_or_create_unregistered_user(mock_request)
+        user1.is_abandoned = True
+        await user1.save()
+        
+        # Same fingerprint should create NEW user (abandoned user skipped)
+        user2 = await get_or_create_unregistered_user(mock_request)
+        
+        assert user1.id != user2.id
+        assert user2.is_abandoned is False
+
+    @pytest.mark.asyncio
+    async def test_skips_disabled_users(self, db):
+        """Test that disabled users are skipped and new user created."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        # Create and disable a user
+        user1 = await get_or_create_unregistered_user(mock_request)
+        user1.is_disabled = True
+        await user1.save()
+        
+        # Same fingerprint should create NEW user (disabled user skipped)
+        user2 = await get_or_create_unregistered_user(mock_request)
+        
+        assert user1.id != user2.id
+        assert user2.is_disabled is False
+
+    @pytest.mark.asyncio
+    async def test_skips_registered_users(self, db):
+        """Test that registered users are skipped and new user created."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        # Create and register a user
+        user1 = await get_or_create_unregistered_user(mock_request)
+        user1.is_registered = True
+        user1.email = "test@example.com"
+        user1.password = "hash"
+        await user1.save()
+        
+        # Same fingerprint should create NEW user (registered user skipped)
+        user2 = await get_or_create_unregistered_user(mock_request)
+        
+        assert user1.id != user2.id
+        assert user2.is_registered is False
+
+    @pytest.mark.asyncio
+    async def test_different_fingerprints_create_different_users(self, db):
+        """Test that different fingerprints create different users."""
+        mock_request1 = Mock(spec=Request)
+        mock_request1.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request1.client = Mock()
+        mock_request1.client.host = "192.168.1.1"
+        
+        mock_request2 = Mock(spec=Request)
+        mock_request2.headers = {
+            "User-Agent": "Chrome/91.0",  # Different
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request2.client = Mock()
+        mock_request2.client.host = "192.168.1.1"
+        
+        user1 = await get_or_create_unregistered_user(mock_request1)
+        user2 = await get_or_create_unregistered_user(mock_request2)
+        
+        assert user1.id != user2.id
+
+    @pytest.mark.asyncio
+    async def test_sets_registration_ip(self, db):
+        """Test that registration_ip is set on new users."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "10.0.0.100"
+        
+        user = await get_or_create_unregistered_user(mock_request)
+        
+        assert user.registration_ip is not None
+        assert "10.0.0.100" in str(user.registration_ip)
+
+    @pytest.mark.asyncio
+    async def test_sets_fingerprint_data(self, db):
+        """Test that fingerprint_data is populated on new users."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        user = await get_or_create_unregistered_user(mock_request)
+        
+        assert user.fingerprint_data is not None
+        assert "user_agent" in user.fingerprint_data
+        assert user.fingerprint_data["user_agent"] == "Mozilla/5.0"
+
+
+class TestGetUnregisteredUserByFingerprint:
+    """Test get_unregistered_user_by_fingerprint() function."""
+
+    @pytest.mark.asyncio
+    async def test_returns_user_with_matching_fingerprint(self, db):
+        """Test that matching fingerprint returns user."""
+        # Create an unregistered user with known fingerprint
+        user = await User.create(
+            username="TestUser1234",
+            email="",
+            password="",
+            is_registered=False,
+            fingerprint_hash="a" * 64
+        )
+        
+        # Mock request that produces same fingerprint hash
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        # Patch generate_fingerprint_hash to return our known hash
+        import app.lib.auth
+        original_hash_fn = app.lib.auth.generate_fingerprint_hash
+        app.lib.auth.generate_fingerprint_hash = lambda r, **kwargs: "a" * 64
+        
+        try:
+            found_user = await get_unregistered_user_by_fingerprint(mock_request)
+            
+            assert found_user is not None
+            assert found_user.id == user.id
+        finally:
+            app.lib.auth.generate_fingerprint_hash = original_hash_fn
+
+    @pytest.mark.asyncio
+    async def test_returns_none_for_no_match(self, db):
+        """Test that non-matching fingerprint returns None."""
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US",
+            "Accept-Encoding": "gzip"
+        }
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        result = await get_unregistered_user_by_fingerprint(mock_request)
+        
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_skips_registered_users_in_lookup(self, db):
+        """Test that registered users are not returned even with matching fingerprint."""
+        # Create a registered user with fingerprint
+        await User.create(
+            username="RegisteredUser",
+            email="test@example.com",
+            password="hash",
+            is_registered=True,
+            fingerprint_hash="b" * 64
+        )
+        
+        # Mock request with same fingerprint
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        import app.lib.auth
+        original_hash_fn = app.lib.auth.generate_fingerprint_hash
+        app.lib.auth.generate_fingerprint_hash = lambda r, **kwargs: "b" * 64
+        
+        try:
+            result = await get_unregistered_user_by_fingerprint(mock_request)
+            
+            # Should not return registered user
+            assert result is None
+        finally:
+            app.lib.auth.generate_fingerprint_hash = original_hash_fn
+
+    @pytest.mark.asyncio
+    async def test_skips_abandoned_users_in_lookup(self, db):
+        """Test that abandoned users are not returned even with matching fingerprint."""
+        # Create an abandoned user with fingerprint
+        await User.create(
+            username="AbandonedUser",
+            email="",
+            password="",
+            is_registered=False,
+            is_abandoned=True,
+            fingerprint_hash="c" * 64
+        )
+        
+        # Mock request with same fingerprint
+        mock_request = Mock(spec=Request)
+        mock_request.headers = {}
+        mock_request.client = Mock()
+        mock_request.client.host = "192.168.1.1"
+        
+        import app.lib.auth
+        original_hash_fn = app.lib.auth.generate_fingerprint_hash
+        app.lib.auth.generate_fingerprint_hash = lambda r, **kwargs: "c" * 64
+        
+        try:
+            result = await get_unregistered_user_by_fingerprint(mock_request)
+            
+            # Should not return abandoned user
+            assert result is None
+        finally:
+            app.lib.auth.generate_fingerprint_hash = original_hash_fn
+
+
+# ============================================================================
+# Abandonment Cleanup Tests
+# ============================================================================
+
+class TestMarkAbandoned:
+    """Test mark_abandoned() function."""
+
+    @pytest.mark.asyncio
+    async def test_marks_old_unregistered_users_as_abandoned(self, db):
+        """Test that old unregistered users are marked as abandoned."""
+        from datetime import datetime, timedelta
+        from app.lib.config import get_app_config
+        
+        config = get_app_config()
+        cutoff_date = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days + 1)
+        
+        # Create an old unregistered user
+        old_user = await User.create(
+            username="OldUser",
+            email="",
+            password="",
+            is_registered=False,
+            is_abandoned=False,
+            last_seen_at=cutoff_date,
+            fingerprint_hash="d" * 64
+        )
+        
+        # Run abandonment cleanup
+        count = await mark_abandoned()
+        
+        # Refresh from database
+        await old_user.refresh_from_db()
+        
+        assert count == 1
+        assert old_user.is_abandoned is True
+        assert old_user.fingerprint_hash is None
+
+    @pytest.mark.asyncio
+    async def test_preserves_recent_unregistered_users(self, db):
+        """Test that recent unregistered users are not marked as abandoned."""
+        from datetime import datetime, timedelta
+        from app.lib.config import get_app_config
+        
+        config = get_app_config()
+        recent_date = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days - 1)
+        
+        # Create a recent unregistered user
+        recent_user = await User.create(
+            username="RecentUser",
+            email="",
+            password="",
+            is_registered=False,
+            is_abandoned=False,
+            last_seen_at=recent_date,
+            fingerprint_hash="e" * 64
+        )
+        
+        # Run abandonment cleanup
+        count = await mark_abandoned()
+        
+        # Refresh from database
+        await recent_user.refresh_from_db()
+        
+        assert count == 0
+        assert recent_user.is_abandoned is False
+        assert recent_user.fingerprint_hash is not None
+
+    @pytest.mark.asyncio
+    async def test_skips_registered_users(self, db):
+        """Test that registered users are never marked as abandoned."""
+        from datetime import datetime, timedelta
+        from app.lib.config import get_app_config
+        
+        config = get_app_config()
+        cutoff_date = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days + 1)
+        
+        # Create an old registered user
+        registered_user = await User.create(
+            username="RegisteredUser",
+            email="registered@example.com",
+            password="hash",
+            is_registered=True,
+            is_abandoned=False,
+            last_seen_at=cutoff_date
+        )
+        
+        # Run abandonment cleanup
+        count = await mark_abandoned()
+        
+        # Refresh from database
+        await registered_user.refresh_from_db()
+        
+        assert count == 0
+        assert registered_user.is_abandoned is False
+
+    @pytest.mark.asyncio
+    async def test_skips_already_abandoned_users(self, db):
+        """Test that already abandoned users are skipped (idempotent)."""
+        from datetime import datetime, timedelta
+        from app.lib.config import get_app_config
+        
+        config = get_app_config()
+        cutoff_date = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days + 1)
+        
+        # Create an already abandoned user
+        abandoned_user = await User.create(
+            username="AlreadyAbandoned",
+            email="",
+            password="",
+            is_registered=False,
+            is_abandoned=True,
+            last_seen_at=cutoff_date
+        )
+        
+        # Run abandonment cleanup
+        count = await mark_abandoned()
+        
+        assert count == 0
+
+    @pytest.mark.asyncio
+    async def test_clears_fingerprint_on_abandonment(self, db):
+        """Test that fingerprint is cleared when user is marked as abandoned."""
+        from datetime import datetime, timedelta
+        from app.lib.config import get_app_config
+        
+        config = get_app_config()
+        cutoff_date = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days + 1)
+        
+        # Create old user with fingerprint
+        user = await User.create(
+            username="UserWithFingerprint",
+            email="",
+            password="",
+            is_registered=False,
+            is_abandoned=False,
+            last_seen_at=cutoff_date,
+            fingerprint_hash="f" * 64,
+            fingerprint_data={"user_agent": "Mozilla/5.0"}
+        )
+        
+        # Run abandonment cleanup
+        await mark_abandoned()
+        
+        # Refresh from database
+        await user.refresh_from_db()
+        
+        # Fingerprint hash should be cleared, but fingerprint_data retained
+        assert user.fingerprint_hash is None
+        assert user.fingerprint_data is not None
+        assert user.fingerprint_data["user_agent"] == "Mozilla/5.0"
+
+    @pytest.mark.asyncio
+    async def test_returns_accurate_count(self, db):
+        """Test that function returns accurate count of abandoned users."""
+        from datetime import datetime, timedelta
+        from app.lib.config import get_app_config
+        
+        config = get_app_config()
+        cutoff_date = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days + 1)
+        
+        # Create multiple old unregistered users
+        for i in range(5):
+            await User.create(
+                username=f"OldUser{i}",
+                email="",
+                password="",
+                is_registered=False,
+                is_abandoned=False,
+                last_seen_at=cutoff_date,
+                fingerprint_hash=f"{i}" * 64
+            )
+        
+        # Run abandonment cleanup
+        count = await mark_abandoned()
+        
+        assert count == 5
+
+    @pytest.mark.asyncio
+    async def test_idempotent_multiple_runs(self, db):
+        """Test that running cleanup multiple times is safe (idempotent)."""
+        from datetime import datetime, timedelta
+        from app.lib.config import get_app_config
+        
+        config = get_app_config()
+        cutoff_date = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days + 1)
+        
+        # Create old unregistered user
+        await User.create(
+            username="OldUser",
+            email="",
+            password="",
+            is_registered=False,
+            is_abandoned=False,
+            last_seen_at=cutoff_date,
+            fingerprint_hash="g" * 64
+        )
+        
+        # Run cleanup first time
+        count1 = await mark_abandoned()
+        assert count1 == 1
+        
+        # Run cleanup second time
+        count2 = await mark_abandoned()
+        assert count2 == 0  # No more users to abandon
+
+    @pytest.mark.asyncio
+    async def test_retains_fingerprint_data_for_audit(self, db):
+        """Test that fingerprint_data is retained for record-keeping."""
+        from datetime import datetime, timedelta
+        from app.lib.config import get_app_config
+        
+        config = get_app_config()
+        cutoff_date = datetime.now() - timedelta(days=config.unregistered_account_abandonment_days + 1)
+        
+        fingerprint_data = {
+            "user_agent": "Mozilla/5.0",
+            "accept_language": "en-US",
+            "accept_encoding": "gzip",
+            "client_ip": "192.168.1.1"
+        }
+        
+        user = await User.create(
+            username="UserForAudit",
+            email="",
+            password="",
+            is_registered=False,
+            is_abandoned=False,
+            last_seen_at=cutoff_date,
+            fingerprint_hash="h" * 64,
+            fingerprint_data=fingerprint_data
+        )
+        
+        await mark_abandoned()
+        await user.refresh_from_db()
+        
+        # fingerprint_data should be retained
+        assert user.fingerprint_data == fingerprint_data
+        assert user.fingerprint_hash is None
+
+
