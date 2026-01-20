@@ -14,6 +14,7 @@ async def upgrade(db: BaseDBAsyncClient) -> str:
         ALTER TABLE `users` ADD `is_registered` BOOL NOT NULL DEFAULT 0;
         ALTER TABLE `users` ADD `last_seen_at` DATETIME(6);
         ALTER TABLE `users` ADD `is_admin` BOOL NOT NULL DEFAULT 0;
+        UPDATE `users` SET `is_registered` = 1 WHERE `id` > 0;
         ALTER TABLE `users` DROP COLUMN `remember_token`;
         ALTER TABLE `users` ADD INDEX `idx_users_fingerp_62b4da` (`fingerprint_hash`);"""
 
