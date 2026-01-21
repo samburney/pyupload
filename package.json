@@ -3,10 +3,11 @@
   "version": "0.0.1",
   "description": "Modern file/image gallery upload application",
   "scripts": {
-    "watch:css": "npx tailwindcss -i ./input.css -o ./app/static/css/tailwind.css --watch=always",
-    "build:css": "npx tailwindcss -i ./input.css -o ./app/static/css/tailwind.css --minify"
+    "watch:css": "npx @tailwindcss/cli -i ./input.css -o ./app/static/css/tailwind.css --watch=always --content './app/ui/templates/**/*.{html,j2}'",
+    "build:css": "npx @tailwindcss/cli -i ./input.css -o ./app/static/css/tailwind.css --minify --content './app/ui/templates/**/*.{html,j2}'"
   },
-  "devDependencies": {
-    "tailwindcss": "^3.4.0"
+  "dependencies": {
+    "tailwindcss": "^4.1",
+    "@tailwindcss/cli": "^4.1"
   }
 }
