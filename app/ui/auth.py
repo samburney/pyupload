@@ -72,7 +72,7 @@ async def register(request: Request):
         flash_message(request, "You are already registered and logged in.", "info")
         response = RedirectResponse(url="/", status_code=302)
         return response
-    else:
+    elif current_user and not current_user.is_registered:
         flash_message(request, "The registration form has been pre-filled with your username, change it if you wish.", "info")
 
     return templates.TemplateResponse(request, "auth/register.html.j2", context={"current_user": current_user})

@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Request, Response, Depends
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 
 from app.lib.config import get_app_config
@@ -7,8 +7,7 @@ from app.lib.config import get_app_config
 from app.models.users import User
 
 from app.ui.common import templates
-from app.ui.common.session import flash_message
-from app.ui.common.security import get_current_authenticated_user, get_or_create_authenticated_user
+from app.ui.common.security import get_or_create_authenticated_user
 
 
 config = get_app_config()
