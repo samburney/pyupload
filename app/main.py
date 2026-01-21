@@ -80,31 +80,6 @@ async def login_required_exception_handler(request: Request, exc: ui.common.secu
     return RedirectResponse(url="/login", status_code=303)
 
 
-# Development environment links
-@app.get("/", response_class=HTMLResponse)
-async def read_root():
-    adminer_host = 'localhost' if '0.0.0.0' == config.adminer_host else config.adminer_host
-    adminer_port = config.adminer_port
-    
-    return f"""
-    <html>
-        <head>
-            <title>pyupload</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head>
-        <body class="container mt-5">
-            <h1 class="text-primary">Welcome to pyupload</h1>
-            <p class="lead">Development environment is successfully established.</p>
-            <ul>
-                <li>API Docs: <a href="/docs" target="_blank">/docs</a></li>
-                <li>Adminer (DB): <a href="http://{adminer_host}:{adminer_port}" target="_blank">http://{adminer_host}:{adminer_port}</a></li>
-                <li>App UI: <a href="/ui" target="_blank">/ui</a></li>
-            </ul>
-        </body>
-    </html>
-    """
-
-
 # Run the application server
 if __name__ == "__main__":
     uvicorn.run(
