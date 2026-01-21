@@ -6,99 +6,111 @@
         <title>TITLE GOES HERE</title>
         <script src="/static/js/htmx.min.js"></script>
         <script src="/static/js/htmx-ext-response-targets.js"></script>
-        <script src="/static/js/bootstrap.bundle.min.js"></script>
-        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-        <link href="/static/css/style.css" rel="stylesheet">
+        <script defer src="/static/js/alpine.min.js"></script>
+        <link href="/static/css/tailwind.css" rel="stylesheet">
+        <style>
+            [x-cloak] { display: none !important; }
+        </style>
     </head>
     <body hx-ext="response-targets">
-        <div id="wrap">
-            <div class="container" id="header">
-                <div id="title-nav" class="row">
-                    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-2">
-                        <div class="container-fluid">
-                            <a class="navbar-brand" href="/">sU</a>
-                            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false"
-                                aria-label="Toggle navigation">
-                                <span class="navbar-toggler-icon"></span>
-                            </button>
-                            <div class="collapse navbar-collapse" id="navbarContent">
-                                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                                    <li class="nav-item dropdown">
-                                        <a class="nav-link dropdown-toggle" href="#" id="browseDropdown" role="button"
-                                            data-bs-toggle="dropdown" aria-expanded="false">
-                                            Browse
-                                        </a>
-                                        <ul class="dropdown-menu" aria-labelledby="browseDropdown">
-                                            <li><a class="dropdown-item" href="/random">Random</a></li>
-                                            <li><a class="dropdown-item" href="/popular">Popular</a></li>
-                                            <li><a class="dropdown-item" href="/all">All</a></li>
-                                        </ul>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="/tags">Tags</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="/uploads">Your Uploads</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="/collections">Your Collections</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="/search">Search</a>
-                                    </li>
-                                </ul>
-                                <div class="d-flex align-items-center">
-                                    <a href="#upload" class="btn btn-primary me-3 d-none d-lg-block">Upload</a>
-                                    <ul class="navbar-nav">
-                                        <li class="nav-item dropdown">
-                                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                Not Logged In
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                                <li><a class="dropdown-item" href="/login">Log in</a></li>
-                                                <li><a class="dropdown-item" href="/register">Register</a></li>
-                                                <li>
-                                                    <hr class="dropdown-divider">
-                                                </li>
-                                                <li><a class="dropdown-item" href="/upload">Upload</a></li>
-                                                <li><a class="dropdown-item" href="/collections">Collections</a></li>
-                                                <li>
-                                                    <hr class="dropdown-divider">
-                                                </li>
-                                                <li><a class="dropdown-item" href="/logout">Log out</a></li>
-                                            </ul>
-                                        </li>
-                                    </ul>
+        <div id="wrap" class="min-h-screen flex flex-col">
+            <div class="bg-gray-900 text-white">
+                <nav class="container mx-auto px-4 py-3">
+                    <div class="flex items-center justify-between" x-data="{ browseOpen: false, userOpen: false, mobileMenuOpen: false }">
+                        <!-- Logo -->
+                        <a href="/" class="text-xl font-bold">sU</a>
+                        
+                        <!-- Mobile menu button -->
+                        <button 
+                            class="md:hidden text-white"
+                            @click="mobileMenuOpen = !mobileMenuOpen">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Desktop menu - center navigation -->
+                        <div class="hidden md:flex items-center space-x-6">
+                            <!-- Browse dropdown -->
+                            <div class="relative" @click.away="browseOpen = false">
+                                <button 
+                                    class="hover:text-gray-300"
+                                    @click="browseOpen = !browseOpen">
+                                    Browse ▾
+                                </button>
+                                <div x-show="browseOpen" x-cloak class="absolute left-0 mt-2 w-40 bg-white text-gray-900 rounded shadow-lg z-10">
+                                    <a href="/random" class="block px-4 py-2 hover:bg-gray-100">Random</a>
+                                    <a href="/popular" class="block px-4 py-2 hover:bg-gray-100">Popular</a>
+                                    <a href="/all" class="block px-4 py-2 hover:bg-gray-100">All</a>
+                                </div>
+                            </div>
+                            <a href="/tags" class="hover:text-gray-300">Tags</a>
+                            <a href="/uploads" class="hover:text-gray-300">Your Uploads</a>
+                            <a href="/collections" class="hover:text-gray-300">Your Collections</a>
+                            <a href="/search" class="hover:text-gray-300">Search</a>
+                        </div>
+
+                        <!-- Desktop menu - right side buttons -->
+                        <div class="hidden md:flex items-center space-x-4">
+                            <a href="/upload" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Upload</a>
+                            <!-- User dropdown -->
+                            <div class="relative" @click.away="userOpen = false">
+                                <button 
+                                    class="hover:text-gray-300"
+                                    @click="userOpen = !userOpen">
+                                    Not Logged In ▾
+                                </button>
+                                <div x-show="userOpen" x-cloak class="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded shadow-lg z-10">
+                                    <a href="/login" class="block px-4 py-2 hover:bg-gray-100">Log in</a>
+                                    <a href="/register" class="block px-4 py-2 hover:bg-gray-100">Register</a>
+                                    <hr class="my-1">
+                                    <a href="/upload" class="block px-4 py-2 hover:bg-gray-100">Upload</a>
+                                    <a href="/collections" class="block px-4 py-2 hover:bg-gray-100">Collections</a>
+                                    <hr class="my-1">
+                                    <a href="/logout" class="block px-4 py-2 hover:bg-gray-100">Log out</a>
                                 </div>
                             </div>
                         </div>
-                    </nav>
-                </div>
+                    
+
+                    <!-- Mobile menu -->
+                    <div x-show="mobileMenuOpen" x-cloak class="md:hidden mt-4 space-y-2">
+                        <a href="/random" class="block hover:text-gray-300">Random</a>
+                        <a href="/popular" class="block hover:text-gray-300">Popular</a>
+                        <a href="/all" class="block hover:text-gray-300">All</a>
+                        <a href="/tags" class="block hover:text-gray-300">Tags</a>
+                        <a href="/uploads" class="block hover:text-gray-300">Your Uploads</a>
+                        <a href="/collections" class="block hover:text-gray-300">Your Collections</a>
+                        <a href="/search" class="block hover:text-gray-300">Search</a>
+                        <a href="/upload" class="block bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-center">Upload</a>
+                        <div class="pt-2 border-t border-gray-700">
+                            <a href="/login" class="block hover:text-gray-300">Log in</a>
+                            <a href="/register" class="block hover:text-gray-300">Register</a>
+                            <a href="/logout" class="block hover:text-gray-300">Log out</a>
+                        </div>
+                    </div>
+                    </div>
+                </nav>
             </div>
-            <div class="container" id="messages">
+
+            <div class="container mx-auto px-4 py-4" id="messages">
                 {% include "layout/messages.html.j2" %}
             </div>
-            <div class="container" id="content">
-                <div class="row">
-                    {% block content %}{% endblock %}
-                </div>
+
+            <div class="container mx-auto px-4 py-6 flex-grow" id="content">
+                {% block content %}{% endblock %}
             </div>
-            <div id="push">
-            </div>
-        </div>
-        <div class="container" id="footer">
-            <div class="row text-center">
-                <small>
+
+            <div class="bg-gray-100 border-t border-gray-300 py-6 mt-auto">
+                <div class="container mx-auto px-4 text-center text-sm text-gray-600">
                     <p>
-                        <a href="https://github.com/samburney/pyupload/issues">Report a Bug or Request a Feature</a>
+                        <a href="https://github.com/samburney/pyupload/issues" class="text-blue-600 hover:underline">Report a Bug or Request a Feature</a>
                     </p>
-                    <p>
-                        pyupload is Copyright &copy;2025 <a href="http://www.sifnt.net.au/">sifnt</a>.<br />
+                    <p class="mt-2">
+                        pyupload is Copyright &copy;2025 <a href="http://www.sifnt.net.au/" class="text-blue-600 hover:underline">sifnt</a>.<br />
                         Use of this software is licensed under the General Public License (GPL) version 2.
                     </p>
-                </small>
+                </div>
             </div>
         </div>
     </body>
