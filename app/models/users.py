@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
-from typing_extensions import Self, Optional
+from typing_extensions import Self, Optional, Annotated
 from tortoise import fields, models
-from pydantic import BaseModel, model_validator, EmailStr
+from pydantic import BaseModel, model_validator, EmailStr, StringConstraints
 from email_validator import validate_email, EmailNotValidError
 
 from app.lib.config import get_app_config
@@ -120,7 +120,7 @@ class UserLoginForm(UserPydanticBase):
 
 # User registration form model
 class UserRegistrationForm(UserPydanticBase):
-    email: EmailStr
+    email: Annotated[EmailStr, StringConstraints(to_lower=True)]
     password: str
     confirm_password: str
 
