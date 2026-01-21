@@ -1,0 +1,12 @@
+{
+  "name": "pyupload",
+  "version": "0.0.1",
+  "description": "Modern file/image gallery upload application",
+  "scripts": {
+    "watch:css": "npx tailwindcss -i ./input.css -o ./app/static/css/tailwind.css --watch=always",
+    "build:css": "npx tailwindcss -i ./input.css -o ./app/static/css/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

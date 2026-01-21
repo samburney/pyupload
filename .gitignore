@@ -10,3 +10,7 @@ data/*
 *.pyc
 *.sqlite3
 docker-compose.override.yaml
+
+# Node / Tailwind CSS
+node_modules/
+app/static/css/tailwind.css

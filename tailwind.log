@@ -1,0 +1,4 @@
+
+> pyupload@0.0.1 watch:css
+> npx tailwindcss -i ./input.css -o ./app/static/css/tailwind.css --watch
+

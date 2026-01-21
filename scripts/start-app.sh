@@ -33,6 +33,7 @@ print_help() {
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT_DIR="${APP_DIR}/scripts"
 FILES_DIR="${APP_DIR}/data/files"
+TAILWIND_PID_FILE="/tmp/pyupload-tailwind.pid"
 
 # Default options
 CLEAN_DB=false
@@ -96,6 +97,12 @@ check_prerequisites() {
         echo "Warning: 'uv' not found. Ensure you have a python environment manager."
     fi
 
+    # Check for Node/npm for Tailwind CSS
+    if ! command -v npm &> /dev/null; then
+        echo "Error: npm is not installed. Required for Tailwind CSS."
+        exit 1
+    fi
+
     # Check for Python virtual environment
     if [ -z "$VIRTUAL_ENV" ]; then
         # Check for local venv directory
@@ -152,6 +159,28 @@ seed_app() {
     fi
 }
 
+start_css_watcher() {
+    echo "Installing/updating Node dependencies..."
+    cd "$APP_DIR"
+    npm install --silent
+
+    # Stop any existing watcher
+    if [ -f "$TAILWIND_PID_FILE" ]; then
+        OLD_PID=$(cat "$TAILWIND_PID_FILE")
+        if kill -0 "$OLD_PID" 2>/dev/null; then
+            echo "Stopping existing Tailwind watcher (PID: $OLD_PID)..."
+            kill "$OLD_PID"
+        fi
+        rm "$TAILWIND_PID_FILE"
+    fi
+
+    echo "Starting Tailwind CSS watcher..."
+    npm run watch:css &
+    TAILWIND_PID=$!
+    echo $TAILWIND_PID > "$TAILWIND_PID_FILE"
+    echo "Tailwind CSS watcher started (PID: $TAILWIND_PID)"
+}
+
 start_app() {
     if [ "$DEV_MODE" = true ]; then
         echo "Starting application in development mode with auto-reload..."
@@ -166,6 +195,7 @@ start_app() {
 run() {
     check_prerequisites
     check_config
+    start_css_watcher
     start_database
     initialise_database
 
