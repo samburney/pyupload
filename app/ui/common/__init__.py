@@ -12,7 +12,7 @@ def error_response(request, error_messages, status_code=400):
     """Render an error response with given messages and status code."""
     return templates.TemplateResponse(
         request=request,
-        name="common/messages.html.j2",
+        name="layout/messages.html.j2",
         context={"error_messages": error_messages},
         status_code=status_code,
     )

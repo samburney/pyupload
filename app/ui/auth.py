@@ -32,7 +32,7 @@ router = APIRouter(tags=["auth"])
 # Login page
 @router.get("/login", response_class=HTMLResponse)
 async def login(request: Request):
-    return templates.TemplateResponse(request, "login.html.j2")
+    return templates.TemplateResponse(request, "auth/login.html.j2")
 
 
 # Login form submission
@@ -75,7 +75,7 @@ async def register(request: Request):
     else:
         flash_message(request, "The registration form has been pre-filled with your username, change it if you wish.", "info")
 
-    return templates.TemplateResponse(request, "register.html.j2", context={"current_user": current_user})
+    return templates.TemplateResponse(request, "auth/register.html.j2", context={"current_user": current_user})
 
 
 # Register form submission
@@ -102,7 +102,7 @@ async def register_post(request: Request):
 
         response = templates.TemplateResponse(
             request=request,
-            name="common/messages.html.j2",
+            name="layout/messages.html.j2",
             context={"error_messages": error_messages},
             status_code=400,
         )
@@ -115,7 +115,7 @@ async def register_post(request: Request):
         error_message = "Username already exists"
         response = templates.TemplateResponse(
             request=request,
-            name="common/messages.html.j2",
+            name="layout/messages.html.j2",
             context={"error_messages": [error_message]},
             status_code=400,
         )
@@ -128,7 +128,7 @@ async def register_post(request: Request):
         error_message = "Email address already exists"
         response = templates.TemplateResponse(
             request=request,
-            name="common/messages.html.j2",
+            name="layout/messages.html.j2",
             context={"error_messages": [error_message]},
             status_code=400,
         )

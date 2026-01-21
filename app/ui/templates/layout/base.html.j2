@@ -13,7 +13,7 @@
 <body hx-ext="response-targets">
     <main>
         <div class="container" id="messages">
-            {% include "common/messages.html.j2" %}
+            {% include "layout/messages.html.j2" %}
         </div>
         {% block content %}
             {{ super() }}
