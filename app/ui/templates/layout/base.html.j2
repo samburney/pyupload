@@ -14,15 +14,15 @@
     </head>
     <body hx-ext="response-targets">
         <div id="wrap" class="min-h-screen flex flex-col">
-            <div class="bg-gray-900 text-white">
-                <nav class="container mx-auto px-4 py-3">
+            <nav class="bg-gray-800 sm:bg-transparent">
+                <div class="container bg-gray-900 text-white mx-auto sm:rounded sm:mt-2 sm:px-4 sm:py-2">
                     <div class="flex items-center justify-between" x-data="{ browseOpen: false, userOpen: false, mobileMenuOpen: false }">
                         <!-- Logo -->
                         <a href="/" class="text-xl font-bold">sU</a>
                         
                         <!-- Mobile menu button -->
                         <button 
-                            class="md:hidden text-white"
+                            class="sm:hidden text-white"
                             @click="mobileMenuOpen = !mobileMenuOpen">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -51,7 +51,7 @@
                         </div>
 
                         <!-- Desktop menu - right side buttons -->
-                        <div class="hidden md:flex items-center space-x-4">
+                        <div class="hidden sm:flex items-center space-x-4">
                             <a href="/upload" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Upload</a>
                             <!-- User dropdown -->
                             <div class="relative" @click.away="userOpen = false">
@@ -74,7 +74,7 @@
                     
 
                     <!-- Mobile menu -->
-                    <div x-show="mobileMenuOpen" x-cloak class="md:hidden mt-4 space-y-2">
+                    <div x-show="mobileMenuOpen" x-cloak class="sm:hidden mt-4 space-y-2">
                         <a href="/random" class="block hover:text-gray-300">Random</a>
                         <a href="/popular" class="block hover:text-gray-300">Popular</a>
                         <a href="/all" class="block hover:text-gray-300">All</a>
@@ -90,8 +90,8 @@
                         </div>
                     </div>
                     </div>
-                </nav>
-            </div>
+                </div>
+            </nav>
 
             <div class="container mx-auto px-4 py-4" id="messages">
                 {% include "layout/messages.html.j2" %}

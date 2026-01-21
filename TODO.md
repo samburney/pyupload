@@ -14,6 +14,17 @@
 - [ ] Implement basic file upload and storage logic
 - [ ] Implement basic file viewing and delivery logic
 
+## Frontend Scaffolding
+- [x] Integrate Tailwind CSS build system with automatic watching
+- [x] Integrate Alpine.js for client-side interactivity
+- [x] Convert base template from Bootstrap to Tailwind
+- [x] Implement navbar with container-constrained content
+- [x] Implement responsive navbar (mobile/sm/md breakpoints)
+- [ ] Refine mobile breakpoint styling (needs content first)
+- [ ] Add full navigation menu access at small breakpoint (currently only Upload visible)
+- [ ] Implement dynamic Browse dropdown text based on active route
+- [ ] Add conditional rendering for authenticated vs. anonymous users
+
 ## Future Authentication Enhancements
 - [ ] Migrate to pwdlib recommended password hashing algorithms
 - [ ] Implement configurable password complexity requirements (uppercase/lowercase/numbers/special chars)
