@@ -95,6 +95,12 @@ check_prerequisites() {
     if ! command -v uv &> /dev/null; then
         echo "Warning: 'uv' not found. Ensure you have a python environment manager."
     fi
+
+    # Check for Python virtual environment
+    if [ -z "$VIRTUAL_ENV" ]; then
+        echo "Python virtual environment is not activated. Please activate it to proceed."
+        exit 1
+    fi
 }
 
 start_database() {
@@ -141,15 +147,13 @@ seed_app() {
 }
 
 start_app() {
-    # If using 'uv'
     if [ "$DEV_MODE" = true ]; then
-        echo "Starting FastAPI app in development mode..."
-        # Assuming main.py exists and uvicorn is installed.
-        # We use 'uv run' to ensure we are in the venv
-        uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+        echo "Starting application in development mode with auto-reload..."
+        APP_RELOAD="${DEV_MODE}" python -m app.main
     else
-         echo "Starting FastAPI app..."
-         uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+        # TODO: Support running in app container in prod mode
+        echo "Starting application..."
+        APP_RELOAD="${DEV_MODE}" python -m app.main
     fi
 }
 

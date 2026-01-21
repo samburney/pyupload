@@ -1,3 +1,5 @@
+import uvicorn
+
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from fastapi import FastAPI, Request
@@ -102,3 +104,12 @@ async def read_root():
     </html>
     """
 
+
+# Run the application server
+if __name__ == "__main__":
+    uvicorn.run(
+        'app.main:app',
+        host=config.app_host,
+        port=config.app_port,
+        reload=config.app_reload
+    )
