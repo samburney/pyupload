@@ -189,7 +189,7 @@ async def do_logout(request: Request,
                  current_user: User = Depends(get_current_user_from_request)):
     # Check if user is authenticated
     if current_user is None or current_user.id < 1:
-        response = RedirectResponse(url="/", status_code=403)
+        response = RedirectResponse(url="/", status_code=303)
         return response
 
     # Set flash message
@@ -220,7 +220,7 @@ async def do_logout_all(request: Request,
                  current_user: User = Depends(get_current_user_from_request)):
     # Check if user is authenticated
     if current_user is None or current_user.id < 1:  # FIXME: Adjust check as needed
-        response = RedirectResponse(url="/", status_code=403)
+        response = RedirectResponse(url="/", status_code=303)
         return response
 
     # Set flash message
