@@ -97,18 +97,18 @@
                 {% include "layout/messages.html.j2" %}
             </div>
 
-            <div class="container mx-auto px-4 py-6 flex-grow" id="content">
+            <div class="container mx-auto px-4 py-6 grow" id="content">
                 {% block content %}{% endblock %}
             </div>
 
-            <div class="bg-gray-100 border-t border-gray-300 py-6 mt-auto">
-                <div class="container mx-auto px-4 text-center text-sm text-gray-600">
+            <div class="bg-gray-100 border-t border-gray-300 py-2 mt-auto">
+                <div class="container mx-auto text-center text-xs text-gray-600">
                     <p>
-                        <a href="https://github.com/samburney/pyupload/issues" class="text-blue-600 hover:underline">Report a Bug or Request a Feature</a>
+                        pyupload is Copyright &copy;2025 <a href="http://www.sifnt.net.au/" class="text-blue-600 hover:underline">sifnt</a>.
+                        <span class="hidden md:inline">Use of this software is licensed under the General Public License (GPL) version 2.</span>
                     </p>
                     <p class="mt-2">
-                        pyupload is Copyright &copy;2025 <a href="http://www.sifnt.net.au/" class="text-blue-600 hover:underline">sifnt</a>.<br />
-                        Use of this software is licensed under the General Public License (GPL) version 2.
+                        <a href="https://github.com/samburney/pyupload/issues" class="text-blue-600 hover:underline">Report a Bug or Request a Feature</a>
                     </p>
                 </div>
             </div>
