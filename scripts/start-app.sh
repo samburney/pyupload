@@ -98,8 +98,14 @@ check_prerequisites() {
 
     # Check for Python virtual environment
     if [ -z "$VIRTUAL_ENV" ]; then
-        echo "Python virtual environment is not activated. Please activate it to proceed."
-        exit 1
+        # Check for local venv directory
+        if [ -d "${APP_DIR}/.venv" ]; then
+            source "${APP_DIR}/.venv/bin/activate"
+            echo "Activated local virtual environment."
+        else
+            echo "Python virtual environment is not activated. Please activate it to proceed."
+            exit 1
+        fi
     fi
 }
 
