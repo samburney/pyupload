@@ -1,10 +1,23 @@
 from fastapi.templating import Jinja2Templates
 
+from app.lib.config import get_app_config
+
 from app.ui.common import security, session
 from app.ui.common.session import get_flashed_messages
 
 
-templates = Jinja2Templates(directory="app/ui/templates")
+config = get_app_config()
+
+
+def app_config_context_processor(request):
+    """Context processor to add app config to templates."""
+    return {"config": config}
+
+
+templates = Jinja2Templates(
+    directory="app/ui/templates",
+    context_processors=[app_config_context_processor]
+)
 templates.env.globals['get_flashed_messages'] = get_flashed_messages
 
 

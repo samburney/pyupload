@@ -24,13 +24,16 @@ class AppConfig:
     app_default_domain: str = str(os.getenv("APP_DEFAULT_DOMAIN", "example.com"))
     app_reload: bool = is_bool(os.getenv("APP_RELOAD", "false")) == True
     app_base_url: str = os.getenv("APP_BASE_URL", f"http://localhost:{app_port}")
+    app_site_name: str = os.getenv("APP_SITE_NAME", "Simple Upload")
 
     # Database configuration
     db_host = os.getenv("DB_HOST", "db")
     db_port = int(os.getenv("DB_PORT", "3306"))
-    db_name = os.getenv("DB_NAME", "radius_app")
-    db_user = os.getenv("DB_USER", "radius_user")
-    db_pass = os.getenv("DB_PASSWORD", "radius_pass")
+    db_name = os.getenv("DB_NAME", "simplegallery")
+    db_user = os.getenv("DB_USER", "simplegallery")
+    db_pass = os.getenv("DB_PASSWORD", "")
+    if db_pass == "":
+        raise ValueError("DB_PASSWORD environment variable must be set for database access.")
     db_pool_min_size: int = int(os.getenv("DB_POOL_MIN_SIZE", "1"))
     db_pool_max_size: int = int(os.getenv("DB_POOL_MAX_SIZE", "20"))
     db_connect_timeout: int = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
