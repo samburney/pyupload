@@ -91,15 +91,10 @@ def make_clean_filename(filename: str) -> str:
 def make_unique_filename(filename: str) -> str:
     """Generate a unique filename by appending datestamp and UUID."""
 
-    name, ext = split_filename(filename)
-    clean_name = make_clean_filename(name)
+    clean_name = make_clean_filename(filename)
 
     datetime_stamp = datetime.now(timezone.utc).strftime(r'%Y%m%d-%H%M%S')
     unique_id = uuid4().hex[:8]
     unique_filename = f"{clean_name}_{datetime_stamp}_{unique_id}"
-
-    # Include extension if it exists
-    if ext != '':
-        unique_filename += f".{ext}"
 
     return unique_filename

@@ -20,7 +20,7 @@ config = get_app_config()
 
 # Validation patterns
 EXTENSION_PATTERN = r'^[a-zA-Z0-9.-]{1,10}$'
-CLEAN_FILENAME_PATTERN = r'^[A-Za-z0-9](?:[A-Za-z0-9_]*[A-Za-z0-9])?$'
+CLEAN_FILENAME_PATTERN = r'[a-z0-9](?:[a-z0-9_]*[a-z0-9])?'
 DATETIME_STAMP_PATTERN = r'\d{8}-\d{6}'
 SHORT_UUID_PATTERN = r'[a-f0-9]{8}'
 UNIQUE_FILENAME_PATTERN = rf'^{CLEAN_FILENAME_PATTERN}_{DATETIME_STAMP_PATTERN}_{SHORT_UUID_PATTERN}$'
@@ -57,7 +57,7 @@ class UploadMetadata(BaseModel):
     filename: Annotated[str, StringConstraints(pattern=UNIQUE_FILENAME_PATTERN)]
     ext: Optional[Annotated[str, StringConstraints(pattern=EXTENSION_PATTERN, to_lower=True)]] = None
     original_filename: Annotated[str, StringConstraints(strip_whitespace=True)]
-    clean_filename: Annotated[str, StringConstraints(pattern=CLEAN_FILENAME_PATTERN)]
+    clean_filename: Annotated[str, StringConstraints(pattern=rf'^{CLEAN_FILENAME_PATTERN}$')]
     
     # Computed metadata
     size: int

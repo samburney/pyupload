@@ -34,7 +34,7 @@ async def make_upload_metadata(user: User, file: UploadFile | BinaryIO, filename
     original_filename_with_extension = get_filename(file, filename)
     original_filename, ext = split_filename(original_filename_with_extension)
     clean_filename = make_clean_filename(original_filename)
-    unique_filename = make_unique_filename(original_filename_with_extension)
+    unique_filename = make_unique_filename(original_filename)
     size = get_file_size(file)
     mime_type = await get_file_mime_type(file)
 
