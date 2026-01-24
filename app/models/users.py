@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing_extensions import Self, Optional, Annotated
+from typing_extensions import Self, Optional, Annotated, TYPE_CHECKING
 from tortoise import fields, models
 from pydantic import BaseModel, model_validator, EmailStr, StringConstraints
 from email_validator import validate_email, EmailNotValidError
@@ -8,6 +8,10 @@ from app.lib.config import get_app_config
 from app.lib.security import verify_password, generate_username
 
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from tortoise.queryset import QuerySet
+    from app.models.uploads import Upload
 
 
 config = get_app_config()
@@ -28,6 +32,10 @@ class User(models.Model, TimestampMixin):
     registration_ip = fields.CharField(max_length=45, null=True)
     last_login_ip = fields.CharField(max_length=45, null=True)
     last_seen_at = fields.DatetimeField(null=True)
+    
+    # Type hints for reverse relationships
+    if TYPE_CHECKING:
+        uploads: "QuerySet[Upload]"
 
     class Meta:
         table = "users"
@@ -35,15 +43,17 @@ class User(models.Model, TimestampMixin):
     @property
     async def images_count(self) -> int:
         """Return count of images owned by this user."""
-        from app.models.legacy import Image  # Import here to avoid circular import
-        images = await Image.filter(user_id=self.id).count()
-        return images
+        images_count = 0
+        uploads = await self.uploads.all()
+        for upload in uploads:
+            upload_images_count = await upload.images.all().count()
+            images_count += upload_images_count
+        return images_count
     
     @property
     async def uploads_count(self) -> int:
         """Return count of uploads owned by this user."""
-        from app.models.uploads import Upload  # Import here to avoid circular import
-        uploads = await Upload.filter(user_id=self.id).count()
+        uploads = await self.uploads.all().count()
         return uploads
     
     @property

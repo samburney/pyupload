@@ -5,6 +5,7 @@ from app.lib.config import get_app_config
 config = get_app_config()
 
 MODEL_MODULES = [
+    "app.models.images",
     "app.models.legacy",
     "app.models.refresh_tokens",
     "app.models.users",

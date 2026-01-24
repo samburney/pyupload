@@ -1,6 +1,6 @@
 import re
 
-from typing import Annotated, Optional
+from typing import Annotated, Optional, TYPE_CHECKING
 from pydantic import BaseModel, StringConstraints, ConfigDict
 from tortoise import fields, models
 from pathlib import Path
@@ -9,6 +9,10 @@ from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
 
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from tortoise.queryset import QuerySet
+    from app.models.images import Image
 
 
 config = get_app_config()
@@ -23,8 +27,7 @@ UNIQUE_FILENAME_PATTERN = rf'^{CLEAN_FILENAME_PATTERN}_{DATETIME_STAMP_PATTERN}_
 
 class Upload(models.Model, TimestampMixin):
     id = fields.IntField(primary_key=True)
-    user_id = fields.IntField() # Using raw int to match legacy FK behavior
-    filegroup_id = fields.IntField(default=0)
+    user = fields.ForeignKeyField("models.User", related_name="uploads", on_delete=fields.RESTRICT)
     description = fields.CharField(max_length=255)
     name = fields.CharField(max_length=255)
     cleanname = fields.CharField(max_length=255)
@@ -35,6 +38,10 @@ class Upload(models.Model, TimestampMixin):
     extra = fields.CharField(max_length=32)
     viewed = fields.IntField(default=0)
     private = fields.IntField(default=0) # tinyint(1) in MySQL
+
+    # Type hints for reverse relationships
+    if TYPE_CHECKING:
+        images: "QuerySet[Image]"
 
     class Meta:
         table = "uploads"

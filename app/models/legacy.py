@@ -1,21 +1,6 @@
 from tortoise import fields, models
 
 
-class Image(models.Model):
-    id = fields.IntField(primary_key=True)
-    upload_id = fields.IntField() # Using raw int
-    type = fields.CharField(max_length=255)
-    width = fields.IntField()
-    height = fields.IntField()
-    bits = fields.IntField()
-    channels = fields.IntField()
-    created_at = fields.DatetimeField()
-    updated_at = fields.DatetimeField()
-
-    class Meta:
-        table = "images"
-
-
 class Collection(models.Model):
     id = fields.IntField(primary_key=True)
     user_id = fields.IntField()
