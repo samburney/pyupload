@@ -423,8 +423,8 @@ class TestLogoutAllEndpoint:
         # Make request without authentication
         response = client.get("/logout-all", follow_redirects=False)
         
-        # Should return 403 (forbidden)
-        assert response.status_code == 403
+        # Should redirect to login (303) when not authenticated
+        assert response.status_code == 303
 
     @pytest.mark.asyncio
     async def test_logout_all_revokes_all_user_tokens(self, monkeypatch):

@@ -22,7 +22,7 @@ async def client(monkeypatch):
     async def init_test_db():
         await Tortoise.init(
             db_url="sqlite://:memory:",
-            modules={"models": ["app.models.users", "app.models.refresh_tokens"]}
+            modules={"models": ["app.models.users", "app.models.refresh_tokens", "app.models.uploads", "app.models.images"]}
         )
         await Tortoise.generate_schemas()
 
@@ -43,7 +43,7 @@ async def db():
     """Initialize in-memory SQLite database for unit tests."""
     await Tortoise.init(
         db_url="sqlite://:memory:",
-        modules={"models": ["app.models.users", "app.models.refresh_tokens"]}
+        modules={"models": ["app.models.users", "app.models.refresh_tokens", "app.models.uploads", "app.models.images"]}
     )
     await Tortoise.generate_schemas()
     yield

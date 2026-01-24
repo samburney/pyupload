@@ -51,8 +51,8 @@ class TestUserModel:
         assert user.registration_ip == "192.168.1.1"
 
     @pytest.mark.asyncio
-    async def test_items_count_property(self, db):
-        """Test that items_count property returns correct count."""
+    async def test_uploads_count_property(self, db):
+        """Test that uploads_count property returns correct count."""
         user = await User.create(
             username="testuser",
             email="test@example.com",
@@ -60,8 +60,22 @@ class TestUserModel:
             is_registered=True
         )
         
-        # Currently placeholder returns 0
-        count = await user.items_count
+        # uploads_count should return 0 for new user with no uploads
+        count = await user.uploads_count
+        assert count == 0
+
+    @pytest.mark.asyncio
+    async def test_images_count_property(self, db):
+        """Test that images_count property returns correct count."""
+        user = await User.create(
+            username="testimagesuser",
+            email="testimages@example.com",
+            password="hash",
+            is_registered=True
+        )
+        
+        # images_count should return 0 for new user with no images
+        count = await user.images_count
         assert count == 0
 
     @pytest.mark.asyncio
