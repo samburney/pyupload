@@ -25,12 +25,19 @@
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### Core Upload Functionality
-- [ ] File storage backend (partially complete - Steps 1-3 done; Steps 4-6 pending)
-- [ ] Upload endpoints (API and UI)
-- [ ] Upload widget UI with progress feedback
-- [ ] File browsing and display
-- [ ] File viewing and delivery
-- [ ] Test coverage and validation
+- [x] **Infrastructure foundation** (Steps 1-5): File storage abstraction, upload handler, Upload/Image models, model registration — **83 passing tests**
+  - [x] File storage backend (filename generation, path construction, quota validation) — 16 tests
+  - [x] Upload handler (single/batch upload, error recovery, cleanup) — 22 tests
+  - [x] Upload model with metadata validation — 21 tests
+  - [x] Image model with relationships — 14 tests
+  - [x] Model imports and Tortoise ORM registration
+- [ ] Image metadata extraction (Step 6)
+- [ ] Upload endpoints - API and UI (Steps 7-8)
+- [ ] Upload widget UI with progress feedback (Step 9)
+- [ ] File browsing and gallery display (Step 10)
+- [ ] Basic configuration and cleanup (Steps 11-12)
+- [ ] Comprehensive testing (Steps 13-17)
+- [ ] End-to-end validation (Step 18)
 
 ---
 
