@@ -14,7 +14,7 @@
 - [x] Implement JWT authentication with access and refresh tokens
 - [x] Implement automatic token refresh middleware
 - [x] Create architectural plan for core upload functionality
-- [ ] Upload backend: file storage, upload handler, models, image metadata extraction
+- [ ] Upload backend: file storage, upload handler, models, image metadata extraction (partially complete - Steps 1-3 done, Steps 4-6 pending)
 - [ ] Upload endpoints: API and UI (POST endpoints for file receive)
 - [ ] Upload widget UI: drag-and-drop form with file list and status
 - [ ] File browsing: list and display uploaded files

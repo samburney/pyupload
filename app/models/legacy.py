@@ -1,27 +1,6 @@
 from tortoise import fields, models
 
 
-class Upload(models.Model):
-    id = fields.IntField(primary_key=True)
-    user_id = fields.IntField() # Using raw int to match legacy FK behavior
-    filegroup_id = fields.IntField(default=0)
-    description = fields.CharField(max_length=255)
-    name = fields.CharField(max_length=255)
-    cleanname = fields.CharField(max_length=255)
-    originalname = fields.CharField(max_length=255)
-    ext = fields.CharField(max_length=10)
-    size = fields.IntField()
-    type = fields.CharField(max_length=255)
-    extra = fields.CharField(max_length=32)
-    created_at = fields.DatetimeField()
-    updated_at = fields.DatetimeField()
-    viewed = fields.IntField(default=0)
-    private = fields.IntField(default=0) # tinyint(1) in MySQL
-
-    class Meta:
-        table = "uploads"
-
-
 class Image(models.Model):
     id = fields.IntField(primary_key=True)
     upload_id = fields.IntField() # Using raw int

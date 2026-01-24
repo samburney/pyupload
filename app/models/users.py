@@ -6,6 +6,7 @@ from email_validator import validate_email, EmailNotValidError
 
 from app.lib.config import get_app_config
 from app.lib.security import verify_password, generate_username
+
 from app.models.base import TimestampMixin
 
 
@@ -32,24 +33,52 @@ class User(models.Model, TimestampMixin):
         table = "users"
     
     @property
-    async def items_count(self) -> int:
-        """Return count of items owned by this user."""
-        images = await self.images_count
-        uploads = await self.uploads_count
-        return images + uploads
-    
-    @property
     async def images_count(self) -> int:
         """Return count of images owned by this user."""
-        # Placeholder for now, will list owned items in `images` table.
-        return 0
+        from app.models.legacy import Image  # Import here to avoid circular import
+        images = await Image.filter(user_id=self.id).count()
+        return images
     
     @property
     async def uploads_count(self) -> int:
-        """Return count of images owned by this user."""
-        # Placeholder for now, will list owned items in `uploads` table.
-        return 0
+        """Return count of uploads owned by this user."""
+        from app.models.uploads import Upload  # Import here to avoid circular import
+        uploads = await Upload.filter(user_id=self.id).count()
+        return uploads
+    
+    @property
+    def max_uploads_count(self) -> int:
+        """Return the maximum number of files allowed for this user."""
+        if self.is_registered:
+            return config.user_max_uploads
+        else:
+            return config.unregistered_max_uploads
+    
+    @property
+    def max_file_size_mb(self) -> int:
+        """Return the maximum file size allowed for this user in MB."""
+        if self.is_registered:
+            return config.user_max_file_size_mb
+        else:
+            return config.unregistered_max_file_size_mb
+        
+    @property
+    def allowed_mime_types(self) -> list[str]:
+        """Return the set of allowed MIME types for this user."""
 
+        allowed_types: str
+        if self.is_registered:
+            allowed_types = config.user_allowed_types
+        else:
+            allowed_types = config.unregistered_allowed_types
+        
+        # Convert from comma-separated string to list
+        allowed_types_list = allowed_types.split(',')
+
+        # Sanitise list and remove empty entries
+        allowed_types_list = [mime_type.strip().lower() for mime_type in allowed_types_list if mime_type.strip()]
+
+        return allowed_types_list
 
     @classmethod
     async def generate_unique_username(cls, num_words: int = 2) -> str:

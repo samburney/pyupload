@@ -6,8 +6,9 @@ config = get_app_config()
 
 MODEL_MODULES = [
     "app.models.legacy",
-    "app.models.users",
     "app.models.refresh_tokens",
+    "app.models.users",
+    "app.models.uploads",
 ]
 
 TORTOISE_ORM = {

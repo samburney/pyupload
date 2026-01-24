@@ -26,6 +26,18 @@ class AppConfig:
     app_base_url: str = os.getenv("APP_BASE_URL", f"http://localhost:{app_port}")
     app_site_name: str = os.getenv("APP_SITE_NAME", "Simple Upload")
 
+    # File storage configuration
+    storage_path_str: str = os.getenv("STORAGE_PATH", "./data/uploads")
+    if storage_path_str.startswith("/"):
+        storage_path: Path = Path(storage_path_str).resolve()
+    else:
+        storage_path: Path = (PROJECT_ROOT / storage_path_str).resolve()
+    if not storage_path.exists():
+        logger.info(f"Creating storage directory at {storage_path}")
+        storage_path.mkdir(parents=True, exist_ok=True)
+    if not storage_path.is_dir():
+        raise ValueError(f"STORAGE_PATH {storage_path} is not a directory.")
+
     # Database configuration
     db_host = os.getenv("DB_HOST", "db")
     db_port = int(os.getenv("DB_PORT", "3306"))
