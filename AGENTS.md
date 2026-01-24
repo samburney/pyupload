@@ -81,19 +81,30 @@ Documentation
     **Files**: [relevant files]
 
     **Tasks**:
-    1. [Task]
-    2. [Task]
+    1. [ ] [Task]
+    2. [ ] [Task]
     ...
 
     **Tests**
-    1. [Test]
-    2. [Test]
+    1. [ ] [Test]
+    2. [ ] [Test]
     ...
 
     **Acceptance Criteria**:
     - [ ] [Criterion]
     - [ ] [Criterion]
     ...
+
+    **Implementation Notes**: [Optional]
+    - Implementation notes go here, if detail is required to impolement particular features
+    - This keeps the sections above concise and neat.
+    ...
+
+    **Dependencies**: [Optional]
+    - List dependencies on other steps here
+    - Multiple can be listed if required
+    ...
+
 
     ---
 
@@ -102,18 +113,28 @@ Documentation
     **Files**: [relevant files]
 
     **Tasks**:
-    1. [Task]
-    2. [Task]
+    1. [ ] [Task]
+    2. [ ] [Task]
     ...
 
     **Tests**
-    1. [Test]
-    2. [Test]
+    1. [ ] [Test]
+    2. [ ] [Test]
     ...
 
     **Acceptance Criteria**:
     - [ ] [Criterion]
     - [ ] [Criterion]
+    ...
+
+    **Implementation Notes**: [Optional]
+    - Implementation notes go here, if detail is required to impolement particular features
+    - This keeps the sections above concise and neat.
+    ...
+
+    **Dependencies**: [Optional]
+    - List dependencies on other steps here
+    - Multiple can be listed if required
     ...
 
     ---
