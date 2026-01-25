@@ -66,6 +66,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # API routes
 app.include_router(api.auth.router, prefix='/api/v1')
+app.include_router(api.uploads.router, prefix='/api/v1')
 
 # UI routes
 app.include_router(ui.main.router, include_in_schema=False)
