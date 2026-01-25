@@ -24,6 +24,7 @@ Instructions
   4. It is currently required that an LLM maintain the `TODO` file, including removing items that are no longer required, desired, or have been completed.
   5. When a code review is requested, the current feature status should be compared to `TODO.md` and the active implementation plan, if there is one.
   6. *simplegallery* may be referred to for feature and implementation details, but should not be considered as a reference for code quality or style.  *simplegallery* is found in the `simplegallery` directory of the parent directory of this project, and also on GitHub at https://github.com/samburney/simplegallery.git.
+  7. When discussing changes, **always** re-reads the source files in question before commentiung on them.  Do not use your cache!!
 
 
 Python tooling
