@@ -60,6 +60,13 @@ class Upload(models.Model, TimestampMixin):
     @property
     def filepath(self) -> Path:
         return make_user_filepath(getattr(self.user, "id"), self.name)
+    
+    @property
+    def is_image(self) -> bool:
+        """Return whether or not this file has related image metadata."""
+        if hasattr(self, "images") and self.images.exists():
+            return True
+        return False
 
 
 class UploadMetadata(BaseModel):
