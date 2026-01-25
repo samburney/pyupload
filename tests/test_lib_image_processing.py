@@ -13,6 +13,7 @@ from app.lib.image_processing import (
     make_image_metadata,
     process_uploaded_image,
     ImageProcessingError,
+    ImageInvalidError,
 )
 from app.models.images import Image, ImageMetadata
 from app.models.users import User
@@ -244,7 +245,7 @@ class TestMakeImageMetadata:
                 metadata = await make_image_metadata(upload)
 
                 # Verify all required fields exist
-                assert hasattr(metadata, "upload")
+                assert hasattr(metadata, "upload_id")
                 assert hasattr(metadata, "type")
                 assert hasattr(metadata, "width")
                 assert hasattr(metadata, "height")
@@ -378,8 +379,8 @@ class TestMakeImageMetadata:
             )
 
             with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: tmp_path)):
-                # Should raise ValueError, not crash
-                with pytest.raises(ValueError) as exc_info:
+                # Should raise ImageInvalidError, not crash
+                with pytest.raises(ImageInvalidError) as exc_info:
                     await make_image_metadata(upload)
 
                 assert "not a valid image" in str(exc_info.value)
@@ -417,8 +418,8 @@ class TestMakeImageMetadata:
             )
 
             with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: tmp_path)):
-                # Should raise ValueError, not crash
-                with pytest.raises(ValueError):
+                # Should raise ImageInvalidError, not crash
+                with pytest.raises(ImageInvalidError):
                     await make_image_metadata(upload)
 
         finally:
@@ -588,8 +589,8 @@ class TestProcessUploadedImage:
             )
 
             with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: tmp_path)):
-                # Should raise ImageProcessingError
-                with pytest.raises(ImageProcessingError):
+                # Should raise ImageInvalidError for invalid image files
+                with pytest.raises(ImageInvalidError):
                     await process_uploaded_image(upload)
 
         finally:

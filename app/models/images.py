@@ -22,11 +22,8 @@ class Image(models.Model, TimestampMixin):
 class ImageMetadata(BaseModel):
     """Metadata for an uploaded file."""
 
-    # Allow arbitrary types
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     # Related upload
-    upload: Upload
+    upload_id: int
 
     # Computed metadata
     type: str

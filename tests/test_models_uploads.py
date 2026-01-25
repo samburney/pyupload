@@ -400,7 +400,8 @@ class TestUploadMetadata:
 
         filepath = metadata.filepath
         assert isinstance(filepath, Path)
-        assert str(filepath).endswith("user_42/test_20250124-063307_abcd1234")
+        # Filepath now includes extension
+        assert str(filepath).endswith("user_42/test_20250124-063307_abcd1234.txt")
 
     def test_uploadmetadata_size_positive_integer(self):
         """Test UploadMetadata size validation."""
@@ -435,13 +436,13 @@ class TestUploadResult:
         result = UploadResult(
             status="success",
             message="File uploaded successfully",
-            upload=None,
+            upload_id=None,
             metadata=None,
         )
 
         assert result.status == "success"
         assert result.message == "File uploaded successfully"
-        assert result.upload is None
+        assert result.upload_id is None
         assert result.metadata is None
 
     def test_uploadresult_error_structure(self):
@@ -449,13 +450,13 @@ class TestUploadResult:
         result = UploadResult(
             status="error",
             message="File size exceeds quota",
-            upload=None,
+            upload_id=None,
             metadata=None,
         )
 
         assert result.status == "error"
         assert result.message == "File size exceeds quota"
-        assert result.upload is None
+        assert result.upload_id is None
         assert result.metadata is None
 
     def test_uploadresult_pending_structure(self):
@@ -463,28 +464,28 @@ class TestUploadResult:
         result = UploadResult(
             status="pending",
             message="Upload in progress",
-            upload=None,
+            upload_id=None,
             metadata=None,
         )
 
         assert result.status == "pending"
         assert result.message == "Upload in progress"
-        assert result.upload is None
+        assert result.upload_id is None
         assert result.metadata is None
 
     def test_uploadresult_arbitrary_types_allowed(self):
-        """Test UploadResult model config allows arbitrary types."""
+        """Test UploadResult model structure with upload_id field."""
         result = UploadResult(
             status="success",
             message="File uploaded",
-            upload=None,
+            upload_id=None,
             metadata=None,
         )
 
         assert result.status == "success"
         assert result.message == "File uploaded"
-        # Verify model_config enables arbitrary_types_allowed
-        assert UploadResult.model_config.get("arbitrary_types_allowed") is True
+        # Verify upload_id field is present and accepts None
+        assert result.upload_id is None
 
 
 class TestUploadModelIntegration:
@@ -668,7 +669,7 @@ class TestUploadFilepathProperty:
 
     @pytest.mark.asyncio
     async def test_upload_filepath_property_contains_filename(self, db):
-        """Test Upload filepath property contains the upload name."""
+        """Test Upload filepath property contains the upload name and extension."""
         user = await User.create(
             username="pathtest3",
             email="path3@example.com",
@@ -691,6 +692,9 @@ class TestUploadFilepathProperty:
 
         filepath = upload.filepath
         assert filename in str(filepath)
+        # Verify extension is included in filepath
+        assert str(filepath).endswith("txt")
+        assert f"{filename}.txt" in str(filepath)
 
     @pytest.mark.asyncio
     async def test_upload_filepath_property_different_uploads_different_paths(self, db):
@@ -769,7 +773,7 @@ class TestUploadMetadataFilepathProperty:
         assert f"user_{user_id}" in str(filepath)
 
     def test_uploadmetadata_filepath_contains_filename(self):
-        """Test UploadMetadata filepath contains the filename."""
+        """Test UploadMetadata filepath contains the filename and extension."""
         filename = "document_20250124-063307_a1b2c3d4"
         metadata = UploadMetadata(
             user_id=42,
@@ -783,6 +787,9 @@ class TestUploadMetadataFilepathProperty:
 
         filepath = metadata.filepath
         assert filename in str(filepath)
+        # Verify extension is included in filepath
+        assert str(filepath).endswith("pdf")
+        assert f"{filename}.pdf" in str(filepath)
 
     def test_uploadmetadata_filepath_creates_user_directory(self):
         """Test UploadMetadata filepath creates user directory."""

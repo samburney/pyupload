@@ -31,7 +31,7 @@ async def handle_uploaded_files(user: User, files: list[UploadFile]) -> list[Upl
                 UploadResult(
                     status="error",
                     message=str(e),
-                    upload=None,
+                    upload_id=None,
                     metadata=None,
                 )
             )

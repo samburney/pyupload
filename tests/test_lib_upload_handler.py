@@ -40,7 +40,7 @@ class TestHandleUploadedFile:
             mock_process.return_value = UploadResult(
                 status="success",
                 message="File uploaded successfully",
-                upload=None,
+                upload_id=None,
                 metadata=None
             )
             
@@ -108,7 +108,7 @@ class TestHandleUploadedFiles:
             mock_handle.return_value = UploadResult(
                 status="success",
                 message="File uploaded",
-                upload=None,
+                upload_id=None,
                 metadata=None
             )
             
@@ -133,7 +133,7 @@ class TestHandleUploadedFiles:
             mock_handle.return_value = UploadResult(
                 status="success",
                 message="File uploaded",
-                upload=None,
+                upload_id=None,
                 metadata=None
             )
             
@@ -170,14 +170,14 @@ class TestHandleUploadedFiles:
                 UploadResult(
                     status="success",
                     message="File uploaded",
-                    upload=None,
+                    upload_id=None,
                     metadata=None
                 ),
                 Exception("File too large"),
                 UploadResult(
                     status="success",
                     message="File uploaded",
-                    upload=None,
+                    upload_id=None,
                     metadata=None
                 ),
             ]
@@ -251,7 +251,7 @@ class TestHandleUploadedFiles:
                 UploadResult(
                     status="success",
                     message="File uploaded",
-                    upload=None,
+                    upload_id=None,
                     metadata=None
                 ),
             ]
@@ -273,7 +273,7 @@ class TestHandleUploadedFiles:
             mock_handle.return_value = UploadResult(
                 status="success",
                 message="File uploaded successfully",
-                upload=None,
+                upload_id=None,
                 metadata=None
             )
             
@@ -285,7 +285,7 @@ class TestHandleUploadedFiles:
             # Check result structure
             assert hasattr(result, 'status')
             assert hasattr(result, 'message')
-            assert hasattr(result, 'upload')
+            assert hasattr(result, 'upload_id')
             assert hasattr(result, 'metadata')
             
             assert isinstance(result, UploadResult)
@@ -330,7 +330,7 @@ class TestUploadHandlerIntegration:
             return UploadResult(
                 status="success",
                 message="Success",
-                upload=None,
+                upload_id=None,
                 metadata=None
             )
         
@@ -354,7 +354,7 @@ class TestUploadHandlerIntegration:
             mock_handle.return_value = UploadResult(
                 status="success",
                 message="Success",
-                upload=None,
+                upload_id=None,
                 metadata=None
             )
             
@@ -398,14 +398,15 @@ class TestUploadHandlerIntegrationWithDatabase:
         # Verify success result
         assert result.status == "success"
         assert result.message == "File uploaded successfully."
-        assert result.upload is not None
+        assert result.upload_id is not None
         assert result.metadata is not None
         
         # Verify upload was created in database
-        assert result.upload.id is not None
-        assert result.upload.user_id == user.id
-        assert result.upload.size == len(content)
-        assert result.upload.type == "text/plain"
+        upload = await Upload.get(id=result.upload_id)
+        assert upload.id is not None
+        assert upload.user_id == user.id
+        assert upload.size == len(content)
+        assert upload.type == "text/plain"
         
         # Verify file metadata
         assert result.metadata.user_id == user.id
@@ -447,12 +448,13 @@ class TestUploadHandlerIntegrationWithDatabase:
         # Verify all succeeded
         assert len(results) == 3
         assert all(r.status == "success" for r in results)
-        assert all(r.upload is not None for r in results)
+        assert all(r.upload_id is not None for r in results)
         
         # Verify all were saved to database
         for result in results:
-            assert result.upload.id is not None
-            assert result.upload.user_id == user.id
+            upload = await Upload.get(id=result.upload_id)
+            assert upload.id is not None
+            assert upload.user_id == user.id
         
         # Clean up
         user_dir = config.storage_path / f"user_{user.id}"
@@ -505,13 +507,14 @@ class TestUploadHandlerIntegrationWithDatabase:
         # Verify UploadResult structure
         assert hasattr(result, 'status')
         assert hasattr(result, 'message')
-        assert hasattr(result, 'upload')
+        assert hasattr(result, 'upload_id')
         assert hasattr(result, 'metadata')
         
         # Verify success result contains expected data
         assert result.status == "success"
-        assert result.upload.name is not None  # Generated filename
-        assert result.upload.size == len(content)
+        upload = await Upload.get(id=result.upload_id)
+        assert upload.name is not None  # Generated filename
+        assert upload.size == len(content)
         assert result.metadata.filename is not None
         assert result.metadata.size == len(content)
         

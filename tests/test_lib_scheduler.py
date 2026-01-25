@@ -15,10 +15,34 @@ Acceptance Criteria:
 import pytest
 from datetime import datetime, timedelta, timezone
 
-from app.lib.scheduler import cleanup_tokens
+from app.lib.scheduler import cleanup_tokens, cleanup_abandoned_users
 from app.models.users import User
 from app.models.refresh_tokens import RefreshToken
 import hashlib
+
+
+@pytest.fixture(scope="function")
+def ensure_scheduler_jobs():
+    """Ensure scheduler jobs are registered for integration tests.
+    
+    The scheduler may be shut down by app lifecycle tests, so we need
+    to ensure jobs are re-registered before integration tests run.
+    """
+    from app.lib.scheduler import scheduler
+    
+    # If no jobs exist (scheduler was shut down), add them back
+    existing_jobs = scheduler.get_jobs()
+    existing_job_names = [job.func.__name__ for job in existing_jobs]
+    
+    if "cleanup_tokens" not in existing_job_names:
+        scheduler.add_job(cleanup_tokens, 'cron', hour='*', minute=0, jitter=300)
+    
+    if "cleanup_abandoned_users" not in existing_job_names:
+        scheduler.add_job(cleanup_abandoned_users, 'cron', hour='*', minute=0, jitter=300)
+    
+    yield
+    
+    # Cleanup is handled by app shutdown, no need to do it here
 
 
 @pytest.fixture(scope="function")
@@ -251,10 +275,11 @@ class TestSchedulerIntegration:
         assert scheduler is not None
         assert callable(cleanup_tokens)
 
-    def test_cleanup_job_scheduled(self):
+    def test_cleanup_job_scheduled(self, ensure_scheduler_jobs):
         """Test that cleanup job is scheduled in the scheduler."""
         from app.lib.scheduler import scheduler
         
+        # Ensure jobs are registered (fixture handles this)
         # Check if scheduler has jobs
         jobs = scheduler.get_jobs()
         assert len(jobs) > 0

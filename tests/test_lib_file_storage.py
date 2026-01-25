@@ -186,8 +186,8 @@ class TestPathConstruction:
         # Should contain user directory
         assert "user_123" in str(filepath)
         
-        # Filename should match (without extension - ext is stored separately)
-        assert filepath.name == "test_20240101-000000_abc12345"
+        # Filename should match with extension now included
+        assert filepath.name == "test_20240101-000000_abc12345.txt"
 
 
 # ============================================================================

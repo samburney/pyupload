@@ -1,6 +1,7 @@
 import magic
 
 from typing import BinaryIO
+from tempfile import SpooledTemporaryFile
 from fastapi import UploadFile
 
 from app.lib.helpers import (
@@ -9,7 +10,7 @@ from app.lib.helpers import (
     make_unique_filename,
 )
 from app.lib.config import get_app_config, logger
-from app.lib.image_processing import process_uploaded_image, ImageProcessingError
+from app.lib.image_processing import process_uploaded_image, ImageInvalidError, ImageProcessingError
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadMetadata, UploadResult
@@ -28,7 +29,7 @@ class UserFileTypeNotAllowed(Exception):
     pass
 
 
-async def make_upload_metadata(user: User, file: UploadFile | BinaryIO, filename: str | None = None) -> UploadMetadata:
+async def make_upload_metadata(user: User, file: UploadFile | BinaryIO | SpooledTemporaryFile, filename: str | None = None) -> UploadMetadata:
     """Build metadata for an uploaded file."""
     
     # Determine file names and attributes
@@ -53,39 +54,44 @@ async def make_upload_metadata(user: User, file: UploadFile | BinaryIO, filename
     return metadata
 
 
-def get_filename(file: UploadFile | BinaryIO, filename: str | None = None) -> str:
-    """Get the filename from UploadFile or BinaryIO."""
-    if isinstance(file, BinaryIO) and filename is None:
+def get_filename(file: UploadFile | BinaryIO | SpooledTemporaryFile, filename: str | None = None) -> str:
+    """Get the filename from UploadFile or BinaryIO or SpooledTemporaryFile."""
+    # If provided, use the `filename` parameter
+    if filename is None and hasattr(file, 'filename') and getattr(file, 'filename') is not None:
+        filename = getattr(file, 'filename')
+    elif filename is None:
         raise ValueError("Uploaded file must have a filename.")
 
-    # If provided, use the `filename` parameter
-    if filename is None:
-        if isinstance(file, UploadFile) and not file.filename:
-            raise ValueError("Uploaded file must have a filename.")
-        elif isinstance(file, UploadFile) and file.filename:
-            filename = file.filename
-
-    # Final check for filename
     if filename is None:
         raise RuntimeError("Filename cannot be None.")
 
     return filename
 
 
-def get_file_instance(file: UploadFile | BinaryIO) -> BinaryIO:
-    """Get a file-like object from UploadFile or BinaryIO."""
+def get_file_instance(file: UploadFile | BinaryIO | SpooledTemporaryFile) -> BinaryIO | SpooledTemporaryFile:
+    """Get a file-like object from UploadFile or BinaryIO.
+    
+    Returns the underlying binary file object, handling import path variations
+    and different file-like object types.
+    """
 
-    # Handle FastAPI UploadFile
-    if isinstance(file, UploadFile):
-        return file.file
-    return file
+    # Handle FastAPI UploadFile by checking class name (handles import path variations)
+    if type(file).__name__ == 'UploadFile' and hasattr(file, 'file'):
+        return getattr(file, 'file')
+    elif isinstance(file, SpooledTemporaryFile):
+        return file
+    elif hasattr(file, 'read') and hasattr(file, 'seek'):
+        # Any file-like object with read and seek methods
+        return file # type: ignore
+    else:
+        raise TypeError("Supplied value must be a BinaryIO, UploadFile, or SpooledTemporaryFile")
 
 
-def get_file_size(file: BinaryIO | UploadFile) -> int:
+def get_file_size(file: BinaryIO | UploadFile | SpooledTemporaryFile) -> int:
     """Get the size of the uploaded file in bytes."""
 
     size: int = 0
-    file_inst: BinaryIO = get_file_instance(file)
+    file_inst: BinaryIO | SpooledTemporaryFile = get_file_instance(file)
         
     # Save current position
     current_pos = file_inst.tell()
@@ -96,7 +102,7 @@ def get_file_size(file: BinaryIO | UploadFile) -> int:
     return size
 
 
-async def get_file_mime_type(file: BinaryIO | UploadFile) -> str:
+async def get_file_mime_type(file: UploadFile | BinaryIO | SpooledTemporaryFile) -> str:
     """Get the MIME type of the uploaded file."""
     # Get file size
     file_size = get_file_size(file)
@@ -106,21 +112,24 @@ async def get_file_mime_type(file: BinaryIO | UploadFile) -> str:
     # Get MIME type
     read_len = min(1024, file_size)
 
-    if isinstance(file, UploadFile):
-        current_pos = file.file.tell()
-        await file.seek(0)
-        mime_type = magic.from_buffer(await file.read(read_len), mime=True)
-        await file.seek(current_pos)  # Reset file pointer after reading
+    if type(file).__name__ == 'UploadFile' and hasattr(file, 'file'):
+        # UploadFile is async
+        await file.seek(0)  # type: ignore
+        data = await file.read(read_len)  # type: ignore
+        mime_type = magic.from_buffer(data, mime=True)
+        await file.seek(0)  # type: ignore
     else:
-        current_pos = file.tell()
-        file.seek(0)
-        mime_type = magic.from_buffer(file.read(read_len), mime=True)
-        file.seek(current_pos)  # Reset file pointer after reading
+        # BinaryIO and SpooledTemporaryFile are sync
+        current_pos = file.tell()  # type: ignore
+        file.seek(0)  # type: ignore
+        data = file.read(read_len)  # type: ignore
+        mime_type = magic.from_buffer(data, mime=True)  # type: ignore
+        file.seek(current_pos)  # type: ignore
 
     return mime_type
 
 
-async def validate_user_filetypes(user: User, file: BinaryIO | UploadFile) -> bool:
+async def validate_user_filetypes(user: User, file: BinaryIO | UploadFile | SpooledTemporaryFile) -> bool:
     """Validate if the uploaded file's MIME type is allowed for the user."""
 
     allowed_mime_types = user.allowed_mime_types
@@ -138,9 +147,8 @@ async def validate_user_filetypes(user: User, file: BinaryIO | UploadFile) -> bo
     return True
 
 
-async def validate_user_quotas(user: User, file: BinaryIO | UploadFile) -> bool:
+async def validate_user_quotas(user: User, file: UploadFile | BinaryIO | SpooledTemporaryFile) -> bool:
     """Validate if the user has enough quota for the uploaded file."""
-
 
     # Check against user quotas
     if user.max_file_size_mb == -1:
@@ -158,7 +166,7 @@ async def validate_user_quotas(user: User, file: BinaryIO | UploadFile) -> bool:
     return True
 
 
-async def add_uploaded_file(user: User, file: UploadFile | BinaryIO, filename: str | None = None) -> UploadResult:
+async def add_uploaded_file(user: User, file: UploadFile | BinaryIO | SpooledTemporaryFile, filename: str | None = None) -> UploadResult:
     """Add the uploaded file to storage and create a database record."""
 
     # Get a upload metadata object
@@ -174,24 +182,31 @@ async def add_uploaded_file(user: User, file: UploadFile | BinaryIO, filename: s
     upload_result = UploadResult(
         status="success",
         message="File uploaded successfully.",
-        upload=upload,
+        upload_id=upload.id,
         metadata=metadata,
     )
 
     return upload_result
 
 
-async def save_uploaded_file(file: UploadFile | BinaryIO, metadata: UploadMetadata) -> bool:
+async def save_uploaded_file(file: UploadFile | BinaryIO | SpooledTemporaryFile, metadata: UploadMetadata) -> bool:
     # Save the uploaded file to the generated path
     try:
         with metadata.filepath.open("wb") as dest:
-            if isinstance(file, UploadFile):
-                await file.seek(0)
-                content = await file.read()
-            else:
+            if isinstance(file, SpooledTemporaryFile):
                 file.seek(0)
                 content = file.read()
-            dest.write(content)
+            elif type(file).__name__ == 'UploadFile' and hasattr(file, 'file'):
+                # UploadFile is async
+                await file.seek(0)  # type: ignore
+                content = await file.read()  # type: ignore
+            else:
+                # BinaryIO - sync
+                file.seek(0)  # type: ignore
+                content = file.read()  # type: ignore
+            
+            # Write content to destination file
+            dest.write(content)  # type: ignore
 
             return True
 
@@ -234,7 +249,7 @@ async def record_uploaded_file(metadata: UploadMetadata) -> Upload:
     return upload
 
 
-async def process_uploaded_file(user: User, file: UploadFile | BinaryIO, filename: str | None = None) -> UploadResult:
+async def process_uploaded_file(user: User, file: UploadFile | BinaryIO | SpooledTemporaryFile, filename: str | None = None) -> UploadResult:
     """Process the uploaded file and return its Upload record."""
     # Validate user constriants
     await validate_user_quotas(user, file)
@@ -247,11 +262,17 @@ async def process_uploaded_file(user: User, file: UploadFile | BinaryIO, filenam
         raise RuntimeError(f"Failed to process uploaded file: {e}")
     
     # Attempt image processing
-    if upload_result.status == "success" and upload_result.upload is not None:
+    if upload_result.status == "success" and upload_result.upload_id is not None:
         try:
-            await process_uploaded_image(upload_result.upload)
-        # Ignore image processing errors
-        except ImageProcessingError:
+            upload = await Upload.get(id=upload_result.upload_id)
+            await process_uploaded_image(upload)
+        
+        # Ignore invalid image errors
+        except ImageInvalidError as e:
             pass
+        
+        # Log image processing errors
+        except ImageProcessingError as e:
+            logger.warning(f"Image processing failed for upload ID {upload_result.upload_id}: {e}")
 
     return upload_result

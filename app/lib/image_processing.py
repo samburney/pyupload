@@ -8,6 +8,10 @@ if TYPE_CHECKING:
     from app.models.uploads import Upload
 
 
+class ImageInvalidError(Exception):
+    """Exception raised when an uploaded file is not a valid image."""
+    pass
+
 class ImageProcessingError(Exception):
     """Exception raised for errors in image metadata processing."""
     pass
@@ -23,7 +27,7 @@ async def make_image_metadata(upload: "Upload") -> ImageMetadata:
     try:
         image_object = Pillow.open(filepath)
     except (UnidentifiedImageError, OSError):
-        raise ValueError("Uploaded file is not a valid image.")
+        raise ImageInvalidError("Uploaded file is not a valid image.")
     
     # Extract image metadata
     # Get image type from MIME type if not able to be determined from format
@@ -57,7 +61,7 @@ async def make_image_metadata(upload: "Upload") -> ImageMetadata:
 
     # Build and return ImageMetadata object
     metadata = ImageMetadata(
-        upload=upload,
+        upload_id=upload.id,
         type=type,
         width=width,
         height=height,
@@ -76,6 +80,9 @@ async def process_uploaded_image(upload: "Upload") -> Image:
     # Build image metadata
     try:
         image_metadata = await make_image_metadata(upload)
+    except ImageInvalidError as e:
+        # Pass through invalid image errors
+        raise e
     except Exception as e:
         raise ImageProcessingError(f"Failed to build image metadata: {e}")
 

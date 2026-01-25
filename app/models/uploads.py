@@ -59,7 +59,8 @@ class Upload(models.Model, TimestampMixin):
 
     @property
     def filepath(self) -> Path:
-        return make_user_filepath(getattr(self.user, "id"), self.name)
+        filename = f'{self.name}{'.' + self.ext if self.ext != "" else ""}'
+        return make_user_filepath(getattr(self, "user_id"), filename)
     
     @property
     def is_image(self) -> bool:
@@ -87,15 +88,14 @@ class UploadMetadata(BaseModel):
 
     @property
     def filepath(self) -> Path:
-        return make_user_filepath(self.user_id, self.filename)
+        filename = f'{self.filename}{'.' + self.ext if self.ext is not None else ""}'
+        return make_user_filepath(self.user_id, filename)
 
 
 class UploadResult(BaseModel):
     """Result of an upload operation."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     status: str
     message: str
-    upload: Optional[Upload]
+    upload_id: Optional[int]
     metadata: Optional[UploadMetadata]
