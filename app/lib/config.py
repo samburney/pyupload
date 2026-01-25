@@ -27,7 +27,7 @@ class AppConfig:
     app_site_name: str = os.getenv("APP_SITE_NAME", "Simple Upload")
 
     # File storage configuration
-    storage_path_str: str = os.getenv("STORAGE_PATH", "./data/uploads")
+    storage_path_str: str = os.getenv("STORAGE_PATH", "./data/files")
     if storage_path_str.startswith("/"):
         storage_path: Path = Path(storage_path_str).resolve()
     else:
