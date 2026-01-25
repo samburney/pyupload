@@ -163,3 +163,4 @@ Development database access
   2. The details for the container should be found in `.env`, `docker-compose.yaml` and `docker-compose.override.yaml`
   3. An example database command might be:
     `docker compose exec db sh -c 'mariadb -u"${MYSQL_USER}" -p"${MYSQL_PASS}" -D"${MYSQL_DATABASE}"'`
+  4. Database state can also be accessed using `uv run aerich inspectdb`
