@@ -7,6 +7,7 @@ Validates:
 - UploadResult structure for API responses
 - Model table mapping and field defaults
 - TimestampMixin functionality
+- Filepath generation for upload storage
 """
 import pytest
 from datetime import datetime, timezone, timedelta
@@ -14,7 +15,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from app.models.users import User
-from app.models.uploads import Upload, UploadMetadata, UploadResult
+from app.models.uploads import Upload, UploadMetadata, UploadResult, make_user_filepath
 
 
 class TestUploadModel:
@@ -561,3 +562,271 @@ class TestUploadModelIntegration:
         uploads = await Upload.filter(user=user)
         assert len(uploads) == 5
         assert all(u.user_id == user.id for u in uploads)
+
+
+class TestMakeUserFilepath:
+    """Test make_user_filepath function."""
+
+    def test_make_user_filepath_basic(self):
+        """Test basic filepath generation."""
+        filepath = make_user_filepath(42, "document_20250124-063307_abcd1234")
+        assert isinstance(filepath, Path)
+        assert str(filepath).endswith("user_42/document_20250124-063307_abcd1234")
+
+    def test_make_user_filepath_creates_directory(self):
+        """Test that make_user_filepath creates the user directory."""
+        filepath = make_user_filepath(123, "file_20250124-063307_a1b2c3d4")
+        assert isinstance(filepath, Path)
+        # Directory should be created
+        assert filepath.parent.exists()
+        assert filepath.parent.is_dir()
+        assert "user_123" in str(filepath.parent)
+
+    def test_make_user_filepath_different_users_different_paths(self):
+        """Test that different user IDs generate different paths."""
+        filepath1 = make_user_filepath(1, "file_20250124-063307_abcd1234")
+        filepath2 = make_user_filepath(2, "file_20250124-063307_abcd1234")
+        
+        assert filepath1 != filepath2
+        assert "user_1" in str(filepath1)
+        assert "user_2" in str(filepath2)
+
+    def test_make_user_filepath_same_user_different_files(self):
+        """Test that same user ID with different filenames generates child paths in same directory."""
+        filepath1 = make_user_filepath(99, "file1_20250124-063307_abcd1234")
+        filepath2 = make_user_filepath(99, "file2_20250124-063307_efgh5678")
+        
+        # Both should be in user_99 directory but different files
+        assert filepath1.parent == filepath2.parent
+        assert filepath1.name != filepath2.name
+        assert filepath1 != filepath2
+
+    def test_make_user_filepath_idempotent_directory_creation(self):
+        """Test that calling make_user_filepath twice with same user doesn't fail."""
+        # First call should create directory
+        filepath1 = make_user_filepath(77, "file1_20250124-063307_abcd1234")
+        # Second call should succeed without error (mkdir with exist_ok=True)
+        filepath2 = make_user_filepath(77, "file2_20250124-063307_efgh5678")
+        
+        assert filepath1.parent.exists()
+        assert filepath2.parent.exists()
+        assert filepath1.parent == filepath2.parent
+
+
+class TestUploadFilepathProperty:
+    """Test Upload model filepath property."""
+
+    @pytest.mark.asyncio
+    async def test_upload_filepath_property_returns_path(self, db):
+        """Test Upload filepath property returns a Path object."""
+        user = await User.create(
+            username="pathtest",
+            email="path@example.com",
+            password="hashed_password_path",
+            fingerprint_hash="fp-hash-path",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Path test",
+            name="testfile_20250124-063307_abcd1234",
+            cleanname="testfile",
+            originalname="testfile.txt",
+            ext="txt",
+            size=512,
+            type="text/plain",
+            extra="0",
+        )
+
+        filepath = upload.filepath
+        assert isinstance(filepath, Path)
+
+    @pytest.mark.asyncio
+    async def test_upload_filepath_property_contains_user_id(self, db):
+        """Test Upload filepath property contains correct user ID."""
+        user = await User.create(
+            username="pathtest2",
+            email="path2@example.com",
+            password="hashed_password_path2",
+            fingerprint_hash="fp-hash-path2",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Path test 2",
+            name="testfile_20250124-063307_abcd1234",
+            cleanname="testfile",
+            originalname="testfile.txt",
+            ext="txt",
+            size=512,
+            type="text/plain",
+            extra="0",
+        )
+
+        filepath = upload.filepath
+        assert f"user_{user.id}" in str(filepath)
+
+    @pytest.mark.asyncio
+    async def test_upload_filepath_property_contains_filename(self, db):
+        """Test Upload filepath property contains the upload name."""
+        user = await User.create(
+            username="pathtest3",
+            email="path3@example.com",
+            password="hashed_password_path3",
+            fingerprint_hash="fp-hash-path3",
+        )
+
+        filename = "myfile_20250124-063307_abcd1234"
+        upload = await Upload.create(
+            user=user,
+            description="Path test 3",
+            name=filename,
+            cleanname="myfile",
+            originalname="myfile.txt",
+            ext="txt",
+            size=512,
+            type="text/plain",
+            extra="0",
+        )
+
+        filepath = upload.filepath
+        assert filename in str(filepath)
+
+    @pytest.mark.asyncio
+    async def test_upload_filepath_property_different_uploads_different_paths(self, db):
+        """Test different uploads have different filepath properties."""
+        user = await User.create(
+            username="pathtest4",
+            email="path4@example.com",
+            password="hashed_password_path4",
+            fingerprint_hash="fp-hash-path4",
+        )
+
+        upload1 = await Upload.create(
+            user=user,
+            description="Test 1",
+            name="file1_20250124-063307_a1a1a1a1",
+            cleanname="file1",
+            originalname="file1.txt",
+            ext="txt",
+            size=512,
+            type="text/plain",
+            extra="0",
+        )
+
+        upload2 = await Upload.create(
+            user=user,
+            description="Test 2",
+            name="file2_20250124-063307_b2b2b2b2",
+            cleanname="file2",
+            originalname="file2.txt",
+            ext="txt",
+            size=512,
+            type="text/plain",
+            extra="0",
+        )
+
+        filepath1 = upload1.filepath
+        filepath2 = upload2.filepath
+
+        assert filepath1 != filepath2
+        assert filepath1.parent == filepath2.parent  # Same user directory
+        assert filepath1.name != filepath2.name  # Different filenames
+
+
+class TestUploadMetadataFilepathProperty:
+    """Test UploadMetadata model filepath property."""
+
+    def test_uploadmetadata_filepath_returns_path(self):
+        """Test UploadMetadata filepath property returns a Path object."""
+        metadata = UploadMetadata(
+            user_id=42,
+            filename="test_20250124-063307_abcd1234",
+            ext="txt",
+            original_filename="test.txt",
+            clean_filename="test",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        filepath = metadata.filepath
+        assert isinstance(filepath, Path)
+
+    def test_uploadmetadata_filepath_contains_user_id(self):
+        """Test UploadMetadata filepath contains correct user ID."""
+        user_id = 123
+        metadata = UploadMetadata(
+            user_id=user_id,
+            filename="test_20250124-063307_abcd1234",
+            ext="txt",
+            original_filename="test.txt",
+            clean_filename="test",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        filepath = metadata.filepath
+        assert f"user_{user_id}" in str(filepath)
+
+    def test_uploadmetadata_filepath_contains_filename(self):
+        """Test UploadMetadata filepath contains the filename."""
+        filename = "document_20250124-063307_a1b2c3d4"
+        metadata = UploadMetadata(
+            user_id=42,
+            filename=filename,
+            ext="pdf",
+            original_filename="document.pdf",
+            clean_filename="document",
+            size=2048,
+            mime_type="application/pdf",
+        )
+
+        filepath = metadata.filepath
+        assert filename in str(filepath)
+
+    def test_uploadmetadata_filepath_creates_user_directory(self):
+        """Test UploadMetadata filepath creates user directory."""
+        user_id = 999
+        metadata = UploadMetadata(
+            user_id=user_id,
+            filename="test_20250124-063307_abcd1234",
+            ext="txt",
+            original_filename="test.txt",
+            clean_filename="test",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        filepath = metadata.filepath
+        # Directory should be created
+        assert filepath.parent.exists()
+        assert filepath.parent.is_dir()
+
+    def test_uploadmetadata_filepath_different_metadata_different_paths(self):
+        """Test different metadata instances have different filepaths."""
+        metadata1 = UploadMetadata(
+            user_id=42,
+            filename="file1_20250124-063307_a1a1a1a1",
+            ext="txt",
+            original_filename="file1.txt",
+            clean_filename="file1",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        metadata2 = UploadMetadata(
+            user_id=42,
+            filename="file2_20250124-063307_b2b2b2b2",
+            ext="txt",
+            original_filename="file2.txt",
+            clean_filename="file2",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        filepath1 = metadata1.filepath
+        filepath2 = metadata2.filepath
+
+        assert filepath1 != filepath2
+        assert filepath1.parent == filepath2.parent  # Same user directory
+        assert filepath1.name != filepath2.name

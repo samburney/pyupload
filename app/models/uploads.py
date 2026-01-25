@@ -1,5 +1,3 @@
-import re
-
 from typing import Annotated, Optional, TYPE_CHECKING
 from pydantic import BaseModel, StringConstraints, ConfigDict
 from tortoise import fields, models
@@ -13,7 +11,7 @@ from app.models.base import TimestampMixin
 if TYPE_CHECKING:
     from tortoise.queryset import QuerySet
     from app.models.images import Image
-
+    
 
 config = get_app_config()
 
@@ -24,6 +22,19 @@ CLEAN_FILENAME_PATTERN = r'[a-z0-9](?:[a-z0-9_]*[a-z0-9])?'
 DATETIME_STAMP_PATTERN = r'\d{8}-\d{6}'
 SHORT_UUID_PATTERN = r'[a-f0-9]{8}'
 UNIQUE_FILENAME_PATTERN = rf'^{CLEAN_FILENAME_PATTERN}_{DATETIME_STAMP_PATTERN}_{SHORT_UUID_PATTERN}$'
+
+
+def make_user_filepath(user_id: int, filename: str) -> Path:
+    """Generate a user-specific file path."""
+    user_dir = config.storage_path / f"user_{user_id}"
+
+    # Ensure user directory exists
+    user_dir.mkdir(exist_ok=True)
+    if not user_dir.is_dir():
+        raise ValueError(f"User directory {user_dir} is not a directory.")
+
+    return user_dir / filename
+
 
 class Upload(models.Model, TimestampMixin):
     id = fields.IntField(primary_key=True)
@@ -46,6 +57,10 @@ class Upload(models.Model, TimestampMixin):
     class Meta:
         table = "uploads"
 
+    @property
+    def filepath(self) -> Path:
+        return make_user_filepath(getattr(self.user, "id"), self.name)
+
 
 class UploadMetadata(BaseModel):
     """Metadata for an uploaded file."""
@@ -65,16 +80,8 @@ class UploadMetadata(BaseModel):
 
     @property
     def filepath(self) -> Path:
-        """Generate a user-specific file path."""
+        return make_user_filepath(self.user_id, self.filename)
 
-        user_dir = config.storage_path / f"user_{self.user_id}"
-
-        # Ensure user directory exists
-        user_dir.mkdir(exist_ok=True)
-        if not user_dir.is_dir():
-            raise ValueError(f"User directory {user_dir} is not a directory.")
-
-        return user_dir / self.filename
 
 class UploadResult(BaseModel):
     """Result of an upload operation."""
