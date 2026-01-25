@@ -35,12 +35,9 @@ class TestHandleUploadedFile:
         file.content_type = "text/plain"
         file.file = BytesIO(file_content)
 
-        # Mock all dependencies
-        with patch('app.lib.upload_handler.validate_user_quotas') as mock_quota, \
-             patch('app.lib.upload_handler.validate_user_filetypes') as mock_filetypes, \
-             patch('app.lib.upload_handler.add_uploaded_file') as mock_add:
-            
-            mock_add.return_value = UploadResult(
+        # Mock process_uploaded_file
+        with patch('app.lib.upload_handler.process_uploaded_file') as mock_process:
+            mock_process.return_value = UploadResult(
                 status="success",
                 message="File uploaded successfully",
                 upload=None,
@@ -53,9 +50,8 @@ class TestHandleUploadedFile:
             assert result.status == "success"
             assert result.message == "File uploaded successfully"
             
-            # Verify validation was called
-            mock_quota.assert_called_once()
-            mock_filetypes.assert_called_once()
+            # Verify process was called
+            mock_process.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_quota_exceeded_error(self):
@@ -64,8 +60,8 @@ class TestHandleUploadedFile:
         file = MagicMock(spec=UploadFile)
         file.filename = "test.txt"
 
-        with patch('app.lib.upload_handler.validate_user_quotas') as mock_quota:
-            mock_quota.side_effect = UserQuotaExceeded("Quota exceeded")
+        with patch('app.lib.upload_handler.process_uploaded_file') as mock_process:
+            mock_process.side_effect = UserQuotaExceeded("Quota exceeded")
             
             with pytest.raises(UserQuotaExceeded):
                 await handle_uploaded_file(user, file)
@@ -77,9 +73,8 @@ class TestHandleUploadedFile:
         file = MagicMock(spec=UploadFile)
         file.filename = "test.exe"
 
-        with patch('app.lib.upload_handler.validate_user_quotas'), \
-             patch('app.lib.upload_handler.validate_user_filetypes') as mock_filetypes:
-            mock_filetypes.side_effect = UserFileTypeNotAllowed("File type not allowed")
+        with patch('app.lib.upload_handler.process_uploaded_file') as mock_process:
+            mock_process.side_effect = UserFileTypeNotAllowed("File type not allowed")
             
             with pytest.raises(UserFileTypeNotAllowed):
                 await handle_uploaded_file(user, file)
@@ -91,10 +86,8 @@ class TestHandleUploadedFile:
         file = MagicMock(spec=UploadFile)
         file.filename = "test.txt"
 
-        with patch('app.lib.upload_handler.validate_user_quotas'), \
-             patch('app.lib.upload_handler.validate_user_filetypes'), \
-             patch('app.lib.upload_handler.add_uploaded_file') as mock_add:
-            mock_add.side_effect = Exception("Database error")
+        with patch('app.lib.upload_handler.process_uploaded_file') as mock_process:
+            mock_process.side_effect = Exception("Database error")
             
             with pytest.raises(Exception):
                 await handle_uploaded_file(user, file)
@@ -357,11 +350,8 @@ class TestUploadHandlerIntegration:
             MagicMock(spec=UploadFile, filename="test2.txt"),
         ]
         
-        with patch('app.lib.upload_handler.validate_user_quotas') as mock_quota, \
-             patch('app.lib.upload_handler.validate_user_filetypes') as mock_filetypes, \
-             patch('app.lib.upload_handler.add_uploaded_file') as mock_add:
-            
-            mock_add.return_value = UploadResult(
+        with patch('app.lib.upload_handler.handle_uploaded_file') as mock_handle:
+            mock_handle.return_value = UploadResult(
                 status="success",
                 message="Success",
                 upload=None,
@@ -372,6 +362,8 @@ class TestUploadHandlerIntegration:
             
             # Both files should complete
             assert len(results) == 2
+            # Verify handle was called for each file
+            assert mock_handle.call_count == 2
 
 
 # ============================================================================

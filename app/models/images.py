@@ -1,6 +1,9 @@
 from tortoise import models, fields
+from pydantic import BaseModel, StringConstraints, ConfigDict
+from typing import Annotated, Optional
 
 from app.models.base import TimestampMixin
+from app.models.uploads import Upload
 
 
 class Image(models.Model, TimestampMixin):
@@ -14,3 +17,25 @@ class Image(models.Model, TimestampMixin):
 
     class Meta:
         table = "images"
+
+
+class ImageMetadata(BaseModel):
+    """Metadata for an uploaded file."""
+
+    # Allow arbitrary types
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    # Related upload
+    upload: Upload
+
+    # Computed metadata
+    type: str
+    width: int
+    height: int
+    bits: int
+    channels: int
+
+    # Additional optional metadata not yet supported by database
+    animated: Optional[bool] = None
+    frames: Optional[int] = None
+    transparency: Optional[bool] = None

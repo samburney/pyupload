@@ -8,7 +8,8 @@ from app.lib.helpers import (
     make_clean_filename,
     make_unique_filename,
 )
-from app.lib.config import get_app_config
+from app.lib.config import get_app_config, logger
+from app.lib.image_processing import process_uploaded_image, ImageProcessingError
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadMetadata, UploadResult
@@ -30,7 +31,7 @@ class UserFileTypeNotAllowed(Exception):
 async def make_upload_metadata(user: User, file: UploadFile | BinaryIO, filename: str | None = None) -> UploadMetadata:
     """Build metadata for an uploaded file."""
     
-    # Determine filename
+    # Determine file names and attributes
     original_filename_with_extension = get_filename(file, filename)
     original_filename, ext = split_filename(original_filename_with_extension)
     clean_filename = make_clean_filename(original_filename)
@@ -231,3 +232,26 @@ async def record_uploaded_file(metadata: UploadMetadata) -> Upload:
         raise RuntimeError(f"Failed to create upload record in database: {e}")
 
     return upload
+
+
+async def process_uploaded_file(user: User, file: UploadFile | BinaryIO, filename: str | None = None) -> UploadResult:
+    """Process the uploaded file and return its Upload record."""
+    # Validate user constriants
+    await validate_user_quotas(user, file)
+    await validate_user_filetypes(user, file)
+
+    # Add the uploaded file
+    try:
+        upload_result = await add_uploaded_file(user, file, filename)
+    except Exception as e:
+        raise RuntimeError(f"Failed to process uploaded file: {e}")
+    
+    # Attempt image processing
+    if upload_result.status == "success" and upload_result.upload is not None:
+        try:
+            await process_uploaded_image(upload_result.upload)
+        # Ignore image processing errors
+        except ImageProcessingError:
+            pass
+
+    return upload_result
