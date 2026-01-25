@@ -2,9 +2,11 @@ import uvicorn
 
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request, status
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.lib.config import get_app_config
@@ -71,10 +73,31 @@ app.include_router(api.uploads.router, prefix='/api/v1')
 # UI routes
 app.include_router(ui.main.router, include_in_schema=False)
 app.include_router(ui.auth.router, include_in_schema=False)
+app.include_router(ui.uploads.router, include_in_schema=False)
 app.include_router(ui.users.router, include_in_schema=False)
 
 
 # Exception handlers
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Override default RequestValidationError handler to render UI error pages."""
+    # Default handler for API endpoints
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content=jsonable_encoder({"detail": exc.errors()}),
+        )
+
+    # HTTPException handler for UI endpoints
+    else:
+        error_messages = []
+        for error in exc.errors():
+            error_messages.append(f"{error['type'].capitalize()}: {error['msg']} - {error['loc'][-1]}")
+
+        return ui.common.error_response(request, error_messages, status_code=422)
+
+
+
 @app.exception_handler(ui.common.security.LoginRequiredException)
 async def login_required_exception_handler(request: Request, exc: ui.common.security.LoginRequiredException):
     ui.common.session.flash_message(request, "Please log in to access this page.", "error")

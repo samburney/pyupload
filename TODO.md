@@ -32,7 +32,9 @@
   - [x] Image model with relationships — 14 tests
   - [x] Model imports and Tortoise ORM registration
 - [x] Image metadata extraction (Step 6) — 14 passing tests
-- [ ] Upload endpoints - API and UI (Steps 7-8)
+- [x] Upload endpoints - API and UI (Steps 7-8) — 30 passing tests
+  - [x] API upload endpoint (POST /api/v1/uploads) — 12 tests
+  - [x] UI upload endpoints (GET/POST /upload) — 18 tests
 - [ ] Upload widget UI with progress feedback (Step 9)
 - [ ] File browsing and gallery display (Step 10)
 - [ ] Basic configuration and cleanup (Steps 11-12)

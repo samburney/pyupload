@@ -1,0 +1,17 @@
+{% extends "layout/base.html.j2" %}
+
+{% block content %}
+<h1>Upload a File</h1>
+<form id='form'
+  hx-encoding="multipart/form-data"
+  hx-post="/upload"
+  hx-swap="innerHTML"
+  hx-target="#uploads-list"
+  hx-select="#content"
+  hx-select-oob="#messages"
+  hx-target-4*="#messages">
+  <p class="py-2"><input type="file" name="upload_files" class="border border-gray-300 rounded px-2 py-1" required></p>
+  <p class="py-2"><button type="submit" class="button">Upload</button></p>
+</form>
+<div id="uploads-list" class="mt-4"></div>
+{% endblock %}
