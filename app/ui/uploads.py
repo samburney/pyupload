@@ -8,7 +8,7 @@ from app.lib.upload_handler import handle_uploaded_files
 from app.models.users import User
 
 from app.ui.common import templates
-from app.ui.common.security import get_or_create_authenticated_user
+from app.ui.common.security import get_current_user, get_or_create_authenticated_user
 
 
 config = get_app_config()
@@ -17,7 +17,8 @@ router = APIRouter(tags=["uploads"])
 
 @router.get("/upload", response_class=HTMLResponse)
 async def show_upload_page(
-    request: Request
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Render the upload page."""
     return templates.TemplateResponse(request, "uploads/index.html.j2")
