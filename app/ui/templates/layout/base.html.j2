@@ -14,85 +14,8 @@
     </head>
     <body hx-ext="response-targets">
         <div id="wrap" class="min-h-screen flex flex-col">
-            <nav class="bg-gray-800 sm:bg-transparent">
-                <div class="container bg-gray-900 text-white mx-auto sm:rounded sm:mt-2 sm:px-4 sm:py-2">
-                    <div class="flex items-center justify-between" x-data="{ browseOpen: false, userOpen: false, mobileMenuOpen: false }">
-                        <!-- Logo -->
-                        <a href="/" class="text-xl font-bold">sU</a>
-                        
-                        <!-- Mobile menu button -->
-                        <button 
-                            class="sm:hidden text-white"
-                            @click="mobileMenuOpen = !mobileMenuOpen">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                        </button>
+            {% include "layout/navbar.html.j2" %}
 
-                        <!-- Desktop menu - center navigation -->
-                        <div class="hidden md:flex items-center space-x-6">
-                            <!-- Browse dropdown -->
-                            <div class="relative" @click.away="browseOpen = false">
-                                <button 
-                                    class="hover:text-gray-300"
-                                    @click="browseOpen = !browseOpen">
-                                    Browse ▾
-                                </button>
-                                <div x-show="browseOpen" x-cloak class="absolute left-0 mt-2 w-40 bg-white text-gray-900 rounded shadow-lg z-10">
-                                    <a href="/random" class="block px-4 py-2 hover:bg-gray-100">Random</a>
-                                    <a href="/popular" class="block px-4 py-2 hover:bg-gray-100">Popular</a>
-                                    <a href="/all" class="block px-4 py-2 hover:bg-gray-100">All</a>
-                                </div>
-                            </div>
-                            <a href="/tags" class="hover:text-gray-300">Tags</a>
-                            <a href="/uploads" class="hover:text-gray-300">Your Uploads</a>
-                            <a href="/collections" class="hover:text-gray-300">Your Collections</a>
-                            <a href="/search" class="hover:text-gray-300">Search</a>
-                        </div>
-
-                        <!-- Desktop menu - right side buttons -->
-                        <div class="hidden sm:flex items-center space-x-4">
-                            <a href="/upload" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Upload</a>
-                            <!-- User dropdown -->
-                            <div class="relative" @click.away="userOpen = false">
-                                <button 
-                                    class="hover:text-gray-300"
-                                    @click="userOpen = !userOpen">
-                                    Not Logged In ▾
-                                </button>
-                                <div x-show="userOpen" x-cloak class="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded shadow-lg z-10">
-                                    <a href="/login" class="block px-4 py-2 hover:bg-gray-100">Log in</a>
-                                    <a href="/register" class="block px-4 py-2 hover:bg-gray-100">Register</a>
-                                    <hr class="my-1">
-                                    <a href="/upload" class="block px-4 py-2 hover:bg-gray-100">Upload</a>
-                                    <a href="/collections" class="block px-4 py-2 hover:bg-gray-100">Collections</a>
-                                    <hr class="my-1">
-                                    <a href="/logout" class="block px-4 py-2 hover:bg-gray-100">Log out</a>
-                                </div>
-                            </div>
-                        </div>
-                    
-
-                    <!-- Mobile menu -->
-                    <div x-show="mobileMenuOpen" x-cloak class="sm:hidden mt-4 space-y-2">
-                        <a href="/random" class="block hover:text-gray-300">Random</a>
-                        <a href="/popular" class="block hover:text-gray-300">Popular</a>
-                        <a href="/all" class="block hover:text-gray-300">All</a>
-                        <a href="/tags" class="block hover:text-gray-300">Tags</a>
-                        <a href="/uploads" class="block hover:text-gray-300">Your Uploads</a>
-                        <a href="/collections" class="block hover:text-gray-300">Your Collections</a>
-                        <a href="/search" class="block hover:text-gray-300">Search</a>
-                        <a href="/upload" class="block bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-center">Upload</a>
-                        <div class="pt-2 border-t border-gray-700">
-                            <a href="/login" class="block hover:text-gray-300">Log in</a>
-                            <a href="/register" class="block hover:text-gray-300">Register</a>
-                            <a href="/logout" class="block hover:text-gray-300">Log out</a>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-            </nav>
-            
             {% include "layout/messages.html.j2" %}
             
             <div class="container mx-auto mt-4 grow" id="content">

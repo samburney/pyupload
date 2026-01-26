@@ -2,7 +2,6 @@ from fastapi.templating import Jinja2Templates
 
 from app.lib.config import get_app_config
 
-from app.ui.common import security, session
 from app.ui.common.session import get_flashed_messages
 
 

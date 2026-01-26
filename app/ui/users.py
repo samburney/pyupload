@@ -11,10 +11,10 @@ from app.ui.common.security import get_or_create_authenticated_user
 
 
 config = get_app_config()
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(tags=["users"])
 
 
-@router.get("/me", response_class=HTMLResponse)
+@router.get("/profile", response_class=HTMLResponse)
 async def show_profile_page(
     request: Request,
     current_user: Annotated[User, Depends(get_or_create_authenticated_user)]
