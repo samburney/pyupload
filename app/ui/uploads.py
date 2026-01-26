@@ -17,11 +17,10 @@ router = APIRouter(tags=["uploads"])
 
 @router.get("/upload", response_class=HTMLResponse)
 async def show_upload_page(
-    request: Request,
-    current_user: Annotated[User, Depends(get_or_create_authenticated_user)]
+    request: Request
 ):
     """Render the upload page."""
-    return templates.TemplateResponse(request, "uploads/index.html.j2", {"current_user": current_user})
+    return templates.TemplateResponse(request, "uploads/index.html.j2")
 
 
 @router.post("/upload", response_class=HTMLResponse)
