@@ -1,0 +1,78 @@
+<!-- File upload widget -->
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('uploadWidget', {
+            files: [],
+            dragActive: false,
+            
+            addFiles(fileList) {
+                this.files = [...this.files, ...Array.from(fileList)];
+                this.dragActive = false;
+                this.updateFileInput();
+            },
+            
+            removeFile(index) {
+                this.files.splice(index, 1);
+                this.updateFileInput();
+            },
+            
+            handleDrop(event) {
+                this.addFiles(event.dataTransfer.files);
+            },
+            
+            updateFileInput() {
+                const dt = new DataTransfer();
+                this.files.forEach(file => dt.items.add(file));
+                const input = document.getElementById('file-upload-picker');
+                if (input) input.files = dt.files;
+            },
+            
+            formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+        });
+    });
+</script>
+<div id="file-upload-widget"
+    x-data
+    class="flex flex-col items-center rounded border p-4 text-gray-900 shadow-sm sm:p-6"
+    :class="$store.uploadWidget.dragActive ? 'border-blue-300 border-dashed' : 'border-gray-200 border-solid'"
+    @drop.prevent="$store.uploadWidget.handleDrop($event)"
+    @dragover.prevent="$store.uploadWidget.dragActive = true"
+    @dragleave.prevent="$store.uploadWidget.dragActive = false"
+    >
+    <label for="file-upload-picker" class="flex flex-col items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 0 0 4.5 9.75v7.5a2.25 2.25 0 0 0 2.25 2.25h7.5a2.25 2.25 0 0 0 2.25-2.25v-7.5a2.25 2.25 0 0 0-2.25-2.25h-.75m0-3-3-3m0 0-3 3m3-3v11.25m6-2.25h.75a2.25 2.25 0 0 1 2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25h-7.5a2.25 2.25 0 0 1-2.25-2.25v-.75"></path>
+        </svg>
+        <span class="mt-4 font-medium"> Upload your file(s) </span>
+        <span class="mt-4 inline-block rounded border border-gray-200 bg-gray-50 px-3 py-1.5 text-center text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-100">
+        Browse files
+        </span>
+        <input
+            type="file"
+            name="upload_files"
+            id="file-upload-picker"
+            x-ref="fileInput"
+            @change="$store.uploadWidget.addFiles($event.target.files)"
+            multiple
+            class="hidden">
+    </label>
+    <div id="file-list-container" x-show="$store.uploadWidget.files.length > 0" class="w-full">
+        <hr class="my-4 border-gray-200 border-dashed">
+        <div id="file-list" class="grid grid-cols-[1fr_auto_auto] gap-x-2 divide-y divide-gray-200 divide-dashed">
+            <span class="font-semibold">File Name</span>
+            <span class="font-semibold">Size</span>
+            <span class="font-semibold">Actions</span>
+            <template x-for="(file, index) in $store.uploadWidget.files" :key="index">
+                <div class="col-span-3 grid grid-cols-subgrid">
+                    <span x-text="file.name" class="overflow-hidden overflow-ellipsis whitespace-nowrap"></span>
+                    <span x-text="$store.uploadWidget.formatFileSize(file.size)"></span>
+                    <button @click="$store.uploadWidget.removeFile(index)" class="button button-xs button-alert">Remove</button>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>

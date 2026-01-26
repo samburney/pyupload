@@ -1,17 +1,15 @@
-{% extends "layout/base.html.j2" %}
+{% include "layout/messages.html.j2" %}
 
-{% block content %}
 <h2>Uploaded Files</h2>
-    {% if uploaded_files is defined and uploaded_files | length > 0 %}
-    <ul>
-        {% for file in uploaded_files %}
-        <li>
-            <a href="/download/{{ file.upload_id }}/{{ file.metadata.clean_filename }}{{ '.' + file.metadata.ext if file.metadata.ext else '' }}"
-               class="text-blue-600 hover:underline">
-                {{ file.metadata.original_filename }}{{ '.' + file.metadata.ext if file.metadata.ext else '' }}
-            </a>
-        </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-{% endblock %}
+{% if uploaded_files is defined and uploaded_files | length > 0 %}
+<ul>
+    {% for file in uploaded_files %}
+    <li>
+        <a href="/download/{{ file.upload_id }}/{{ file.metadata.clean_filename }}{{ '.' + file.metadata.ext if file.metadata.ext else '' }}"
+            class="text-blue-600 hover:underline">
+            {{ file.metadata.original_filename }}{{ '.' + file.metadata.ext if file.metadata.ext else '' }}
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}

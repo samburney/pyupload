@@ -378,19 +378,43 @@ class TestUploadPostEndpoint:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_upload_post_auto_creates_user(self, client):
+    async def test_upload_post_auto_creates_user(self, client, monkeypatch):
         """Test that POST /upload auto-creates authenticated user."""
         # Database should start empty
         user_count_before = await User.all().count()
         
-        # Make a request (even without real files, endpoint should be reachable)
-        # This will trigger the dependency which auto-creates a user
-        response = await client.get("/upload")
+        # Mock the upload handler to avoid actual file processing
+        async def mock_handle_uploaded_files(user, files):
+            return [
+                UploadResult(
+                    status="success",
+                    message="",
+                    upload_id=1,
+                    metadata=UploadMetadata(
+                        user_id=user.id,
+                        filename="test_20250125-120000_abcd1234",
+                        ext="txt",
+                        original_filename="test.txt",
+                        clean_filename="test",
+                        size=7,
+                        mime_type="text/plain",
+                    ),
+                )
+            ]
+        
+        import app.ui.uploads
+        monkeypatch.setattr(app.ui.uploads, "handle_uploaded_files", mock_handle_uploaded_files)
+        
+        # POST to /upload with a file - this triggers get_or_create_authenticated_user
+        response = await client.post(
+            "/upload",
+            files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
+        )
         
         # Should succeed
         assert response.status_code == 200
         
-        # User should have been created
+        # User should have been created by the dependency
         user_count_after = await User.all().count()
         assert user_count_after > user_count_before
 

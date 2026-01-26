@@ -1,0 +1,18 @@
+<form id='form'
+  hx-encoding="multipart/form-data"
+  hx-post="/upload"
+  hx-swap="innerHTML"
+  hx-target="#uploads-list"
+  hx-select-oob="#messages"
+  hx-target-4*="#messages">
+  <p>
+    {% include "uploads/widget.html.j2" %}
+  </p>
+  <p class="py-2 mt-2">
+    <button type="submit" class="button"
+      x-data
+      :disabled="$store.uploadWidget.files.length === 0"
+      :class="{ 'button-disabled': $store.uploadWidget.files.length === 0 }"
+      >Upload</button>
+    </p>
+</form>
