@@ -1,7 +1,37 @@
 @import "tailwindcss";
 
+@layer base {
+  h1 {
+    font-size: var(--text-2xl);
+  }
+  h2 {
+    font-size: var(--text-xl);
+  }
+  h3 {
+    font-size: var(--text-lg);
+  }
+}
+
 @layer components {
     .button {
         @apply bg-blue-500 hover:bg-blue-300 text-white py-2 px-4 rounded cursor-pointer;
+    }
+    .button-sm {
+        @apply py-1 px-2 text-sm;
+    }
+    .button-xs {
+        @apply py-1 px-1 text-xs;
+    }
+    .button-alert {
+        @apply bg-red-500 hover:bg-red-300;
+    }
+    .button-warning {
+        @apply bg-yellow-500 hover:bg-yellow-300;
+    }
+    .button-ok {
+        @apply bg-green-500 hover:bg-green-300;
+    }
+    .button-disabled {
+        @apply bg-gray-400 hover:bg-gray-400 cursor-not-allowed;
     }
 }
