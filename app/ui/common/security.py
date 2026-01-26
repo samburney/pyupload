@@ -77,6 +77,11 @@ async def get_or_create_authenticated_user(request: Request) -> User:
 
 async def check_user_over_quota(request: Request, current_user: User) -> None:
     """Check if the current authenticated user is over quota."""
+    # If user quota is -1, they have unlimited uploads
+    if current_user.max_uploads_count == -1:
+        return
+
+    # Check if user is over quota
     if await current_user.uploads_count >= current_user.max_uploads_count:
         if current_user.is_registered:
             flash_message(request, "You are over your upload quota, you will no longer be able to upload files until you remove some files.", "error")
