@@ -1,20 +1,65 @@
 {% set flashed_info_messages, flashed_error_messages = get_flashed_messages(request) %}
 {% set info_messages = info_messages | default([]) + flashed_info_messages %}
 {% set error_messages = error_messages | default([]) + flashed_error_messages %}
-<div id="messages" hx-oob-swap="true">
+<div
+    id="messages"
+    class="container mx-auto"
+    x-show="infoMessagesCount > 0 || errorMessagesCount > 0"
+    x-transition
+    x-data="{
+        infoMessagesCount: 0,
+        errorMessagesCount: 0,
+
+        updateMessageCounts() {
+            this.infoMessagesCount = $refs.infoMessages?.children.length || 0;
+            this.errorMessagesCount = $refs.errorMessages?.children.length || 0;
+            console.log(this.infoMessagesCount, this.errorMessagesCount);
+        },
+
+        removeMessage($el) {
+            $el.remove();
+            this.updateMessageCounts();
+        },
+    }"
+    x-init="updateMessageCounts();"
+    >
     {% if info_messages is defined and info_messages | length > 0 %}
-    <span class="info-header">Info:</span>
-    <ul class="info-messages">
+    <ul
+        x-ref="infoMessages"
+        x-show="infoMessagesCount > 0"
+        x-transition
+        class="info-messages mt-4 p-2 border border-green-500 bg-green-100 rounded">
         {% for message in info_messages %}
-        <li>{{ message }}</li>
+        <li
+            x-data="{ show: true }"
+            x-show="show"
+            x-transition
+            @transitionend.once="if (!show) { removeMessage($el) }"
+            class="mx-1 my-1 flex justify-between"
+            >
+            <span>{{ message }}</span>
+            <button @click="show = false" class="button button-xs button-ok">Remove</button>
+        </li>
         {% endfor %}
     </ul>
     {% endif %}
     {% if error_messages is defined and error_messages | length > 0 %}
-    <span class="error-header">Error:</span>
-    <ul class="error-messages">
+    <ul
+        x-ref="errorMessages"
+        x-show="errorMessagesCount > 0"
+        x-transition
+        class="error-messages mt-4 p-2 border border-red-500 bg-red-100 rounded">
         {% for message in error_messages %}
-        <li>{{ message }}</li>
+        <li
+            x-data="{ show: true }"
+            x-show="show"
+            x-transition
+            @transitionend.once="if (!show) { removeMessage($el) }"
+            class="mx-1 my-1 flex justify-between"
+            >
+            <span>{{ message }}</span>
+            <button @click="show = false" class="button button-xs button-alert">Remove</button>
+        </li>
         {% endfor %}
     </ul>
     {% endif %}

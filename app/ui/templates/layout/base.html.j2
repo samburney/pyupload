@@ -92,12 +92,10 @@
                     </div>
                 </div>
             </nav>
-
-            <div class="container mx-auto px-4 py-4" id="messages">
-                {% include "layout/messages.html.j2" %}
-            </div>
-
-            <div class="container mx-auto px-4 py-6 grow" id="content">
+            
+            {% include "layout/messages.html.j2" %}
+            
+            <div class="container mx-auto mt-4 grow" id="content">
                 {% block content %}{% endblock %}
             </div>
 
