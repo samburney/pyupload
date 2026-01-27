@@ -13,12 +13,11 @@
         updateMessageCounts() {
             this.infoMessagesCount = $refs.infoMessages?.children.length || 0;
             this.errorMessagesCount = $refs.errorMessages?.children.length || 0;
-            console.log(this.infoMessagesCount, this.errorMessagesCount);
         },
 
-        removeMessage($el) {
-            $el.remove();
-            this.updateMessageCounts();
+        removeMessage($el, type) {
+            this[type + 'MessagesCount'] -= 1;
+            setTimeout(() => $el.remove(), 300);
         },
     }"
     x-init="updateMessageCounts();"
@@ -34,11 +33,10 @@
             x-data="{ show: true }"
             x-show="show"
             x-transition
-            @transitionend.once="if (!show) { removeMessage($el) }"
             class="mx-1 my-1 flex justify-between"
             >
             <span>{{ message }}</span>
-            <button @click="show = false" class="button button-xs button-ok">Ok</button>
+            <button @click="if (infoMessagesCount > 1) { show = false }; removeMessage($el.closest('li'), 'info');" class="button button-xs button-ok">Ok</button>
         </li>
         {% endfor %}
     </ul>
@@ -54,11 +52,10 @@
             x-data="{ show: true }"
             x-show="show"
             x-transition
-            @transitionend.once="if (!show) { removeMessage($el) }"
             class="mx-1 my-1 flex justify-between"
             >
             <span>{{ message }}</span>
-            <button @click="show = false" class="button button-xs button-alert">Ok</button>
+            <button @click="if (errorMessagesCount > 1) { show = false }; removeMessage($el.closest('li'), 'error');" class="button button-xs button-alert">Ok</button>
         </li>
         {% endfor %}
     </ul>
