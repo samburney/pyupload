@@ -65,6 +65,7 @@ app.add_middleware(
 # App routes
 # Static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/files", StaticFiles(directory="data/files"), name="files")
 
 # API routes
 app.include_router(api.auth.router, prefix='/api/v1')

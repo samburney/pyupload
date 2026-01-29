@@ -61,6 +61,16 @@ class Upload(models.Model, TimestampMixin):
     def filepath(self) -> Path:
         filename = f'{self.name}{'.' + self.ext if self.ext != "" else ""}'
         return make_user_filepath(getattr(self, "user_id"), filename)
+
+    @property
+    def url(self) -> Path:
+        url = f'/get/{self.id}/{self.cleanname}{"." + self.ext if self.ext != "" else ""}'
+        return url
+
+    @property
+    def static_url(self) -> Path:
+        url = f'/files/user_{getattr(self, "user_id")}/{self.name}{"." + self.ext if self.ext != "" else ""}'
+        return url
     
     @property
     def is_image(self) -> bool:
