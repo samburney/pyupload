@@ -738,6 +738,88 @@ class TestUploadFilepathProperty:
         assert filepath1.name != filepath2.name  # Different filenames
 
 
+class TestUploadUrlProperties:
+    """Test Upload model url and static_url properties."""
+
+    @pytest.mark.asyncio
+    async def test_upload_url_property(self, db):
+        """Test Upload url property returns correct download URL."""
+        user = await User.create(
+            username="urltest",
+            email="url@example.com",
+            password="hashed_password_url",
+            fingerprint_hash="fp-hash-url",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="URL test",
+            name="testfile_20250124-063307_abcd1234",
+            cleanname="testfile",
+            originalname="testfile.txt",
+            ext="txt",
+            size=512,
+            type="text/plain",
+            extra="0",
+        )
+
+        # Expected format: /get/{id}/{cleanname}.{ext}
+        expected_url = f"/get/{upload.id}/testfile.txt"
+        assert upload.url == expected_url
+
+    @pytest.mark.asyncio
+    async def test_upload_static_url_property(self, db):
+        """Test Upload static_url property returns correct static file URL."""
+        user = await User.create(
+            username="statictest",
+            email="static@example.com",
+            password="hashed_password_static",
+            fingerprint_hash="fp-hash-static",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Static URL test",
+            name="image_20250124-063307_12345678",
+            cleanname="image",
+            originalname="image.jpg",
+            ext="jpg",
+            size=1024,
+            type="image/jpeg",
+            extra="0",
+        )
+
+        # Expected format: /files/user_{id}/{name}.{ext}
+        expected_url = f"/files/user_{user.id}/image_20250124-063307_12345678.jpg"
+        assert upload.static_url == expected_url
+
+    @pytest.mark.asyncio
+    async def test_upload_url_properties_without_extension(self, db):
+        """Test URL properties handle files without extensions correctly."""
+        user = await User.create(
+            username="noext",
+            email="noext@example.com",
+            password="hashed_password_noext",
+            fingerprint_hash="fp-hash-noext",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="No extension test",
+            name="README_20250124-063307_abcdef12",
+            cleanname="README",
+            originalname="README",
+            ext="",
+            size=128,
+            type="text/plain",
+            extra="0",
+        )
+
+        # Should not have a trailing dot
+        assert upload.url == f"/get/{upload.id}/README"
+        assert upload.static_url == f"/files/user_{user.id}/README_20250124-063307_abcdef12"
+
+
 class TestUploadMetadataFilepathProperty:
     """Test UploadMetadata model filepath property."""
 
