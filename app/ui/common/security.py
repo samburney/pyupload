@@ -86,4 +86,4 @@ async def check_user_over_quota(request: Request, current_user: User) -> None:
         if current_user.is_registered:
             flash_message(request, "You are over your upload quota, you will no longer be able to upload files until you remove some files.", "error")
         else:
-            flash_message(request, "You are over your upload quota. Please register to increase your quota.", "error")
+            flash_message(request, "You are over your upload quota. Please [register](/register) to increase your quota.", "error")

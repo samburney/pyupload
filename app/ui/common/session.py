@@ -22,10 +22,11 @@ def flash_message(request: Request, message: str, message_type: str = "info") ->
     request.session["_flashes"] = flashes
 
 
-def get_flashed_messages(request: Request) -> tuple[list[str], list[str]]:
+def get_flashed_messages(request: Request) -> dict[str, list[str]]:
     """Retrieve and clear flashed messages from the session."""
     info_messages = []
     error_messages = []
+    warning_messages = []
 
     # Get messages from session and clear them by setting to empty list
     messages = request.session.get("_flashes", [])
@@ -35,7 +36,13 @@ def get_flashed_messages(request: Request) -> tuple[list[str], list[str]]:
     for message in messages:
         if message["message_type"] == "error":
             error_messages.append(message["message"])
+        elif message["message_type"] == "warning":
+            warning_messages.append(message["message"])
         else:
             info_messages.append(message["message"])
 
-    return info_messages, error_messages
+    return {
+        "info": info_messages,
+        "error": error_messages,
+        "warning": warning_messages,
+    }

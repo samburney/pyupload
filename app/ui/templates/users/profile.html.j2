@@ -3,12 +3,6 @@
 {% block content %}
 <h1>Profile</h1>
 <h2>{{ current_user.username }}</h2>
-{% if not current_user.is_registered %}
-<div class="message">
-    <p>You are currently logged in with a temporary, limited, user session.</p>
-    <p>If you would like to upgrade to a full account, please <a href="/register">register</a> or <a href="/login">log in</a>.</p>
-</div>
-{% endif %}
 <p><strong>Actions</strong></p>
 <ul>
     <li><a href="/logout">Logout</a></li>

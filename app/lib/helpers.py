@@ -1,6 +1,9 @@
 import re
+import html
+
 from datetime import datetime, timezone
 from uuid import uuid4
+from markdown import markdown
 
 
 # RFC 6838 MIME type pattern: type/subtype
@@ -98,3 +101,13 @@ def make_unique_filename(filename: str) -> str:
     unique_filename = f"{clean_name}_{datetime_stamp}_{unique_id}"
 
     return unique_filename
+
+
+def sanitised_markdown(text: str) -> str:
+    """Sanitise markdown by escaping HTML entities and converting to HTML."""
+
+    # Filter text through HTML entities santisier
+    sanitised_text = html.escape(text)
+
+    # Convert markdown to HTML
+    return markdown(sanitised_text)

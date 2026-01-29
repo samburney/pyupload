@@ -17,7 +17,7 @@
 
 @layer components {
     .button {
-        @apply bg-blue-500 hover:bg-blue-300 text-white py-2 px-4 rounded cursor-pointer;
+        @apply bg-blue-500 hover:bg-blue-300 text-white py-2 px-4 rounded cursor-pointer max-h-fit;
     }
     .button-sm {
         @apply py-1 px-2 text-sm;
@@ -38,6 +38,15 @@
         @apply bg-gray-400 hover:bg-gray-400 cursor-not-allowed;
     }
     .message {
-      @apply my-2 p-2 border border-blue-500 bg-blue-100 rounded;
+      @apply my-2 p-2 border border-blue-500 bg-blue-100 rounded items-center;
+    }
+    .message-ok {
+      @apply border-green-500 bg-green-100;
+    }
+    .message-warning {
+      @apply border-yellow-500 bg-yellow-100;
+    }
+    .message-alert {
+      @apply border-red-500 bg-red-100;
     }
 }

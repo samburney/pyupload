@@ -1,18 +1,21 @@
-{% set flashed_info_messages, flashed_error_messages = get_flashed_messages(request) %}
-{% set info_messages = info_messages | default([]) + flashed_info_messages %}
-{% set error_messages = error_messages | default([]) + flashed_error_messages %}
+{% set flashed_messages = get_flashed_messages(request) %}
+{% set info_messages = info_messages | default([]) + flashed_messages['info'] %}
+{% set error_messages = error_messages | default([]) + flashed_messages['error'] %}
+{% set warning_messages = warning_messages | default([]) + flashed_messages['warning'] %}
 <div
     id="messages"
     class="container mx-auto"
-    x-show="infoMessagesCount > 0 || errorMessagesCount > 0"
+    x-show="infoMessagesCount > 0 || errorMessagesCount > 0 || warningMessagesCount > 0"
     x-transition
     x-data="{
         infoMessagesCount: 0,
         errorMessagesCount: 0,
+        warningMessagesCount: 0,
 
         updateMessageCounts() {
             this.infoMessagesCount = $refs.infoMessages?.children.length || 0;
             this.errorMessagesCount = $refs.errorMessages?.children.length || 0;
+            this.warningMessagesCount = $refs.warningMessages?.children.length || 0;
         },
 
         removeMessage($el, type) {
@@ -27,16 +30,35 @@
         x-ref="infoMessages"
         x-show="infoMessagesCount > 0"
         x-transition
-        class="info-messages mt-4 p-2 border border-green-500 bg-green-100 rounded">
+        class="message message-ok">
         {% for message in info_messages %}
         <li
             x-data="{ show: true }"
             x-show="show"
             x-transition
-            class="mx-1 my-1 flex justify-between"
+            class="mx-1 my-1 flex justify-between items-center"
             >
-            <span>{{ message }}</span>
+            <div>{{ message | markdown | safe }}</div>
             <button @click="if (infoMessagesCount > 1) { show = false }; removeMessage($el.closest('li'), 'info');" class="button button-xs button-ok">Ok</button>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if warning_messages is defined and warning_messages | length > 0 %}
+    <ul
+        x-ref="warningMessages"
+        x-show="warningMessagesCount > 0"
+        x-transition
+        class="message message-warning">
+        {% for message in warning_messages %}
+        <li
+            x-data="{ show: true }"
+            x-show="show"
+            x-transition
+            class="mx-1 my-1 flex justify-between items-center"
+            >
+            <div>{{ message | markdown | safe }}</div>
+            <button @click="if (warningMessagesCount > 1) { show = false }; removeMessage($el.closest('li'), 'warning');" class="button button-xs button-warning">Ok</button>
         </li>
         {% endfor %}
     </ul>
@@ -46,15 +68,15 @@
         x-ref="errorMessages"
         x-show="errorMessagesCount > 0"
         x-transition
-        class="error-messages mt-4 p-2 border border-red-500 bg-red-100 rounded">
+        class="message message-alert">
         {% for message in error_messages %}
         <li
             x-data="{ show: true }"
             x-show="show"
             x-transition
-            class="mx-1 my-1 flex justify-between"
+            class="mx-1 my-1 flex justify-between items-center"
             >
-            <span>{{ message }}</span>
+            <div>{{ message | markdown | safe }}</div>
             <button @click="if (errorMessagesCount > 1) { show = false }; removeMessage($el.closest('li'), 'error');" class="button button-xs button-alert">Ok</button>
         </li>
         {% endfor %}
