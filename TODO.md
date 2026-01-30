@@ -35,8 +35,8 @@
 - [x] Upload endpoints - API and UI (Steps 7-8) — 30 passing tests
   - [x] API upload endpoint (POST /api/v1/uploads) — 12 tests
   - [x] UI upload endpoints (GET/POST /upload) — 18 tests
-- [ ] Upload widget UI with progress feedback (Step 9)
-- [ ] File browsing and gallery display (Step 10)
+- [x] Upload widget UI with progress feedback (Step 9) — 30 passing tests
+- [x] File browsing and gallery display (Step 10) — 5 passing tests
 - [ ] Basic configuration and cleanup (Steps 11-12)
 - [ ] Comprehensive testing (Steps 13-17)
 - [ ] End-to-end validation (Step 18)
