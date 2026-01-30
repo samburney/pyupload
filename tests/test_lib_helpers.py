@@ -8,6 +8,7 @@ from app.lib.helpers import (
     make_clean_filename,
     make_unique_filename,
     sanitised_markdown,
+    time_ago,
 )
 
 
@@ -393,3 +394,32 @@ class TestSanitisedMarkdown:
         assert "<blockquote>" not in result
         # Should contain the escaped character
         assert "&gt;" in result
+
+
+class TestTimeAgo:
+    """Test time_ago helper function."""
+
+    def test_returns_string(self):
+        """Test that time_ago returns a string."""
+        from datetime import datetime, timezone
+        dt = datetime.now(timezone.utc)
+        result = time_ago(dt)
+        assert isinstance(result, str)
+
+    def test_returns_natural_time(self):
+        """Test that time_ago returns natural time string."""
+        from datetime import datetime, timedelta, timezone
+        now = datetime.now(timezone.utc)
+        hour_ago = now - timedelta(hours=1)
+        
+        # We assume humanize works correctly, just checking format roughly
+        result = time_ago(hour_ago)
+        assert "hour" in result or "hr" in result
+        assert "ago" in result
+
+    def test_handles_naive_datetime(self):
+        """Test that time_ago handles naive datetime."""
+        from datetime import datetime
+        dt = datetime.now() 
+        result = time_ago(dt)
+        assert isinstance(result, str)

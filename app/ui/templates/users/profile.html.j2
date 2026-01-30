@@ -3,9 +3,36 @@
 {% block content %}
 <h1>Profile</h1>
 <h2>{{ current_user.username }}</h2>
-<p><strong>Actions</strong></p>
+<p class="mt-4 mb-2"><strong>Actions</strong></p>
 <ul>
     <li><a href="/logout">Logout</a></li>
     <li><a href="/logout-all">Logout All Sessions</a></li>
 </ul>
+{% if uploads | length > 0 %}
+<p class="mt-4 mb-2"><strong>Files</strong></p>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
+{% for upload in uploads %}
+    <div class="grid grid-cols-2 shadow-md rounded p-2">
+        <div class="flex flex-col grow items-center justify-center">
+        {% if upload.images  %}
+            <img class="border border-gray-500 rounded p-1" src="{{ upload.static_url }}" alt="{{ upload.originalname }}">
+        {% else %}
+            <div class="border border-gray-500 rounded p-1 size-32 flex items-center justify-center">.{{ upload.ext }}</div>
+        {% endif %}
+        </div>
+        <div class="p-2">
+            <ul>
+                <li class="overflow-hidden text-ellipsis whitespace-nowrap">Filename: <a href="{{ upload.url }}">{{ upload.originalname }}</a></li>
+                <li>Filesize: {{ upload.size }}</li>
+                <li>MIME Type: {{ upload.type }}</li>
+                <li>Uploaded: {{ upload.created_at | ago }}</li>
+            </ul>
+        </div>
+    </div>
+{% endfor %}
+</div>
+{% include "components/pagination.html.j2" %}
+{% endif %}
 {% endblock %}
+
+

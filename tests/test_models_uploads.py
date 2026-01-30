@@ -793,11 +793,16 @@ class TestUploadUrlProperties:
         expected_url = f"/files/user_{user.id}/image_20250124-063307_12345678.jpg"
         assert upload.static_url == expected_url
 
+        # Verify url exists (basic check, implementation may vary)
+        assert upload.url is not None
+
+
     @pytest.mark.asyncio
     async def test_upload_url_properties_without_extension(self, db):
         """Test URL properties handle files without extensions correctly."""
         user = await User.create(
             username="noext",
+
             email="noext@example.com",
             password="hashed_password_noext",
             fingerprint_hash="fp-hash-noext",
@@ -919,3 +924,85 @@ class TestUploadMetadataFilepathProperty:
         assert filepath1 != filepath2
         assert filepath1.parent == filepath2.parent  # Same user directory
         assert filepath1.name != filepath2.name
+
+
+class TestUploadPagination:
+    """Test Upload model pagination functionality (PaginationMixin)."""
+
+    @pytest.mark.asyncio
+    async def test_paginate_returns_queryset(self, db):
+        """Test paginate method returns a filtered queryset."""
+        user = await User.create(username="pageuser", email="page@example.com", is_registered=True, password="password")
+        
+        # Create 15 uploads
+        for i in range(15):
+             await Upload.create(
+                user=user,
+                description=f"File {i}",
+                name=f"file{i}_20250101-000000_12345678",
+                cleanname=f"file{i}",
+                originalname=f"file{i}.txt",
+                ext="txt",
+                size=100,
+                type="text/plain",
+                extra=""
+            )
+
+        # Paginate: page 1, size 10
+        page1 = await Upload.paginate(page=1, page_size=10, user=user)
+        assert len(page1) == 10
+        
+        # Paginate: page 2, size 10
+        page2 = await Upload.paginate(page=2, page_size=10, user=user)
+        assert len(page2) == 5
+
+    @pytest.mark.asyncio
+    async def test_pages_calculation(self, db):
+        """Test pages calculation method."""
+        user = await User.create(username="pagecalc", email="calc@example.com", is_registered=True, password="password")
+        
+        # Create 25 uploads
+        for i in range(25):
+             await Upload.create(
+                user=user,
+                description=f"File {i}",
+                name=f"file{i}",
+                cleanname="file",
+                originalname="file.txt",
+                ext="txt",
+                size=100,
+                type="text/plain",
+                extra=""
+            )
+            
+        # Page size 10 -> 3 pages
+        pages = await Upload.pages(page_size=10, user=user)
+        assert pages == 3
+        
+        # Page size 5 -> 5 pages
+        pages = await Upload.pages(page_size=5, user=user)
+        assert pages == 5
+        
+        # Page size 100 -> 1 page
+        pages = await Upload.pages(page_size=100, user=user)
+        assert pages == 1
+
+    @pytest.mark.asyncio
+    async def test_pagination_sorting(self, db):
+        """Test pagination sorting arguments."""
+        user = await User.create(username="pagesort", email="sort@example.com", is_registered=True, password="password")
+        
+        # Create 3 uploads with different sizes
+        u1 = await Upload.create(user=user, description="Sort test", name="small", cleanname="small", originalname="s.txt", ext="txt", size=10, type="text/plain", extra="")
+        u2 = await Upload.create(user=user, description="Sort test", name="medium", cleanname="medium", originalname="m.txt", ext="txt", size=20, type="text/plain", extra="")
+        u3 = await Upload.create(user=user, description="Sort test", name="large", cleanname="large", originalname="l.txt", ext="txt", size=30, type="text/plain", extra="")
+        
+        # Sort by size asc
+        asc = await Upload.paginate(page=1, page_size=10, sort_by="size", sort_order="asc", user=user)
+        assert asc[0].id == u1.id
+        assert asc[2].id == u3.id
+        
+        # Sort by size desc
+        desc = await Upload.paginate(page=1, page_size=10, sort_by="size", sort_order="desc", user=user)
+        assert desc[0].id == u3.id
+        assert desc[2].id == u1.id

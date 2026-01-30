@@ -1,5 +1,6 @@
 import re
 import html
+import humanize
 
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -111,3 +112,8 @@ def sanitised_markdown(text: str) -> str:
 
     # Convert markdown to HTML
     return markdown(sanitised_text)
+
+
+def time_ago(dt: datetime) -> str:
+    """Return a human-readable time ago string."""
+    return humanize.naturaltime(dt)

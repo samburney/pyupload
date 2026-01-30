@@ -1,17 +1,18 @@
 from typing import Annotated, Optional, TYPE_CHECKING
-from pydantic import BaseModel, StringConstraints, ConfigDict
+from pydantic import BaseModel, StringConstraints
 from tortoise import fields, models
 from pathlib import Path
 
 from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
+from app.models.pagination import PaginationMixin
 
 from app.models.base import TimestampMixin
 
 if TYPE_CHECKING:
-    from tortoise.queryset import QuerySet
     from app.models.images import Image
-    
+    from tortoise.queryset import QuerySet
+
 
 config = get_app_config()
 
@@ -36,7 +37,7 @@ def make_user_filepath(user_id: int, filename: str) -> Path:
     return user_dir / filename
 
 
-class Upload(models.Model, TimestampMixin):
+class Upload(models.Model, TimestampMixin, PaginationMixin):
     id = fields.IntField(primary_key=True)
     user = fields.ForeignKeyField("models.User", related_name="uploads", on_delete=fields.RESTRICT)
     description = fields.CharField(max_length=255)
@@ -78,7 +79,7 @@ class Upload(models.Model, TimestampMixin):
         if hasattr(self, "images") and self.images.exists():
             return True
         return False
-
+        
 
 class UploadMetadata(BaseModel):
     """Metadata for an uploaded file."""

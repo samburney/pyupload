@@ -21,7 +21,14 @@ async def show_upload_page(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Render the upload page."""
-    return templates.TemplateResponse(request, "uploads/index.html.j2")
+
+    return templates.TemplateResponse(
+        request,
+        "uploads/index.html.j2",
+        context={
+            "current_user": current_user,
+        },
+    )
 
 
 @router.post("/upload", response_class=HTMLResponse)
