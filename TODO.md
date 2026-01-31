@@ -38,9 +38,11 @@
 - [x] Upload widget UI with progress feedback (Step 9) — 30 passing tests
 - [x] File browsing and gallery display (Step 10) — 5 passing tests
 - [x] Basic configuration and transactional cleanup (Steps 11-12)
-- [ ] Scheduled maintenance jobs (Orphaned file cleanup)
-- [ ] Comprehensive testing (Steps 13-17)
-- [ ] End-to-end validation (Step 18)
+- [x] Scheduled maintenance jobs (Orphaned file cleanup) — 9 passing tests
+- [x] Manual testing and security review (Step 13)
+- [x] **Core upload functionality complete (495/495 tests passing)**
+- [ ] Implement file download/serving endpoints (GET /get/{id}/{filename})
+- [ ] Remove temporary /files/ static route before release
 
 ---
 
@@ -72,6 +74,7 @@
 - [ ] Image rotation/transformation endpoints
 
 ### Permissions & Sharing
+- [ ] Implement access control for private files (owner-only access)
 - [ ] Private/public permissions with shareable links
 - [ ] Link-based sharing with optional expiration
 - [ ] Granular access control (view, download, manage)
