@@ -37,6 +37,12 @@ class AppConfig:
         storage_path.mkdir(parents=True, exist_ok=True)
     if not storage_path.is_dir():
         raise ValueError(f"STORAGE_PATH {storage_path} is not a directory.")
+    
+    storage_cache_retention_days: int = int(os.getenv("STORAGE_CACHE_RETENTION_DAYS", "30"))
+    
+    storage_orphaned_max_age_hours: int = int(os.getenv("STORAGE_ORPHANED_MAX_AGE_HOURS", "24"))
+    if storage_orphaned_max_age_hours < 0:
+        raise ValueError("STORAGE_ORPHANED_MAX_AGE_HOURS must be a non-negative integer.")
 
     # Database configuration
     db_host = os.getenv("DB_HOST", "db")
@@ -57,10 +63,10 @@ class AppConfig:
     auth_token_algorithm: str = os.getenv("AUTH_TOKEN_ALGORITHM", "HS256")
     auth_token_age_minutes: int = int(os.getenv("AUTH_TOKEN_AGE_MINUTES", "30"))
     if auth_token_age_minutes <= 0:
-        raise ValueError("AUTH_TOKEN_AGE_MINUTES must be a positive integer.")
+        raise ValueError("AUTH_TOKEN_AGE_MINUTES must be a non-negative integer.")
     auth_refresh_token_age_days: int = int(os.getenv("AUTH_REFRESH_TOKEN_AGE_DAYS", "7"))
     if auth_refresh_token_age_days <= 0:
-        raise ValueError("AUTH_REFRESH_TOKEN_AGE_DAYS must be a positive integer.")
+        raise ValueError("AUTH_REFRESH_TOKEN_AGE_DAYS must be a non-negative integer.")
 
     # User limits configuration
     user_max_file_size_mb: int = int(os.getenv("USER_MAX_FILE_SIZE_MB", "100"))
