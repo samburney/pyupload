@@ -37,7 +37,8 @@
   - [x] UI upload endpoints (GET/POST /upload) — 18 tests
 - [x] Upload widget UI with progress feedback (Step 9) — 30 passing tests
 - [x] File browsing and gallery display (Step 10) — 5 passing tests
-- [ ] Basic configuration and cleanup (Steps 11-12)
+- [x] Basic configuration and transactional cleanup (Steps 11-12)
+- [ ] Scheduled maintenance jobs (Orphaned file cleanup)
 - [ ] Comprehensive testing (Steps 13-17)
 - [ ] End-to-end validation (Step 18)
 

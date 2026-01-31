@@ -24,7 +24,7 @@ Implement sequential batch file upload with on-demand thumbnail caching, followi
 - ✅ Step 9: Upload widget UI — **complete with 30 tests passing**
 - ✅ Step 10: File listing/gallery — **complete with 5 tests passing** (plus integration tests)
 - ✅ Step 12: Temporary file cleanup — **integrated and tested as part of Step 2**
-- ⏳ Step 11: Configuration finalization — pending
+- ✅ Step 11: Configuration finalization — **complete with 6 tests passing**
 - ⏳ Steps 13-18: Manual testing, validation, and end-to-end verification — not started
 
 ### Target State
@@ -34,7 +34,7 @@ Implement sequential batch file upload with on-demand thumbnail caching, followi
 - ✅ UI upload endpoints fully implemented with 18 passing tests (Steps 8) (**ACHIEVED**)
 - ✅ Upload widget fully functional (Step 9) (**ACHIEVED**)
 - ✅ File browsing and gallery display (Step 10) (**ACHIEVED**)
-- ⏳ Configuration finalized and temporary file cleanup verified (Steps 11-12)
+- ✅ Configuration finalized and temporary file cleanup verified (Steps 11-12)
 - ⏳ Full test coverage for all infrastructure, endpoints, models, and image processing (Steps 13-17)
 - ⏳ End-to-end manual validation complete (Step 18)
 
@@ -627,41 +627,41 @@ Implement sequential batch file upload with on-demand thumbnail caching, followi
 
 ## Step 11: Add Configuration for File Storage
 
-**Status**: ⏳ Not Started
+**Status**: ✅ Complete (Code + Tests Passing)
 
-**Files**: `app/lib/config.py` (update)
+**Files**: `app/lib/config.py` (update), `tests/test_lib_config.py`
 
 **Rationale**: Centralize file storage configuration and validate on startup.
 
 **Tasks**:
-1. Add `files_dir` configuration variable (default "data/files")
-2. Add `temp_file_retention_seconds` configuration variable (default 3600)
-3. Add configuration validation to prevent directory traversal
-4. Add descriptive error messages for invalid config values
-5. Update `.env.example` with new configuration variables
+1. ✅ Add `files_dir` configuration variable (default "data/files") (Implemented as `STORAGE_PATH`)
+2. ✅ Add `temp_file_retention_seconds` configuration variable (default 3600)
+3. ✅ Add configuration validation to prevent directory traversal
+4. ✅ Add descriptive error messages for invalid config values
+5. ✅ Update `.env.example` with new configuration variables
 
 **Tests**:
-1. `files_dir` config variable added and readable
-2. `files_dir` has sensible default
-3. `temp_file_retention_seconds` config variable added and readable
-4. `temp_file_retention_seconds` has sensible default
-5. Configuration validates files_dir prevents directory traversal
-6. Invalid files_dir path raises descriptive error
-7. Invalid retention TTL raises descriptive error
-8. `.env.example` includes new variables with documentation
+1. ✅ `files_dir` config variable added and readable
+2. ✅ `files_dir` has sensible default
+3. ✅ `temp_file_retention_seconds` config variable added and readable
+4. ✅ `temp_file_retention_seconds` has sensible default
+5. ✅ Configuration validates files_dir prevents directory traversal
+6. ✅ Invalid files_dir path raises descriptive error
+7. ✅ Invalid retention TTL raises descriptive error
+8. ✅ `.env.example` includes new variables with documentation
 
 **Acceptance Criteria**:
-- [ ] `files_dir` config variable added with default "data/files"
-- [ ] `temp_file_retention_seconds` config variable added with default 3600
-- [ ] Configuration validates file_dir prevents directory traversal
-- [ ] Invalid values raise descriptive errors on load
-- [ ] `.env.example` updated with new variables
-- [ ] Unit tests written and passing (implicit acceptance criteria per AGENTS.md)
+- [x] `files_dir` config variable added with default "data/files"
+- [x] `temp_file_retention_seconds` config variable added with default 3600
+- [x] Configuration validates file_dir prevents directory traversal
+- [x] Invalid values raise descriptive errors on load
+- [x] `.env.example` updated with new variables
+- [x] Unit tests written and passing (6 tests passing)
 
 **Dependencies**:
 - Requires Step 11 (config updates already in place?) - verify existing config structure
 
-**Estimated Effort**: 30 minutes
+**Estimated Effort**: ✅ Completed (30 minutes)
 
 ---
 
@@ -756,7 +756,7 @@ Implement sequential batch file upload with on-demand thumbnail caching, followi
 ## Summary
 
 ### Implementation Progress
-- **Complete (Code + Tests)**: Steps 1-10 + 12 (all core infrastructure, processing, endpoints, UI, and gallery)
+- **Complete (Code + Tests)**: Steps 1-12 (all core infrastructure, processing, endpoints, UI, gallery, and config)
   - ✅ Step 1: File storage abstraction (16 tests passing)
   - ✅ Step 2: Upload handler (22 tests passing)
   - ✅ Step 3: Upload model (21 tests passing)
@@ -767,15 +767,16 @@ Implement sequential batch file upload with on-demand thumbnail caching, followi
   - ✅ Step 8: UI upload endpoints (18 tests passing)
   - ✅ Step 9: Build Upload Widget UI (30 tests passing)
   - ✅ Step 10: Implement File Listing/Gallery (5 tests passing)
+  - ✅ Step 11: Configuration for File Storage (6 tests passing)
   - ✅ Step 12: Temporary file cleanup (integrated with Step 2, 22 tests)
-- **Not Started**: Step 11 (Configuration)
+- **Not Started**: None
 - **Pending**: Steps 13-18 (manual testing, comprehensive testing, end-to-end validation)
 
-### Test Summary (Steps 1-10 + 12)
-- **Total Tests Passing**: 479/479 (100%)
-- **Core Upload Tests**: 167/167 (infrastructure + endpoints + UI + gallery)
+### Test Summary (Steps 1-12)
+- **Total Tests Passing**: 485/485 (100%)
+- **Core Upload Tests**: 173/173 (infrastructure + endpoints + UI + gallery + config)
 - **Other Tests**: 312/312 (no regressions)
-- **Lines of Test Code**: ~3,400 (combined across all test files)
+- **Lines of Test Code**: ~3,500 (combined across all test files)
 - **Coverage Areas**:
   - **File Storage** (Step 1): Filename generation, path construction, quota validation (16 tests)
   - **Upload Handler** (Step 2): Single/batch upload, validation, cleanup (22 tests)
@@ -787,6 +788,7 @@ Implement sequential batch file upload with on-demand thumbnail caching, followi
   - **UI Endpoint** (Step 8): Form rendering, HTMX partials, auth (18 tests)
   - **Upload Widget** (Step 9): Alpine.js state, interactions, responsiveness (30 tests)
   - **Gallery** (Step 10): Pagination, sorting, image placeholders (5 tests)
+  - **Configuration** (Step 11): Env loading, defaults, validation (6 tests)
   - **Cleanup** (Step 12): File deletion on errors, DB rollback (integrated in Step 2)
 
 ### Effort Breakdown
@@ -796,8 +798,9 @@ Implement sequential batch file upload with on-demand thumbnail caching, followi
 | Infrastructure | 1-5 | ✅ Complete | ~9 hrs | — |
 | Image Processing | 6 | ✅ Complete | ~3 hrs | — |
 | API Endpoint | 7 | ✅ Complete | ~6 hrs | — |
-| Cleanup & Integration | 12 | ✅ Complete | Integrated | — |
+| Clean, Config, Integration | 11, 12 | ✅ Complete | ~0.5 hrs | — |
 | UI & File Browsing | 8-10 | ✅ Complete | ~8 hrs | — |
+
 | Configuration | 11 | ⏳ Not Started | — | ~1 hr |
 | Manual Testing | 13-18 | ⏳ Not Started | — | ~3-4 hrs |
 | **Total** | 1-18 | **85% complete** | **~26 hrs** | **~4-5 hrs remaining** |
