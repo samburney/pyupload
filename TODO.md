@@ -1,6 +1,6 @@
 # TODO - pyupload
 
-## Current Release (v0.1)
+## Current Release (v0.1) - Feature Parity with simplegallery
 
 ### Planning & Foundation
 - [x] Document application overview
@@ -41,22 +41,60 @@
 - [x] Scheduled maintenance jobs (Orphaned file cleanup) — 9 passing tests
 - [x] Manual testing and security review (Step 13)
 - [x] **Core upload functionality complete (495/495 tests passing)**
-- [ ] Implement file download/serving endpoints (GET /get/{id}/{filename})
+
+### File Serving & Viewing (Critical for v0.1)
+- [ ] Implement file download/serving endpoint (GET /get/{id}/{filename})
+  - [ ] View counter increment on file delivery
+  - [ ] Access control for private files (owner-only)
+  - [ ] Proper MIME type handling
+- [ ] Individual upload detail/view page
+  - [ ] Display file metadata (size, dimensions, type, view count)
+  - [ ] Social/direct link sharing options
+  - [ ] Inline editing for title/description (owner only)
+  - [ ] Privacy toggle (private/public) for owners
+  - [ ] Delete button for owners/admins
 - [ ] Remove temporary /files/ static route before release
+
+### Access Control & Privacy
+- [ ] Implement privacy enforcement for file serving
+  - [ ] Private files only accessible to owner
+  - [ ] Public files accessible to all
+- [ ] Delete functionality for uploads (owners/admins only)
 
 ---
 
-## Future Release (v0.2)
+## Future Release (v0.2) - Extended Feature Parity
+
+### Gallery & Discovery Pages
+- [ ] Home page - Latest public uploads gallery
+- [ ] Random uploads page
+- [ ] Popular uploads page (most viewed)
+- [ ] Search functionality
+  - [ ] Keyword search across titles, descriptions
+  - [ ] Tag-based search
+
+### Collections & Organization
+- [ ] Collection management UI
+  - [ ] Create/edit/delete collections
+  - [ ] Add/remove uploads from collections
+  - [ ] Collection browsing pages
+- [ ] Tag system UI
+  - [ ] Tag creation and management
+  - [ ] Tag browsing pages
+  - [ ] Inline tag editing on upload view page
+
+### Image Processing & Transformations
+- [ ] Dynamic image resizing (on-the-fly via URL parameters)
+- [ ] Format conversion (deliver files in different formats)
+- [ ] Image rotation endpoints
+  - [ ] Update metadata (width/height swap)
+  - [ ] Cache invalidation after rotation
+- [ ] On-demand thumbnail generation
+- [ ] Cache cleanup scheduler
 
 ### Upload Enhancements
 - [ ] HTMX upload progress bars
 - [ ] Parallel batch processing
-- [ ] On-demand image thumbnail generation
-- [ ] Cache cleanup scheduler
-
-### Collections & Organization
-- [ ] Collection/tagging system
-- [ ] File search functionality
 
 ---
 
@@ -74,7 +112,7 @@
 - [ ] Image rotation/transformation endpoints
 
 ### Permissions & Sharing
-- [ ] Implement access control for private files (owner-only access)
+- [ ] Admin access to all files (override privacy settings)
 - [ ] Private/public permissions with shareable links
 - [ ] Link-based sharing with optional expiration
 - [ ] Granular access control (view, download, manage)
