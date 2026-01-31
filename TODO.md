@@ -66,7 +66,8 @@
 ## Future Release (v0.2) - Extended Feature Parity
 
 ### Gallery & Discovery Pages
-- [ ] Home page - Latest public uploads gallery
+- [ ] Home gallery page (latest public uploads)
+- [ ] Sort and filter options (newest, most viewed, file type)
 - [ ] Random uploads page
 - [ ] Popular uploads page (most viewed)
 - [ ] Search functionality
@@ -122,6 +123,7 @@
 
 ## Potential Future Enhancements
 
+- [ ] Social media share buttons (Twitter, Facebook, Reddit, etc.)
 - [ ] S3/cloud storage backends
 - [ ] File integrity checking (checksums/verification)
 - [ ] Virus/malware scanning integration

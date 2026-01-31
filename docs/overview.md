@@ -34,11 +34,13 @@ The following technologies have been selected for `pyupload` to ensure a modern,
 
 `pyupload` implements a three-tier user system to balance ease of access with security:
 
-1. **Anonymous Users**: Truly anonymous browsing with no database record. Limited to viewing public content.
+1. **Anonymous Users**: Truly anonymous browsing with no database record. Limited to viewing public content. Can visit any public page without authentication.
 
-2. **Unregistered Auto-Generated Accounts**: Created automatically via server-side fingerprinting (User-Agent, Accept headers, without IP to allow network changes). Users receive a Reddit-style auto-generated username (e.g., "HappyPanda1234") and JWT authentication. Fingerprint-based auto-login allows returning users to access their account seamlessly. These accounts have tiered upload restrictions and are marked abandoned after 90 days of inactivity (configurable via `UNREGISTERED_ACCOUNT_ABANDONMENT_DAYS`).
+2. **Unregistered Auto-Generated Accounts**: Created automatically **on first file upload** via server-side fingerprinting (User-Agent, Accept headers, without IP to allow network changes). Users receive a Reddit-style auto-generated username (e.g., "HappyPanda1234") and JWT authentication. Fingerprint-based auto-login allows returning users to access their account seamlessly. These accounts have tiered upload restrictions and are marked abandoned after 90 days of inactivity (configurable via `UNREGISTERED_ACCOUNT_ABANDONMENT_DAYS`).
 
 3. **Registered Accounts**: Full accounts with email/password authentication. Unregistered users can upgrade to registered status via the `/register` page, which clears their fingerprint and issues fresh tokens. Registered accounts have no upload restrictions and are never abandoned.
+
+**Auto-Account Creation Trigger**: Auto-accounts are created **only when a user uploads a file** (POST to `/upload`), not when visiting the upload page (GET `/upload`). This prevents unnecessary account creation for users who are just browsing. The upload page is accessible to all users, but authentication/account creation happens at upload time.
 
 **Configuration**: Upload limits, allowed file types, and abandonment policy are configurable via environment variables (see `.env.example`). Fingerprints are cleared upon abandonment, allowing reuse on the same device.
 
