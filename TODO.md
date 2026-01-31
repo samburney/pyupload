@@ -55,6 +55,17 @@
   - [ ] Delete button for owners/admins
 - [ ] Remove temporary /files/ static route before release
 
+### Gallery & Discovery Pages (v0.1)
+- [ ] Random uploads page (/random)
+- [ ] Popular uploads page (/popular - most viewed)
+- [ ] All uploads page (/all - latest public uploads)
+
+### Static Content Pages (v0.1)
+- [ ] About page
+- [ ] Privacy Policy page
+- [ ] Terms of Service page
+- [ ] Contact page
+
 ### Access Control & Privacy
 - [ ] Implement privacy enforcement for file serving
   - [ ] Private files only accessible to owner
@@ -75,6 +86,8 @@
   - [ ] Tag-based search
 
 ### Collections & Organization
+- [ ] Tags navbar link and browsing page (/tags)
+- [ ] Collections navbar link and browsing page (/collections)
 - [ ] Collection management UI
   - [ ] Create/edit/delete collections
   - [ ] Add/remove uploads from collections
@@ -96,6 +109,7 @@
 ### Upload Enhancements
 - [ ] HTMX upload progress bars
 - [ ] Parallel batch processing
+- [ ] Loading states and transitions for all HTMX interactions
 
 ---
 
