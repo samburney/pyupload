@@ -1,5 +1,6 @@
 import magic
 
+from datetime import datetime, timedelta
 from typing import BinaryIO
 from tempfile import SpooledTemporaryFile
 from fastapi import UploadFile
@@ -276,3 +277,53 @@ async def process_uploaded_file(user: User, file: UploadFile | BinaryIO | Spoole
             logger.warning(f"Image processing failed for upload ID {upload_result.upload_id}: {e}")
 
     return upload_result
+
+
+async def cleanup_orphaned_files():
+    """Clean up orphaned files (files on disk with no DB record)."""
+    
+    orphans_found = 0
+    
+    # Function to delete a file
+    def delete_orphaned_file(file):
+        try:
+            logger.info(f"Orphaned file found: {file.relative_to(config.storage_path)}")
+            file.unlink()
+        except Exception as e:
+            logger.error(f"Failed to delete orphaned file {file}: {e}")
+
+
+    # Iterate through user directories
+    user_directories = config.storage_path.glob("user_*")
+    
+    for user_dir in user_directories:
+        # Skip if not a directory
+        if not user_dir.is_dir():
+            continue
+
+        user_id = int(user_dir.name.split("_")[1])
+        user_files = user_dir.glob("*")
+
+        for file in user_files:
+            # Skip if not a normal file
+            if not file.is_file() or file.name.startswith("."):
+                continue
+
+            # Get file metadata
+            file_stat = file.stat()
+            file_age = datetime.fromtimestamp(file_stat.st_mtime)
+
+            # Skip if file is too new
+            if file_age > datetime.now() - timedelta(hours=config.storage_orphaned_max_age_hours):
+                continue
+
+            # Get file name parts
+            file_name, file_ext = split_filename(file.name)
+
+            # Check if file exists in database
+            upload = await Upload.get_or_none(user_id=user_id, name=file_name, ext=file_ext)
+            if upload is None:
+                orphans_found += 1
+                delete_orphaned_file(file)
+                
+    return orphans_found
