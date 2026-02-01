@@ -8,6 +8,7 @@ from app.lib.helpers import (
     make_clean_filename,
     make_unique_filename,
     sanitised_markdown,
+    sanitise_filename,
     time_ago,
 )
 
@@ -394,6 +395,132 @@ class TestSanitisedMarkdown:
         assert "<blockquote>" not in result
         # Should contain the escaped character
         assert "&gt;" in result
+
+
+class TestSanitiseFilename:
+    """Test filename sanitization function for security."""
+
+    def test_returns_clean_filename(self):
+        """Test that normal filenames pass through unchanged."""
+        result = sanitise_filename("normal-file_123.jpg")
+        assert result == "normal-file_123.jpg"
+
+    def test_prevents_directory_traversal(self):
+        """Test that directory traversal attempts are blocked."""
+        result = sanitise_filename("../../etc/passwd")
+        assert result == "passwd"
+        assert ".." not in result
+        assert "/" not in result
+
+    def test_prevents_absolute_paths(self):
+        """Test that absolute paths are reduced to basename."""
+        result = sanitise_filename("/etc/passwd")
+        assert result == "passwd"
+        assert "/" not in result
+
+    def test_prevents_windows_paths(self):
+        """Test that Windows-style paths are reduced to basename."""
+        result = sanitise_filename("C:\\Windows\\System32\\config")
+        assert result == "config"
+        assert "\\" not in result
+        assert ":" not in result
+
+    def test_removes_null_bytes(self):
+        """Test that null bytes are removed."""
+        result = sanitise_filename("file\x00name.txt")
+        assert result == "filename.txt"
+        assert "\x00" not in result
+
+    def test_removes_control_characters(self):
+        """Test that control characters (0-31, 127) are removed."""
+        # Test various control characters
+        result = sanitise_filename("file\x01\x02\x1fname.txt")
+        assert result == "filename.txt"
+        
+        # Test DEL character (127)
+        result = sanitise_filename("file\x7fname.txt")
+        assert result == "filename.txt"
+
+    def test_preserves_unicode_characters(self):
+        """Test that valid Unicode characters are preserved."""
+        result = sanitise_filename("файл.txt")  # Cyrillic
+        assert result == "файл.txt"
+        
+        result = sanitise_filename("文件.txt")  # Chinese
+        assert result == "文件.txt"
+
+    def test_preserves_spaces(self):
+        """Test that spaces are preserved (unlike make_clean_filename)."""
+        result = sanitise_filename("my file.txt")
+        assert result == "my file.txt"
+
+    def test_preserves_special_characters(self):
+        """Test that safe special characters are preserved."""
+        result = sanitise_filename("file-name_v2.0.txt")
+        assert result == "file-name_v2.0.txt"
+
+    def test_returns_none_for_empty_input(self):
+        """Test that empty string returns None."""
+        result = sanitise_filename("")
+        assert result is None
+
+    def test_returns_none_for_whitespace_only(self):
+        """Test that whitespace-only string returns None."""
+        result = sanitise_filename("   ")
+        assert result is None
+
+    def test_returns_none_for_path_only(self):
+        """Test that path with no filename returns None."""
+        result = sanitise_filename("../../")
+        assert result is None
+
+    def test_handles_mixed_separators(self):
+        """Test handling of mixed path separators."""
+        result = sanitise_filename("path/to\\file.txt")
+        assert result == "file.txt"
+        assert "/" not in result
+        assert "\\" not in result
+
+    def test_handles_multiple_dots(self):
+        """Test that multiple dots in filename are preserved."""
+        result = sanitise_filename("archive.tar.gz")
+        assert result == "archive.tar.gz"
+
+    def test_handles_hidden_files(self):
+        """Test that hidden files (starting with dot) are preserved."""
+        result = sanitise_filename(".gitignore")
+        assert result == ".gitignore"
+
+    def test_handles_very_long_filenames(self):
+        """Test that very long filenames are preserved."""
+        long_name = "a" * 255 + ".txt"
+        result = sanitise_filename(long_name)
+        assert result == long_name
+
+    def test_security_null_byte_injection(self):
+        """Test protection against null byte injection attacks."""
+        # Null byte injection: file.txt\x00.php
+        result = sanitise_filename("file.txt\x00.php")
+        assert result == "file.txt.php"
+        assert "\x00" not in result
+
+    def test_security_path_traversal_variations(self):
+        """Test various path traversal attack patterns."""
+        attacks = [
+            "../../../etc/passwd",
+            "..\\..\\..\\windows\\system32",
+            "....//....//etc/passwd",
+            "/etc/passwd",
+            "C:\\boot.ini",
+        ]
+        
+        for attack in attacks:
+            result = sanitise_filename(attack)
+            # Should not contain path separators
+            assert "/" not in result if result else True
+            assert "\\" not in result if result else True
+            # Should not contain parent directory references
+            assert ".." not in result if result else True
 
 
 class TestTimeAgo:

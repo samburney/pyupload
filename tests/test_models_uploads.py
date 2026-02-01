@@ -825,6 +825,107 @@ class TestUploadUrlProperties:
         assert upload.static_url == f"/files/user_{user.id}/README_20250124-063307_abcdef12"
 
 
+class TestUploadDotExtProperty:
+    """Test Upload model dot_ext property."""
+
+    @pytest.mark.asyncio
+    async def test_dot_ext_with_extension(self, db):
+        """Test dot_ext property returns dot plus extension when extension exists."""
+        user = await User.create(
+            username="dotexttest",
+            email="dotext@example.com",
+            password="hashed_password",
+            fingerprint_hash="fp-hash",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Dot ext test",
+            name="testfile_20250124-063307_abcd1234",
+            cleanname="testfile",
+            originalname="testfile.txt",
+            ext="txt",
+            size=512,
+            type="text/plain",
+            extra="0",
+        )
+
+        assert upload.dot_ext == ".txt"
+
+    @pytest.mark.asyncio
+    async def test_dot_ext_without_extension(self, db):
+        """Test dot_ext property returns empty string when no extension."""
+        user = await User.create(
+            username="dotexttest2",
+            email="dotext2@example.com",
+            password="hashed_password",
+            fingerprint_hash="fp-hash-2",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="No ext test",
+            name="README_20250124-063307_abcd1234",
+            cleanname="README",
+            originalname="README",
+            ext="",
+            size=128,
+            type="text/plain",
+            extra="0",
+        )
+
+        assert upload.dot_ext == ""
+
+    @pytest.mark.asyncio
+    async def test_dot_ext_with_multipart_extension(self, db):
+        """Test dot_ext property with multipart extensions like tar.gz."""
+        user = await User.create(
+            username="dotexttest3",
+            email="dotext3@example.com",
+            password="hashed_password",
+            fingerprint_hash="fp-hash-3",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Multipart ext test",
+            name="archive_20250124-063307_abcd1234",
+            cleanname="archive",
+            originalname="archive.tar.gz",
+            ext="tar.gz",
+            size=2048,
+            type="application/gzip",
+            extra="0",
+        )
+
+        assert upload.dot_ext == ".tar.gz"
+
+    @pytest.mark.asyncio
+    async def test_filename_property_uses_dot_ext(self, db):
+        """Test that filename property correctly uses dot_ext."""
+        user = await User.create(
+            username="filenametest",
+            email="filename@example.com",
+            password="hashed_password",
+            fingerprint_hash="fp-hash-filename",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Filename test",
+            name="myfile_20250124-063307_abcd1234",
+            cleanname="myfile",
+            originalname="myfile.jpg",
+            ext="jpg",
+            size=1024,
+            type="image/jpeg",
+            extra="0",
+        )
+
+        assert upload.filename == "myfile_20250124-063307_abcd1234.jpg"
+        assert upload.filename == f"{upload.name}{upload.dot_ext}"
+
+
 class TestUploadMetadataFilepathProperty:
     """Test UploadMetadata model filepath property."""
 

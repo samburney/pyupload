@@ -59,18 +59,26 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         table = "uploads"
 
     @property
+    def dot_ext(self) -> str:
+        return f".{self.ext}" if self.ext else ""
+
+    @property
     def filepath(self) -> Path:
-        filename = f'{self.name}{'.' + self.ext if self.ext != "" else ""}'
+        filename = f'{self.name}{self.dot_ext}'
         return make_user_filepath(getattr(self, "user_id"), filename)
 
     @property
+    def filename(self) -> str:
+        return f"{self.name}{self.dot_ext}"
+
+    @property
     def url(self) -> Path:
-        url = f'/get/{self.id}/{self.cleanname}{"." + self.ext if self.ext != "" else ""}'
+        url = f'/get/{self.id}/{self.cleanname}{self.dot_ext}'
         return url
 
     @property
     def static_url(self) -> Path:
-        url = f'/files/user_{getattr(self, "user_id")}/{self.name}{"." + self.ext if self.ext != "" else ""}'
+        url = f'/files/user_{getattr(self, "user_id")}/{self.name}{self.dot_ext}'
         return url
     
     @property
@@ -98,8 +106,12 @@ class UploadMetadata(BaseModel):
     mime_type: Annotated[str, StringConstraints(pattern=MIME_TYPE_PATTERN)]
 
     @property
+    def dot_ext(self) -> str:
+        return f".{self.ext}" if self.ext else ""
+
+    @property
     def filepath(self) -> Path:
-        filename = f'{self.filename}{'.' + self.ext if self.ext is not None else ""}'
+        filename = f'{self.filename}{self.dot_ext}'
         return make_user_filepath(self.user_id, filename)
 
 

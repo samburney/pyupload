@@ -2,6 +2,7 @@ import re
 import html
 import humanize
 
+from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
 from markdown import markdown
@@ -117,3 +118,44 @@ def sanitised_markdown(text: str) -> str:
 def time_ago(dt: datetime) -> str:
     """Return a human-readable time ago string."""
     return humanize.naturaltime(dt)
+
+
+def sanitise_filename(filename: str) -> str | None:
+    """Sanitize a filename to prevent directory traversal and other attacks.
+    
+    Removes path separators, null bytes, and control characters.
+    Returns a safe filename suitable for use in Content-Disposition headers.
+    
+    Args:
+        filename: The filename to sanitize
+        
+    Returns:
+        A sanitized filename safe for file serving, or None if invalid
+        
+    Examples:
+        >>> sanitise_filename("../../etc/passwd")
+        'passwd'
+        >>> sanitise_filename("file\x00name.txt")
+        'filename.txt'
+        >>> sanitise_filename("normal-file_123.jpg")
+        'normal-file_123.jpg'
+    """
+    
+    # Remove null bytes
+    filename = filename.replace('\0', '')
+    
+    # Normalize path separators (replace backslashes with forward slashes)
+    # This ensures Windows paths work correctly on Unix systems
+    filename = filename.replace('\\', '/')
+    
+    # Get basename to prevent directory traversal (removes any path separators)
+    filename = Path(filename).name
+    
+    # Remove control characters (ASCII 0-31 and 127)
+    filename = re.sub(r'[\x00-\x1f\x7f]', '', filename)
+    
+    # Return None if empty after sanitization or if it's a parent directory reference
+    if not filename or filename.strip() == '' or filename == '..':
+        return None
+        
+    return filename

@@ -2,6 +2,7 @@ import uvicorn
 
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from urllib.parse import urlencode
 from fastapi import FastAPI, Request, status
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -89,14 +90,22 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             content=jsonable_encoder({"detail": exc.errors()}),
         )
 
+    elif request.url.path.startswith("/get/"):
+        # Handle specified, but empty `download` param
+        if 'download' in request.query_params and request.query_params['download'] == '':
+            query_params = dict(request.query_params)
+            query_params['download'] = 1
+
+            url = f'{request.url.path}?{urlencode(query_params)}'
+            response = RedirectResponse(url=url, status_code=307)
+            return response
+
     # HTTPException handler for UI endpoints
-    else:
-        error_messages = []
-        for error in exc.errors():
-            error_messages.append(f"{error['type'].capitalize()}: {error['msg']} - {error['loc'][-1]}")
+    error_messages = []
+    for error in exc.errors():
+        error_messages.append(f"{error['type'].capitalize()}: {error['msg']} - {error['loc'][-1]}")
 
-        return ui.common.error_response(request, error_messages, status_code=422)
-
+    return ui.common.error_response(request, error_messages, status_code=422)
 
 
 @app.exception_handler(ui.common.security.LoginRequiredException)
