@@ -14,12 +14,16 @@
     </head>
     <body hx-ext="response-targets">
         <div id="wrap" class="min-h-screen flex flex-col">
-            {% include "layout/navbar.html.j2" %}
-
-            {% include "layout/messages.html.j2" %}
-            
-            <div class="container mx-auto mt-4 grow" id="content">
-                {% block content %}{% endblock %}
+            <div class="sm:mx-2">
+                {% include "layout/navbar.html.j2" %}
+            </div>
+            <div class="mx-2">
+                {% include "layout/messages.html.j2" %}
+            </div>
+            <div class="mx-2">
+                <div class="container mx-auto mt-4 grow" id="content">
+                    {% block content %}{% endblock %}
+                </div>
             </div>
 
             <div class="bg-gray-100 border-t border-gray-300 py-2 mt-auto">
