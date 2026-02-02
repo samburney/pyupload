@@ -68,7 +68,7 @@ Implement a secure file serving endpoint that replaces the temporary static file
 **Tasks**:
 1. [x] Create file serving logic in `app/lib/file_serving.py`
 2. [x] Implement UI endpoint GET `/get/{id}/{filename}` (optional filename)
-3. [ ] Implement API endpoint GET `/api/v1/files/{id}/{filename}` (optional filename)
+3. [ ] Implement API endpoint GET `/api/v1/files/{id}` (returns JSON metadata + download URL)
 4. [x] Validate upload ID exists in database
 5. [x] Use filename from URL if provided, otherwise use `Upload.filename`
 6. [x] Sanitize filename to prevent injection attacks (added `sanitise_filename` function)
