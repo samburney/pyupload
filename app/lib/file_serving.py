@@ -34,13 +34,13 @@ def is_inline_mimetype(mimetype: str) -> bool:
     return False
 
 
-async def serve_file(upload: Upload, filename: str = None, user: User = None, download: bool = False) -> FileResponse:
+async def serve_file(upload: Upload, filename: str | None = None, user: User | None = None, download: bool | None = False) -> FileResponse:
     """
     Serve a file with proper access control and view counter increment.
     """
     
     is_private = upload.private
-    is_owner = user is not None and user.id == upload.user_id
+    is_owner = user is not None and user.id == getattr(upload, "user_id")
     is_download = True
 
     # Check if the file is private and the user is not the owner

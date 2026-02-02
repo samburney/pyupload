@@ -9,7 +9,7 @@ class Collection(models.Model):
     created_at = fields.DatetimeField()
     updated_at = fields.DatetimeField()
 
-    class Meta:
+    class Meta:  # type: ignore[override]
         table = "collections"
 
 
@@ -19,7 +19,7 @@ class Tag(models.Model):
     created_at = fields.DatetimeField()
     updated_at = fields.DatetimeField()
 
-    class Meta:
+    class Meta:  # type: ignore[override]
         table = "tags"
 
 
@@ -27,7 +27,7 @@ class CollectionUpload(models.Model):
     collection_id = fields.IntField()
     upload_id = fields.IntField()
 
-    class Meta:
+    class Meta:  # type: ignore[override]
         table = "collection_upload"
 
 
@@ -35,5 +35,5 @@ class TagUpload(models.Model):
     tag_id = fields.IntField()
     upload_id = fields.IntField()
 
-    class Meta:
+    class Meta:  # type: ignore[override]
         table = "tag_upload"

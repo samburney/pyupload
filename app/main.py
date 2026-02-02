@@ -17,6 +17,8 @@ from app.middleware.fingerprint_auto_login import FingerprintAutoLoginMiddleware
 
 from app.models import init_db
 
+from app.ui.common.security import LoginRequiredException
+
 from app import api
 from app import ui
 
@@ -94,7 +96,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         # Handle specified, but empty `download` param
         if 'download' in request.query_params and request.query_params['download'] == '':
             query_params = dict(request.query_params)
-            query_params['download'] = 1
+            query_params['download'] = '1'
 
             url = f'{request.url.path}?{urlencode(query_params)}'
             response = RedirectResponse(url=url, status_code=307)
@@ -108,8 +110,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return ui.common.error_response(request, error_messages, status_code=422)
 
 
-@app.exception_handler(ui.common.security.LoginRequiredException)
-async def login_required_exception_handler(request: Request, exc: ui.common.security.LoginRequiredException):
+@app.exception_handler(LoginRequiredException)
+async def login_required_exception_handler(request: Request, exc: LoginRequiredException):
     ui.common.session.flash_message(request, "Please log in to access this page.", "error")
     return RedirectResponse(url="/login", status_code=303)
 

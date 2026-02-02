@@ -156,6 +156,7 @@ def create_token_cookie(token: str, token_type: str = "access") -> dict:
     if token_type not in ["access", "refresh"]:
         raise ValueError("Invalid token type specified")
 
+    max_age: timedelta = timedelta()
     if token_type == "access":
         max_age = timedelta(minutes=config.auth_token_age_minutes)
     elif token_type == "refresh":
@@ -292,6 +293,9 @@ async def revoke_refresh_token(token: str, user: User | int) -> bool:
 
 async def revoke_user_refresh_tokens(user: User | int) -> int:
     """Revoke all refresh tokens for a user."""
+
+    user_id = None
+
     # Set user_id prior to possible user fetch
     if isinstance(user, int):
         user_id = user

@@ -7,7 +7,7 @@ from email_validator import validate_email, EmailNotValidError
 from app.lib.config import get_app_config
 from app.lib.security import verify_password, generate_username
 
-from app.models.base import TimestampMixin
+from app.models.common.base import TimestampMixin
 
 if TYPE_CHECKING:
     from tortoise.queryset import QuerySet
@@ -37,7 +37,7 @@ class User(models.Model, TimestampMixin):
     if TYPE_CHECKING:
         uploads: "QuerySet[Upload]"
 
-    class Meta:
+    class Meta:  # type: ignore[override]
         table = "users"
     
     @property

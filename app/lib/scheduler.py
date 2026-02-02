@@ -22,6 +22,9 @@ scheduler.add_job(cleanup_tokens, 'cron', hour='*', minute=0, jitter=300)
 
 async def cleanup_abandoned_users():
     """Clean up abandoned users who never completed registration"""
+
+    abandoned_count: int = 0
+
     # Mark abandoned users and get count
     try:
         abandoned_count = await mark_abandoned()
@@ -38,6 +41,9 @@ scheduler.add_job(cleanup_abandoned_users, 'cron', hour='*', minute=0, jitter=30
 
 async def cleanup_orphaned_files():
     """Clean up orphaned files"""
+
+    orphaned_count: int = 0
+
     # Mark abandoned users and get count
     try:
         orphaned_count = await lib_file_storage.cleanup_orphaned_files()

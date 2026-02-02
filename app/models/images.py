@@ -1,9 +1,8 @@
 from tortoise import models, fields
-from pydantic import BaseModel, StringConstraints, ConfigDict
-from typing import Annotated, Optional
+from pydantic import BaseModel
+from typing import Optional
 
-from app.models.base import TimestampMixin
-from app.models.uploads import Upload
+from app.models.common.base import TimestampMixin
 
 
 class Image(models.Model, TimestampMixin):
@@ -15,7 +14,7 @@ class Image(models.Model, TimestampMixin):
     bits = fields.IntField()
     channels = fields.IntField()
 
-    class Meta:
+    class Meta:  # type: ignore[override]
         table = "images"
 
 

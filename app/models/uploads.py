@@ -5,9 +5,9 @@ from pathlib import Path
 
 from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
-from app.models.pagination import PaginationMixin
 
-from app.models.base import TimestampMixin
+from app.models.common.base import TimestampMixin
+from app.models.common.pagination import PaginationMixin
 
 if TYPE_CHECKING:
     from app.models.images import Image
@@ -55,7 +55,7 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     if TYPE_CHECKING:
         images: "QuerySet[Image]"
 
-    class Meta:
+    class Meta:  # type: ignore[override]
         table = "uploads"
 
     @property
@@ -72,12 +72,12 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         return f"{self.name}{self.dot_ext}"
 
     @property
-    def url(self) -> Path:
+    def url(self) -> str:
         url = f'/get/{self.id}/{self.cleanname}{self.dot_ext}'
         return url
 
     @property
-    def static_url(self) -> Path:
+    def static_url(self) -> str:
         url = f'/files/user_{getattr(self, "user_id")}/{self.name}{self.dot_ext}'
         return url
     

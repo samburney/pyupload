@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from tortoise import fields, models
 
 from app.lib.config import get_app_config
-from app.models.base import TimestampMixin
+from app.models.common.base import TimestampMixin
 
 
 config = get_app_config()
@@ -18,7 +18,7 @@ class RefreshToken(models.Model, TimestampMixin):
     expires_at = fields.DatetimeField()
     revoked = fields.BooleanField(default=False)
 
-    class Meta:
+    class Meta:  # type: ignore[override]
         table = "refresh_tokens"
 
     async def revoke(self) -> bool:

@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 
 from app.lib.config import get_app_config
 
-from app.models.pagination import PaginationParams
+from app.models.common.pagination import PaginationParams
 from app.models.users import User
 from app.models.uploads import Upload
 

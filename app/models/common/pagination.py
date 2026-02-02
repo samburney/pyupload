@@ -1,10 +1,9 @@
 from math import ceil
 from pydantic import BaseModel 
-from typing import Self, Any, Optional
-
+from typing import TYPE_CHECKING, Any
 from tortoise.queryset import Q, QuerySet
 
-from app.models.base import _ModelBase
+from app.models.common.base import _ModelBase
 
 
 class PaginationParams(BaseModel):
@@ -19,6 +18,11 @@ class PaginationParams(BaseModel):
 class PaginationMixin(_ModelBase):
     """Mixin to add pagination support to models."""
 
+    # Type hints referenced Model methods
+    if TYPE_CHECKING:
+        @classmethod
+        def filter(cls, *args: "Q", **kwargs: Any) -> "QuerySet[Any]": ...  # type: ignore[misc]
+
     @classmethod
     def paginate(
         cls,
@@ -27,7 +31,7 @@ class PaginationMixin(_ModelBase):
         sort_order: str = "asc",
         sort_by: str = "id",
         *args: Q, **kwargs: Any
-    ) -> QuerySet[Self]:
+    ) -> "QuerySet[Any]":
         """Paginate user uploads."""
         
         offset = (page - 1) * page_size
