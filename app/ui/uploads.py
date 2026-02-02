@@ -112,3 +112,14 @@ async def get_upload(
         import logging
         logging.error(f"Unexpected error serving file {id}/{filename}: {e}", exc_info=True)
         return HTMLResponse(status_code=500)
+
+
+@router.get("/download/{id}/{filename}", response_class=HTMLResponse)
+async def download_upload(
+    id: int,
+    filename: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Download an uploaded file."""
+
+    return await get_upload(id=id, filename=filename, current_user=current_user, download=True)
