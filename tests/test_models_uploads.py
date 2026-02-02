@@ -739,7 +739,7 @@ class TestUploadFilepathProperty:
 
 
 class TestUploadUrlProperties:
-    """Test Upload model url and static_url properties."""
+    """Test Upload model url and download_url properties."""
 
     @pytest.mark.asyncio
     async def test_upload_url_property(self, db):
@@ -768,8 +768,8 @@ class TestUploadUrlProperties:
         assert upload.url == expected_url
 
     @pytest.mark.asyncio
-    async def test_upload_static_url_property(self, db):
-        """Test Upload static_url property returns correct static file URL."""
+    async def test_upload_download_url_property(self, db):
+        """Test Upload download_url property returns correct download URL."""
         user = await User.create(
             username="statictest",
             email="static@example.com",
@@ -789,9 +789,9 @@ class TestUploadUrlProperties:
             extra="0",
         )
 
-        # Expected format: /files/user_{id}/{name}.{ext}
-        expected_url = f"/files/user_{user.id}/image_20250124-063307_12345678.jpg"
-        assert upload.static_url == expected_url
+        # Expected format: /download/{id}/{cleanname}.{ext}
+        expected_url = f"/download/{upload.id}/image.jpg"
+        assert upload.download_url == expected_url
 
         # Verify url exists (basic check, implementation may vary)
         assert upload.url is not None
@@ -822,7 +822,7 @@ class TestUploadUrlProperties:
 
         # Should not have a trailing dot
         assert upload.url == f"/get/{upload.id}/README"
-        assert upload.static_url == f"/files/user_{user.id}/README_20250124-063307_abcdef12"
+        assert upload.download_url == f"/download/{upload.id}/README"
 
 
 class TestUploadDotExtProperty:

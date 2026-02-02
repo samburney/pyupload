@@ -43,17 +43,18 @@
 - [x] **Core upload functionality complete (495/495 tests passing)**
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Implement file download/serving endpoint (GET /get/{id}/{filename})
-  - [ ] View counter increment on file delivery
-  - [ ] Access control for private files (owner-only)
-  - [ ] Proper MIME type handling
+- [x] Implement file download/serving endpoint (GET /get/{id}/{filename})
+  - [x] View counter increment on file delivery
+  - [x] Access control for private files (owner-only)
+  - [x] Proper MIME type handling
+  - [x] `/download/` endpoint for forced downloads
+- [x] Remove temporary /files/ static route ✅
 - [ ] Individual upload detail/view page
   - [ ] Display file metadata (size, dimensions, type, view count)
   - [ ] Social/direct link sharing options
   - [ ] Inline editing for title/description (owner only)
   - [ ] Privacy toggle (private/public) for owners
   - [ ] Delete button for owners/admins
-- [ ] Remove temporary /files/ static route before release
 
 ### Gallery & Discovery Pages (v0.1)
 - [ ] Random uploads page (/random)

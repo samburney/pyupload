@@ -15,7 +15,7 @@
     <div class="grid grid-cols-2 shadow-md rounded p-2">
         <div class="flex flex-col grow items-center justify-center">
         {% if upload.images  %}
-            <img class="border border-gray-500 rounded p-1" src="{{ upload.static_url }}" alt="{{ upload.originalname }}">
+            <img class="border border-gray-500 rounded p-1" src="{{ upload.url }}" alt="{{ upload.originalname }}">
         {% else %}
             <div class="border border-gray-500 rounded p-1 size-32 flex items-center justify-center">.{{ upload.ext }}</div>
         {% endif %}

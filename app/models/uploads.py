@@ -77,8 +77,8 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         return url
 
     @property
-    def static_url(self) -> str:
-        url = f'/files/user_{getattr(self, "user_id")}/{self.name}{self.dot_ext}'
+    def download_url(self) -> str:
+        url = f'/download/{self.id}/{self.cleanname}{self.dot_ext}'
         return url
     
     @property

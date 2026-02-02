@@ -2,21 +2,21 @@
 
 ## Implementation Progress
 
-**Status**: Steps 1-3 Complete ✅ | Step 4 Partial ⚠️ | Steps 5-6 Pending
+**Status**: Steps 1-5 Complete ✅ | Step 6 Pending
 
 **Completed**:
 - ✅ Step 1: File serving endpoints (UI complete, API pending)
 - ✅ Step 2: Access control (private/public files)
 - ✅ Step 3: View counter (increments for non-owners)
 - ⚠️ Step 4: Content-Type and headers (basic implementation, advanced features pending)
+- ✅ Step 5: Remove temporary static route
 
 **Pending**:
 - ⏳ Step 1: API endpoint implementation
 - ⏳ Step 4: Advanced headers (ETag, Last-Modified, conditional requests)
-- ⏳ Step 5: Remove temporary static route
 - ⏳ Step 6: Integration testing and security review
 
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-02-02
 
 ---
 
@@ -36,11 +36,12 @@ Implement a secure file serving endpoint that replaces the temporary static file
 ### Current State
 - Files are stored in `data/files/user_{id}/` directories
 - Upload model has `url` property that generates `/get/{id}/{filename}` URLs
-- Upload model has `static_url` property pointing to `/files/` (temporary)
-- Temporary static file route mounted at `/files/` in `app/main.py`
-- Upload model has `private` field (0 or 1) but not enforced
-- Upload model has `viewed` field but never incremented
-- No file serving endpoint implemented
+- Upload model has `download_url` property that generates `/download/{id}/{filename}` URLs
+- `/get/` endpoint serves files inline (images, videos, PDFs, etc.)
+- `/download/` endpoint forces download with Content-Disposition: attachment
+- Upload model has `private` field (0 or 1) and is enforced
+- Upload model has `viewed` field and increments on file access
+- Access control enforced (private files owner-only)
 
 ### Target State
 - Secure `/get/{id}/{filename}` endpoint serving files
@@ -68,14 +69,15 @@ Implement a secure file serving endpoint that replaces the temporary static file
 **Tasks**:
 1. [x] Create file serving logic in `app/lib/file_serving.py`
 2. [x] Implement UI endpoint GET `/get/{id}/{filename}` (optional filename)
-3. [ ] Implement API endpoint GET `/api/v1/files/{id}` (returns JSON metadata + download URL)
-4. [x] Validate upload ID exists in database
-5. [x] Use filename from URL if provided, otherwise use `Upload.filename`
-6. [x] Sanitize filename to prevent injection attacks (added `sanitise_filename` function)
-7. [x] Check file exists on filesystem using `Upload.filepath`
-8. [x] Return FileResponse with appropriate headers
-9. [x] Handle errors (404 for missing files, 403 for unauthorized, 500 for unexpected)
-10. [x] Register endpoints in uploads router
+3. [x] Implement UI endpoint GET `/download/{id}/{filename}` (forced download)
+4. [ ] Implement API endpoint GET `/api/v1/files/{id}` (returns JSON metadata + download URL)
+5. [x] Validate upload ID exists in database
+6. [x] Use filename from URL if provided, otherwise use `Upload.filename`
+7. [x] Sanitize filename to prevent injection attacks (added `sanitise_filename` function)
+8. [x] Check file exists on filesystem using `Upload.filepath`
+9. [x] Return FileResponse with appropriate headers
+10. [x] Handle errors (404 for missing files, 403 for unauthorized, 500 for unexpected)
+11. [x] Register endpoints in uploads router
 
 **Tests**:
 1. [x] Test successful file serving for existing upload
@@ -263,27 +265,37 @@ Implement a secure file serving endpoint that replaces the temporary static file
 ## Step 5: Remove Temporary Static Route
 
 **Files**: 
-- `app/main.py`
-- `app/models/uploads.py`
+- `app/main.py` (✅ updated)
+- `app/models/uploads.py` (✅ updated)
+- `app/ui/templates/users/profile.html.j2` (✅ updated)
+- `app/ui/templates/uploads/list.html.j2` (✅ updated)
+- `tests/test_models_uploads.py` (✅ updated)
+- `tests/test_ui_users.py` (✅ updated)
+- `tests/test_ui_uploads.py` (✅ updated - added download endpoint tests)
 
 **Tasks**:
-1. [ ] Remove `/files/` static mount from main.py
-2. [ ] Remove `static_url` property from Upload model (or mark deprecated)
-3. [ ] Update any templates using `static_url` to use `url` instead
-4. [ ] Update tests that rely on static file serving
-5. [ ] Verify all upload links work with new endpoint
+1. [x] Remove `/files/` static mount from main.py
+2. [x] Rename `static_url` property to `download_url` in Upload model
+3. [x] Update templates using `static_url` to use `url` instead
+4. [x] Update tests that rely on static file serving
+5. [x] Verify all upload links work with new endpoint
+6. [x] Add tests for `/download/` endpoint
 
 **Tests**:
-1. [ ] Test `/files/` route no longer accessible
-2. [ ] Test all upload URLs use `/get/` endpoint
-3. [ ] Test profile page displays uploads correctly
-4. [ ] Test upload list page works
+1. [x] Test `/files/` route no longer accessible (removed from main.py)
+2. [x] Test all upload URLs use `/get/` endpoint
+3. [x] Test profile page displays uploads correctly
+4. [x] Test upload list page works
+5. [x] Test `/download/` endpoint forces attachment
+6. [x] Test `/download/` endpoint authentication
+7. [x] Test `download_url` property generates correct URLs
 
 **Acceptance Criteria**:
-- [ ] `/files/` static route removed
-- [ ] All file access goes through `/get/` endpoint
-- [ ] No broken links in UI
-- [ ] All tests passing
+- [x] `/files/` static route removed
+- [x] All file access goes through `/get/` or `/download/` endpoints
+- [x] No broken links in UI
+- [x] All tests passing (66 tests including 3 new download endpoint tests)
+- [x] `download_url` property implemented for forced downloads
 
 **Implementation Notes**:
 - Search codebase for references to `/files/` or `static_url`

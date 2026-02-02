@@ -154,7 +154,7 @@ class TestUserProfileIntegration:
         assert "image/jpeg" in html
         # Should have img tag
         assert "<img" in html
-        assert f'src="{image_upload.static_url}"' in html
+        assert f'src="{image_upload.url}"' in html
 
     @pytest.mark.asyncio
     async def test_profile_pagination_integration(self, client):

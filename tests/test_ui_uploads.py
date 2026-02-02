@@ -3,6 +3,8 @@
 This module tests the FastAPI/Starlette file upload endpoints:
 - GET /upload - Display upload form page
 - POST /upload - Process form submission
+- GET /get/{id}/{filename} - Serve files for viewing
+- GET /download/{id}/{filename} - Force download files
 
 Tests verify:
 - Endpoint accessibility and routing
@@ -13,6 +15,7 @@ Tests verify:
 - Single and batch file uploads
 - Error handling and per-file error recovery
 - Success/error message display
+- File serving with proper Content-Disposition headers
 """
 
 import pytest
@@ -457,6 +460,123 @@ class TestUploadPostEndpoint:
         
         # Should still return 200 (partial/error results are returned, not server error)
         assert response.status_code == 200
+
+
+class TestDownloadEndpoint:
+    """Test GET /download/{id}/{filename} endpoint for forced downloads."""
+
+    @pytest.mark.asyncio
+    async def test_download_endpoint_forces_attachment(self, client, tmp_path, monkeypatch):
+        """Test that /download/ endpoint sets Content-Disposition to attachment."""
+        from app.lib.config import get_app_config
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        # Create user and file
+        user = await User.create(
+            username="downloaduser",
+            email="download@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        # Authenticate
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        # Create test file
+        test_file = tmp_path / f"user_{user.id}" / "download_test.jpg"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake image data")
+
+        upload = await Upload.create(
+            user=user,
+            description="Download test",
+            name="download_test",
+            cleanname="download",
+            originalname="download.jpg",
+            ext="jpg",
+            size=15,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+
+        # Request file via /download/ endpoint
+        response = await client.get(f"/download/{upload.id}/download.jpg")
+
+        assert response.status_code == 200
+        assert "attachment" in response.headers["Content-Disposition"]
+
+    @pytest.mark.asyncio
+    async def test_download_endpoint_with_authentication(self, client, tmp_path, monkeypatch):
+        """Test that /download/ endpoint works with proper authentication."""
+        from app.lib.config import get_app_config
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        # Create user and upload
+        user = await User.create(
+            username="authuser",
+            email="auth@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        # Authenticate user
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        # Create test file
+        test_file = tmp_path / f"user_{user.id}" / "auth_test.txt"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_text("auth test content")
+
+        upload = await Upload.create(
+            user=user,
+            description="Auth test",
+            name="auth_test",
+            cleanname="auth",
+            originalname="auth.txt",
+            ext="txt",
+            size=10,
+            type="text/plain",
+            extra="",
+            private=0,
+        )
+
+        # Access with authentication should work
+        response = await client.get(f"/download/{upload.id}/auth.txt", follow_redirects=False)
+
+        # Should successfully download
+        assert response.status_code == 200
+        assert "attachment" in response.headers["Content-Disposition"]
+
+    @pytest.mark.asyncio
+    async def test_download_url_property_generates_correct_url(self, db):
+        """Test that Upload.download_url property generates correct URL."""
+        user = await User.create(
+            username="urltest",
+            email="url@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="URL test",
+            name="url_test",
+            cleanname="urltest",
+            originalname="urltest.pdf",
+            ext="pdf",
+            size=1024,
+            type="application/pdf",
+            extra="",
+            private=0,
+        )
+
+        # Check the download_url property
+        assert upload.download_url == f"/download/{upload.id}/urltest.pdf"
 
 
 class TestUploadIntegration:

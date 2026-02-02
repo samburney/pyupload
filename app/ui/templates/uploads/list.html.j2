@@ -4,8 +4,8 @@
 {% if uploaded_files is defined and uploaded_files | length > 0 %}
 <ul>
     {% for file in uploaded_files %}
-    <li>
-        <a href="/download/{{ file.upload_id }}/{{ file.metadata.clean_filename }}{{ '.' + file.metadata.ext if file.metadata.ext else '' }}"
+    <li>    
+        <a href="/get/{{ file.upload_id }}/{{ file.metadata.clean_filename }}{{ '.' + file.metadata.ext if file.metadata.ext else '' }}"
             class="text-blue-600 hover:underline">
             {{ file.metadata.original_filename }}{{ '.' + file.metadata.ext if file.metadata.ext else '' }}
         </a>
