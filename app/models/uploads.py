@@ -1,13 +1,14 @@
 from typing import Annotated, Optional, TYPE_CHECKING
 from pydantic import BaseModel, StringConstraints
-from tortoise import fields, models
 from pathlib import Path
+from tortoise import fields, models
 
 from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
 
 from app.models.common.base import TimestampMixin
 from app.models.common.pagination import PaginationMixin
+from app.models.users import User
 
 if TYPE_CHECKING:
     from app.models.images import Image
@@ -58,6 +59,16 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     class Meta:  # type: ignore[override]
         table = "uploads"
 
+    class PydanticMeta:
+        exclude = [
+            "extra",
+            "user",
+            "images.created_at",
+            "images.updated_at",
+            "images.id",
+            "images.upload_id",
+        ]
+
     @property
     def dot_ext(self) -> str:
         return f".{self.ext}" if self.ext else ""
@@ -77,6 +88,11 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         return url
 
     @property
+    def view_url(self) -> str:
+        url = f'/view/{self.id}/{self.cleanname}{self.dot_ext}'
+        return url
+
+    @property
     def download_url(self) -> str:
         url = f'/download/{self.id}/{self.cleanname}{self.dot_ext}'
         return url
@@ -84,10 +100,19 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     @property
     def is_image(self) -> bool:
         """Return whether or not this file has related image metadata."""
-        if hasattr(self, "images") and self.images.exists():
+        if hasattr(self, "images") and self.images:
             return True
         return False
-        
+
+    @property
+    def is_private(self) -> bool:
+        """Return whether or not this file is private."""
+        return self.private == 1
+
+    def is_owner(self, user: User) -> bool:
+        """Return whether or not this file is owned by the current user."""
+        return getattr(self, "user_id") == user.id
+
 
 class UploadMetadata(BaseModel):
     """Metadata for an uploaded file."""

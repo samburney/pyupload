@@ -1,3 +1,4 @@
+from app.models import init_db
 import uvicorn
 
 from contextlib import asynccontextmanager
@@ -9,13 +10,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 from starlette.middleware.sessions import SessionMiddleware
+from tortoise.contrib.pydantic import pydantic_model_creator
+
 
 from app.lib.config import get_app_config
 from app.lib.scheduler import scheduler
 from app.middleware.token_refresh import TokenRefreshMiddleware
 from app.middleware.fingerprint_auto_login import FingerprintAutoLoginMiddleware
 
-from app.models import init_db
 
 from app.ui.common.security import LoginRequiredException
 
@@ -29,18 +31,18 @@ config = get_app_config()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # App startup
-    # Initialize Tortoise ORM
-    await init_db()
+    # Initialize Tortoise ORM - use as async context manager
+    async with init_db():
 
-    # Start scheduler
-    scheduler.start()
+        # Start scheduler
+        scheduler.start()
 
-    # App running
-    yield
+        # App running
+        yield
 
-    # App shutdown
-    # Stop scheduler
-    scheduler.shutdown()
+        # App shutdown
+        # Stop scheduler
+        scheduler.shutdown()
 
 
 # Init FastAPI app
@@ -72,6 +74,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # API routes
 app.include_router(api.auth.router, prefix='/api/v1')
 app.include_router(api.uploads.router, prefix='/api/v1')
+app.include_router(api.files.router, prefix='/api/v1')
 
 # UI routes
 app.include_router(ui.main.router, include_in_schema=False)
