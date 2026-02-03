@@ -39,8 +39,8 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
     Serve a file with proper access control and view counter increment.
     """
     
-    is_private = upload.private
-    is_owner = user is not None and user.id == getattr(upload, "user_id")
+    is_private = upload.is_private
+    is_owner = user is not None and upload.is_owner(user)
     is_download = True
 
     # Check if the file is private and the user is not the owner
