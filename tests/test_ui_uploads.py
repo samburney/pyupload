@@ -468,9 +468,9 @@ class TestDownloadEndpoint:
     @pytest.mark.asyncio
     async def test_download_endpoint_forces_attachment(self, client, tmp_path, monkeypatch):
         """Test that /download/ endpoint sets Content-Disposition to attachment."""
-        from app.lib.config import get_app_config
-        config = get_app_config()
-        monkeypatch.setattr(config, "storage_path", tmp_path)
+        # Monkeypatch storage_path at the module level where it's actually used
+        import app.models.uploads
+        monkeypatch.setattr(app.models.uploads.config, "storage_path", tmp_path)
 
         # Create user and file
         user = await User.create(
@@ -511,9 +511,9 @@ class TestDownloadEndpoint:
     @pytest.mark.asyncio
     async def test_download_endpoint_with_authentication(self, client, tmp_path, monkeypatch):
         """Test that /download/ endpoint works with proper authentication."""
-        from app.lib.config import get_app_config
-        config = get_app_config()
-        monkeypatch.setattr(config, "storage_path", tmp_path)
+        # Monkeypatch storage_path at the module level where it's actually used
+        import app.models.uploads
+        monkeypatch.setattr(app.models.uploads.config, "storage_path", tmp_path)
 
         # Create user and upload
         user = await User.create(

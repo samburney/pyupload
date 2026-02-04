@@ -43,8 +43,12 @@ async def get_file(
     upload_data["download_url"] = f"{url_base}{upload.download_url}"
 
     # Update field names where sensible
-    image_data = upload_data.pop("images")
+    upload_data['name'] = upload_data['originalname']
+    upload_data["originalname"] = upload_data['originalname'] + upload.dot_ext
+
+    # Add image data if applicable
     if upload.is_image:
+        image_data = upload_data.pop("images")
         upload_data["image"] = image_data
     
     return upload_data

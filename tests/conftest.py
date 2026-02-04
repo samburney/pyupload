@@ -3,8 +3,9 @@
 import os
 import httpx
 import pytest_asyncio
+from contextlib import asynccontextmanager
 from asgi_lifespan import LifespanManager
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 
 # Ensure required environment variables are present before importing the app
 os.environ.setdefault("AUTH_TOKEN_SECRET_KEY", "test_secret_key_for_testing_at_least_32_chars")
@@ -19,12 +20,18 @@ from app.models import users  # noqa: E402
 @pytest_asyncio.fixture
 async def client(monkeypatch):
     """Create an async HTTP client with in-memory test database."""
+    @asynccontextmanager
     async def init_test_db():
+        """Initialize test database as async context manager to match production init_db."""
         await Tortoise.init(
             db_url="sqlite://:memory:",
             modules={"models": ["app.models.users", "app.models.refresh_tokens", "app.models.uploads", "app.models.images"]}
         )
         await Tortoise.generate_schemas()
+        try:
+            yield
+        finally:
+            await connections.close_all()
 
     # Use an in-memory database during tests
     monkeypatch.setattr(main, "init_db", init_test_db)

@@ -421,3 +421,466 @@ class TestServeFile:
         assert "passwd" in response.headers["Content-Disposition"]
         assert ".." not in response.headers["Content-Disposition"]
         assert "/" not in response.headers["Content-Disposition"]
+
+
+class TestCacheControlHeaders:
+    """Test Cache-Control header behavior."""
+
+    @pytest.mark.asyncio
+    async def test_cache_control_private_for_private_files(self, db, tmp_path, monkeypatch):
+        """Test that private files get Cache-Control: private header."""
+        # Mock storage path
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="privatecache",
+            email="privatecache@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        # Create a test file
+        test_file = tmp_path / f"user_{user.id}" / "private_cache.txt"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_text("private content")
+
+        upload = await Upload.create(
+            user=user,
+            description="Private cache test",
+            name="private_cache",
+            cleanname="privatecache",
+            originalname="privatecache.txt",
+            ext="txt",
+            size=15,
+            type="text/plain",
+            extra="",
+            private=1,
+        )
+
+        response = await serve_file(upload, filename=None, user=user, download=False)
+
+        assert "Cache-Control" in response.headers
+        assert "private" in response.headers["Cache-Control"]
+        assert "max-age=3600" in response.headers["Cache-Control"]
+
+    @pytest.mark.asyncio
+    async def test_cache_control_public_for_public_files(self, db, tmp_path, monkeypatch):
+        """Test that public files get Cache-Control: public header."""
+        # Mock storage path
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="publiccache",
+            email="publiccache@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        # Create a test file
+        test_file = tmp_path / f"user_{user.id}" / "public_cache.txt"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_text("public content")
+
+        upload = await Upload.create(
+            user=user,
+            description="Public cache test",
+            name="public_cache",
+            cleanname="publiccache",
+            originalname="publiccache.txt",
+            ext="txt",
+            size=14,
+            type="text/plain",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert "Cache-Control" in response.headers
+        assert "public" in response.headers["Cache-Control"]
+        assert "max-age=3600" in response.headers["Cache-Control"]
+
+
+class TestContentDispositionVariety:
+    """Test Content-Disposition header for various MIME types."""
+
+    @pytest.mark.asyncio
+    async def test_inline_for_video_files(self, db, tmp_path, monkeypatch):
+        """Test that video files are served inline by default."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="videouser",
+            email="video@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "test_video.mp4"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake video data")
+
+        upload = await Upload.create(
+            user=user,
+            description="Test video",
+            name="test_video",
+            cleanname="test",
+            originalname="test.mp4",
+            ext="mp4",
+            size=15,
+            type="video/mp4",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert "inline" in response.headers["Content-Disposition"]
+
+    @pytest.mark.asyncio
+    async def test_inline_for_audio_files(self, db, tmp_path, monkeypatch):
+        """Test that audio files are served inline by default."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="audiouser",
+            email="audio@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "test_audio.mp3"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake audio data")
+
+        upload = await Upload.create(
+            user=user,
+            description="Test audio",
+            name="test_audio",
+            cleanname="test",
+            originalname="test.mp3",
+            ext="mp3",
+            size=15,
+            type="audio/mpeg",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert "inline" in response.headers["Content-Disposition"]
+
+    @pytest.mark.asyncio
+    async def test_inline_for_pdf_files(self, db, tmp_path, monkeypatch):
+        """Test that PDF files are served inline by default."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="pdfuser",
+            email="pdf@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "test_doc.pdf"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake pdf data")
+
+        upload = await Upload.create(
+            user=user,
+            description="Test PDF",
+            name="test_doc",
+            cleanname="test",
+            originalname="test.pdf",
+            ext="pdf",
+            size=13,
+            type="application/pdf",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert "inline" in response.headers["Content-Disposition"]
+
+    @pytest.mark.asyncio
+    async def test_attachment_for_binary_files(self, db, tmp_path, monkeypatch):
+        """Test that binary files are served as attachment by default."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="binaryuser",
+            email="binary@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "test_binary.bin"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake binary data")
+
+        upload = await Upload.create(
+            user=user,
+            description="Test binary",
+            name="test_binary",
+            cleanname="test",
+            originalname="test.bin",
+            ext="bin",
+            size=16,
+            type="application/octet-stream",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert "attachment" in response.headers["Content-Disposition"]
+
+    @pytest.mark.asyncio
+    async def test_attachment_for_zip_files(self, db, tmp_path, monkeypatch):
+        """Test that archive files are served as attachment."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="zipuser",
+            email="zip@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "test_archive.zip"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake zip data")
+
+        upload = await Upload.create(
+            user=user,
+            description="Test ZIP",
+            name="test_archive",
+            cleanname="test",
+            originalname="test.zip",
+            ext="zip",
+            size=13,
+            type="application/zip",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert "attachment" in response.headers["Content-Disposition"]
+
+    @pytest.mark.asyncio
+    async def test_download_param_forces_attachment_for_all_types(self, db, tmp_path, monkeypatch):
+        """Test that download=True forces attachment even for inline types."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="forcedownload",
+            email="forcedownload@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        # Test with an image (normally inline)
+        test_file = tmp_path / f"user_{user.id}" / "force_download.png"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake image")
+
+        upload = await Upload.create(
+            user=user,
+            description="Force download test",
+            name="force_download",
+            cleanname="force",
+            originalname="force.png",
+            ext="png",
+            size=10,
+            type="image/png",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=True)
+
+        assert "attachment" in response.headers["Content-Disposition"]
+
+
+class TestMimeTypeHandling:
+    """Test MIME type handling in FileResponse."""
+
+    @pytest.mark.asyncio
+    async def test_correct_mime_type_for_images(self, db, tmp_path, monkeypatch):
+        """Test that image MIME type is set correctly."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="mimeimageuser",
+            email="mimeimage@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "mime_test.jpg"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake image")
+
+        upload = await Upload.create(
+            user=user,
+            description="MIME test",
+            name="mime_test",
+            cleanname="mime",
+            originalname="mime.jpg",
+            ext="jpg",
+            size=10,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert response.media_type == "image/jpeg"
+
+    @pytest.mark.asyncio
+    async def test_correct_mime_type_for_videos(self, db, tmp_path, monkeypatch):
+        """Test that video MIME type is set correctly."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="mimevideouser",
+            email="mimevideo@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "mime_video.mp4"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake video")
+
+        upload = await Upload.create(
+            user=user,
+            description="MIME video test",
+            name="mime_video",
+            cleanname="mimevideo",
+            originalname="mimevideo.mp4",
+            ext="mp4",
+            size=10,
+            type="video/mp4",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert response.media_type == "video/mp4"
+
+    @pytest.mark.asyncio
+    async def test_correct_mime_type_for_audio(self, db, tmp_path, monkeypatch):
+        """Test that audio MIME type is set correctly."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="mimeaudiouser",
+            email="mimeaudio@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "mime_audio.mp3"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake audio")
+
+        upload = await Upload.create(
+            user=user,
+            description="MIME audio test",
+            name="mime_audio",
+            cleanname="mimeaudio",
+            originalname="mimeaudio.mp3",
+            ext="mp3",
+            size=10,
+            type="audio/mpeg",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert response.media_type == "audio/mpeg"
+
+    @pytest.mark.asyncio
+    async def test_correct_mime_type_for_pdf(self, db, tmp_path, monkeypatch):
+        """Test that PDF MIME type is set correctly."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="mimepdfuser",
+            email="mimepdf@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "mime_doc.pdf"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake pdf")
+
+        upload = await Upload.create(
+            user=user,
+            description="MIME PDF test",
+            name="mime_doc",
+            cleanname="mimedoc",
+            originalname="mimedoc.pdf",
+            ext="pdf",
+            size=8,
+            type="application/pdf",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert response.media_type == "application/pdf"
+
+    @pytest.mark.asyncio
+    async def test_correct_mime_type_for_text(self, db, tmp_path, monkeypatch):
+        """Test that text MIME type is set correctly."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="mimetextuser",
+            email="mimetext@example.com",
+            password="password",
+            fingerprint_hash="fp-hash",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "mime_text.txt"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_text("test text content")
+
+        upload = await Upload.create(
+            user=user,
+            description="MIME text test",
+            name="mime_text",
+            cleanname="mimetext",
+            originalname="mimetext.txt",
+            ext="txt",
+            size=17,
+            type="text/plain",
+            extra="",
+            private=0,
+        )
+
+        response = await serve_file(upload, filename=None, user=None, download=False)
+
+        assert response.media_type == "text/plain"
