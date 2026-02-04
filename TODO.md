@@ -48,7 +48,20 @@
   - [x] Access control for private files (owner-only)
   - [x] Proper MIME type handling
   - [x] `/download/` endpoint for forced downloads
+  - [x] Cache-Control headers (public/private, 1 hour)
+  - [x] Automatic Last-Modified and ETag headers (via FileResponse)
+- [x] API metadata endpoint (GET /api/v1/files/{id})
+  - [x] Returns file metadata with absolute URLs
+  - [x] Enriched fields (is_image, is_private, is_owner)
 - [x] Remove temporary /files/ static route ✅
+- [x] Integration tests and security review ✅
+  - [x] Upload → View → Download workflow tests
+  - [x] Private file access control tests (multi-user)
+  - [x] Security: Path traversal prevention verified
+  - [x] Security: Access control bypass prevention verified
+  - [x] Security: SQL injection protection verified
+  - [x] Edge cases: Special characters, concurrent access, missing files
+- [x] **File serving complete (569/569 tests passing, 74 file serving tests)**
 - [ ] Individual upload detail/view page
   - [ ] Display file metadata (size, dimensions, type, view count)
   - [ ] Social/direct link sharing options
@@ -68,9 +81,10 @@
 - [ ] Contact page
 
 ### Access Control & Privacy
-- [ ] Implement privacy enforcement for file serving
-  - [ ] Private files only accessible to owner
-  - [ ] Public files accessible to all
+- [x] Implement privacy enforcement for file serving
+  - [x] Private files only accessible to owner
+  - [x] Public files accessible to all
+  - [x] Security review complete (path traversal, access bypass, SQL injection)
 - [ ] Delete functionality for uploads (owners/admins only)
 
 ---
