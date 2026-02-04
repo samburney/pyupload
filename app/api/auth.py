@@ -182,7 +182,7 @@ async def refresh_access_token(request: Request, response: Response) -> Token:
     return Token(access_token=access_token_payload, token_type="bearer")
 
 
-@router.get("/users/me/")
+@router.get("/users/me")
 async def read_users_me(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
