@@ -374,8 +374,12 @@ class TestUploadHandlerIntegrationWithDatabase:
     """Integration tests with actual database and file I/O."""
 
     @pytest.mark.asyncio
-    async def test_single_file_upload_end_to_end_with_database(self, db):
+    async def test_single_file_upload_end_to_end_with_database(self, db, tmp_path, monkeypatch):
         """Test that a valid file upload succeeds end-to-end with real database."""
+        # Monkeypatch storage path to use temporary directory
+        import app.lib.file_storage
+        monkeypatch.setattr(app.lib.file_storage.config, "storage_path", tmp_path)
+        
         # Create a real user
         user = await User.create(
             username="testuser",
@@ -414,16 +418,17 @@ class TestUploadHandlerIntegrationWithDatabase:
         assert result.metadata.mime_type == "text/plain"
         
         # Verify file was saved to correct location
-        user_dir = config.storage_path / f"user_{user.id}"
+        user_dir = tmp_path / f"user_{user.id}"
         assert user_dir.exists()
-        
-        # Clean up test files
-        import shutil
-        shutil.rmtree(user_dir, ignore_errors=True)
+        # No cleanup needed - tmp_path is auto-cleaned
 
     @pytest.mark.asyncio
-    async def test_batch_upload_all_files_succeed(self, db):
+    async def test_batch_upload_all_files_succeed(self, db, tmp_path, monkeypatch):
         """Test batch upload where all files succeed."""
+        # Monkeypatch storage path to use temporary directory
+        import app.lib.file_storage
+        monkeypatch.setattr(app.lib.file_storage.config, "storage_path", tmp_path)
+        
         # Create a real user
         user = await User.create(
             username="batchuser1",
@@ -455,11 +460,7 @@ class TestUploadHandlerIntegrationWithDatabase:
             upload = await Upload.get(id=result.upload_id)
             assert upload.id is not None
             assert upload.user_id == user.id
-        
-        # Clean up
-        user_dir = config.storage_path / f"user_{user.id}"
-        import shutil
-        shutil.rmtree(user_dir, ignore_errors=True)
+        # No cleanup needed - tmp_path is auto-cleaned
 
     @pytest.mark.asyncio
     @pytest.mark.asyncio
@@ -486,8 +487,12 @@ class TestUploadHandlerIntegrationWithDatabase:
         assert "empty" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_upload_result_structure_contains_required_fields(self, db):
+    async def test_upload_result_structure_contains_required_fields(self, db, tmp_path, monkeypatch):
         """Test that UploadResult contains success/error status, filename, and size."""
+        # Monkeypatch storage path to use temporary directory
+        import app.lib.file_storage
+        monkeypatch.setattr(app.lib.file_storage.config, "storage_path", tmp_path)
+        
         user = await User.create(
             username="structuser",
             email="struct@example.com",
@@ -517,11 +522,7 @@ class TestUploadHandlerIntegrationWithDatabase:
         assert upload.size == len(content)
         assert result.metadata.filename is not None
         assert result.metadata.size == len(content)
-        
-        # Clean up
-        user_dir = config.storage_path / f"user_{user.id}"
-        import shutil
-        shutil.rmtree(user_dir, ignore_errors=True)
+        # No cleanup needed - tmp_path is auto-cleaned
 
     @pytest.mark.asyncio
     async def test_quota_exceeded_prevents_upload(self, db):
@@ -549,8 +550,12 @@ class TestUploadHandlerIntegrationWithDatabase:
         assert "quota" in results[0].message.lower() or "exceeds" in results[0].message.lower()
 
     @pytest.mark.asyncio
-    async def test_file_saved_to_correct_user_directory(self, db):
+    async def test_file_saved_to_correct_user_directory(self, db, tmp_path, monkeypatch):
         """Test that uploaded files are saved to correct user-specific directory."""
+        # Monkeypatch storage path to use temporary directory
+        import app.lib.file_storage
+        monkeypatch.setattr(app.lib.file_storage.config, "storage_path", tmp_path)
+        
         # Create two users
         user1 = await User.create(
             username="user1",
@@ -584,8 +589,8 @@ class TestUploadHandlerIntegrationWithDatabase:
             result2 = await handle_uploaded_file(user2, file2)
         
         # Verify files are in correct directories
-        user1_dir = config.storage_path / f"user_{user1.id}"
-        user2_dir = config.storage_path / f"user_{user2.id}"
+        user1_dir = tmp_path / f"user_{user1.id}"
+        user2_dir = tmp_path / f"user_{user2.id}"
         
         assert user1_dir.exists()
         assert user2_dir.exists()
@@ -597,16 +602,16 @@ class TestUploadHandlerIntegrationWithDatabase:
         
         assert len(user1_files) > 0
         assert len(user2_files) > 0
-        
-        # Clean up
-        import shutil
-        shutil.rmtree(user1_dir, ignore_errors=True)
-        shutil.rmtree(user2_dir, ignore_errors=True)
+        # No cleanup needed - tmp_path is auto-cleaned
 
     @pytest.mark.asyncio
     @pytest.mark.asyncio
-    async def test_batch_processes_files_sequentially_order_preserved(self, db):
+    async def test_batch_processes_files_sequentially_order_preserved(self, db, tmp_path, monkeypatch):
         """Test that batch processing happens sequentially and results maintain order."""
+        # Monkeypatch storage path to use temporary directory
+        import app.lib.file_storage
+        monkeypatch.setattr(app.lib.file_storage.config, "storage_path", tmp_path)
+        
         user = await User.create(
             username="orderuser",
             email="order@example.com",
@@ -636,8 +641,4 @@ class TestUploadHandlerIntegrationWithDatabase:
                 f"Filename {result.metadata.filename} doesn't match pattern"
             # Verify extension is stored separately
             assert result.metadata.ext == "txt"
-        
-        # Clean up
-        user_dir = config.storage_path / f"user_{user.id}"
-        import shutil
-        shutil.rmtree(user_dir, ignore_errors=True)
+        # No cleanup needed - tmp_path is auto-cleaned

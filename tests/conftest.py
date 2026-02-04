@@ -2,16 +2,25 @@
 
 import os
 import httpx
+import pytest
 import pytest_asyncio
 from contextlib import asynccontextmanager
 from asgi_lifespan import LifespanManager
 from tortoise import Tortoise, connections
+
+import shutil
+import tempfile
 
 # Ensure required environment variables are present before importing the app
 os.environ.setdefault("AUTH_TOKEN_SECRET_KEY", "test_secret_key_for_testing_at_least_32_chars")
 os.environ.setdefault("AUTH_TOKEN_ALGORITHM", "HS256")
 os.environ.setdefault("AUTH_TOKEN_EXPIRE_MINUTES", "30")
 os.environ.setdefault("AUTH_REFRESH_TOKEN_AGE_DAYS", "7")
+
+# Create a temporary directory for storage to isolate tests from production filesystem
+# This must be done BEFORE importing app.lib.config
+_TEST_STORAGE_DIR = tempfile.mkdtemp(prefix="pyupload_test_storage_")
+os.environ["STORAGE_PATH"] = _TEST_STORAGE_DIR
 
 from app import main  # noqa: E402
 from app.models import users  # noqa: E402
@@ -55,3 +64,11 @@ async def db():
     await Tortoise.generate_schemas()
     yield
     await Tortoise.close_connections()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_storage():
+    """Cleanup temporary storage directory after test session."""
+    yield
+    if os.path.exists(_TEST_STORAGE_DIR):
+        shutil.rmtree(_TEST_STORAGE_DIR)

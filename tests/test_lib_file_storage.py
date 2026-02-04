@@ -118,76 +118,81 @@ class TestFilenameGeneration:
 class TestPathConstruction:
     """Test path construction using storage_path and user_id."""
 
-    def test_path_construction_uses_storage_path(self):
+    def test_path_construction_uses_storage_path(self, tmp_path):
         """Path construction uses storage_path config value and user_id."""
         from app.models.uploads import UploadMetadata
         
-        metadata = UploadMetadata(
-            user_id=42,
-            filename="test_20240101-000000_abc12345",
-            ext="txt",
-            original_filename="test",
-            clean_filename="test",
-            size=1024,
-            mime_type="text/plain",
-        )
-        
-        filepath = metadata.filepath
-        
-        # Should start with configured storage_path
-        assert filepath.is_relative_to(config.storage_path)
-        
-        # Should contain user_id in directory name
-        assert f"user_42" in str(filepath)
+        with patch.object(config, 'storage_path', tmp_path):
+            metadata = UploadMetadata(
+                user_id=42,
+                filename="test_20240101-000000_abc12345",
+                ext="txt",
+                original_filename="test",
+                clean_filename="test",
+                size=1024,
+                mime_type="text/plain",
+            )
+            
+            filepath = metadata.filepath
+            
+            # Should start with configured storage_path
+            assert filepath.is_relative_to(tmp_path)
+            
+            # Should contain user_id in directory name
+            assert f"user_42" in str(filepath)
 
-    def test_path_construction_creates_user_directory(self):
+    def test_path_construction_creates_user_directory(self, tmp_path):
         """Path construction creates user directory structure."""
         from app.models.uploads import UploadMetadata
         
-        # Use a unique user ID for this test
-        test_user_id = 999999
-        metadata = UploadMetadata(
-            user_id=test_user_id,
-            filename="test_20240101-000000_abc12345",
-            ext="txt",
-            original_filename="test",
-            clean_filename="test",
-            size=1024,
-            mime_type="text/plain",
-        )
-        
-        # Accessing filepath should create the directory
-        filepath = metadata.filepath
-        user_dir = filepath.parent
-        
-        # Directory should be created
-        assert user_dir.exists(), "User directory should be created"
-        assert user_dir.is_dir(), "User directory should be a directory"
-        
-        # Clean up
-        user_dir.rmdir()
+        with patch.object(config, 'storage_path', tmp_path):
+            # Use a unique user ID for this test
+            test_user_id = 999999
+            metadata = UploadMetadata(
+                user_id=test_user_id,
+                filename="test_20240101-000000_abc12345",
+                ext="txt",
+                original_filename="test",
+                clean_filename="test",
+                size=1024,
+                mime_type="text/plain",
+            )
+            
+            # Accessing filepath should create the directory
+            filepath = metadata.filepath
+            user_dir = filepath.parent
+            
+            # Directory should be created
+            assert user_dir.exists(), "User directory should be created"
+            assert user_dir.is_dir(), "User directory should be a directory"
+            # It should be within tmp_path
+            assert user_dir.is_relative_to(tmp_path)
+            
+            # Clean up (not strictly necessary with tmp_path but good practice)
+            user_dir.rmdir()
 
-    def test_path_construction_returns_correct_directory_structure(self):
+    def test_path_construction_returns_correct_directory_structure(self, tmp_path):
         """Path construction returns correct user-specific directory structure."""
         from app.models.uploads import UploadMetadata
         
-        metadata = UploadMetadata(
-            user_id=123,
-            filename="test_20240101-000000_abc12345",
-            ext="txt",
-            original_filename="test",
-            clean_filename="test",
-            size=1024,
-            mime_type="text/plain",
-        )
-        
-        filepath = metadata.filepath
-        
-        # Should contain user directory
-        assert "user_123" in str(filepath)
-        
-        # Filename should match with extension now included
-        assert filepath.name == "test_20240101-000000_abc12345.txt"
+        with patch.object(config, 'storage_path', tmp_path):
+            metadata = UploadMetadata(
+                user_id=123,
+                filename="test_20240101-000000_abc12345",
+                ext="txt",
+                original_filename="test",
+                clean_filename="test",
+                size=1024,
+                mime_type="text/plain",
+            )
+            
+            filepath = metadata.filepath
+            
+            # Should contain user directory
+            assert "user_123" in str(filepath)
+            
+            # Filename should match with extension now included
+            assert filepath.name == "test_20240101-000000_abc12345.txt"
 
 
 # ============================================================================
@@ -393,48 +398,50 @@ class TestFileTypeValidation:
 class TestPathValidation:
     """Test path validation prevents directory traversal attacks."""
 
-    def test_path_construction_prevents_directory_traversal(self):
+    def test_path_construction_prevents_directory_traversal(self, tmp_path):
         """Path validation prevents directory traversal attacks."""
         from app.models.uploads import UploadMetadata
         
-        # Try path traversal attacks in filename
-        metadata = UploadMetadata(
-            user_id=42,
-            filename="test_20240101-000000_abc12345",  # Must match pattern
-            ext="txt",
-            original_filename="test",
-            clean_filename="test",
-            size=1024,
-            mime_type="text/plain",
-        )
-        
-        filepath = metadata.filepath
-        
-        # Filepath should be within storage_path
-        try:
-            filepath.relative_to(config.storage_path)
-        except ValueError:
-            pytest.fail("Filepath is not within storage_path")
+        with patch.object(config, 'storage_path', tmp_path):
+            # Try path traversal attacks in filename
+            metadata = UploadMetadata(
+                user_id=42,
+                filename="test_20240101-000000_abc12345",  # Must match pattern
+                ext="txt",
+                original_filename="test",
+                clean_filename="test",
+                size=1024,
+                mime_type="text/plain",
+            )
+            
+            filepath = metadata.filepath
+            
+            # Filepath should be within storage_path
+            try:
+                filepath.relative_to(tmp_path)
+            except ValueError:
+                pytest.fail("Filepath is not within storage_path")
 
-    def test_path_construction_respects_storage_path_boundary(self):
+    def test_path_construction_respects_storage_path_boundary(self, tmp_path):
         """Path construction respects storage_path boundaries."""
         from app.models.uploads import UploadMetadata
         import os
         
-        metadata = UploadMetadata(
-            user_id=42,
-            filename="test_20240101-000000_abc12345",
-            ext="txt",
-            original_filename="test",
-            clean_filename="test",
-            size=1024,
-            mime_type="text/plain",
-        )
-        
-        filepath = metadata.filepath
-        
-        # Verify path is within storage_path
-        assert str(filepath).startswith(str(config.storage_path))
+        with patch.object(config, 'storage_path', tmp_path):
+            metadata = UploadMetadata(
+                user_id=42,
+                filename="test_20240101-000000_abc12345",
+                ext="txt",
+                original_filename="test",
+                clean_filename="test",
+                size=1024,
+                mime_type="text/plain",
+            )
+            
+            filepath = metadata.filepath
+            
+            # Verify path is within storage_path
+            assert str(filepath).startswith(str(tmp_path))
 
 
 # ============================================================================
@@ -444,69 +451,71 @@ class TestPathValidation:
 class TestDirectoryCreation:
     """Test directory creation with proper permissions."""
 
-    def test_directory_creation_succeeds_with_proper_permissions(self):
+    def test_directory_creation_succeeds_with_proper_permissions(self, tmp_path):
         """Directory creation succeeds with proper permissions."""
         from app.models.uploads import UploadMetadata
         import os
         
-        test_user_id = 999998
-        metadata = UploadMetadata(
-            user_id=test_user_id,
-            filename="test_20240101-000000_abc12345",
-            ext="txt",
-            original_filename="test",
-            clean_filename="test",
-            size=1024,
-            mime_type="text/plain",
-        )
-        
-        filepath = metadata.filepath
-        user_dir = filepath.parent
-        
-        # Directory should exist
-        assert user_dir.exists()
-        
-        # Should have read and write permissions
-        assert os.access(user_dir, os.R_OK | os.W_OK)
-        
-        # Clean up
-        user_dir.rmdir()
+        with patch.object(config, 'storage_path', tmp_path):
+            test_user_id = 999998
+            metadata = UploadMetadata(
+                user_id=test_user_id,
+                filename="test_20240101-000000_abc12345",
+                ext="txt",
+                original_filename="test",
+                clean_filename="test",
+                size=1024,
+                mime_type="text/plain",
+            )
+            
+            filepath = metadata.filepath
+            user_dir = filepath.parent
+            
+            # Directory should exist
+            assert user_dir.exists()
+            
+            # Should have read and write permissions
+            assert os.access(user_dir, os.R_OK | os.W_OK)
+            
+            # Clean up
+            user_dir.rmdir()
 
-    def test_directory_creation_idempotent(self):
+    def test_directory_creation_idempotent(self, tmp_path):
         """Directory creation is idempotent."""
         from app.models.uploads import UploadMetadata
         
-        test_user_id = 999997
-        metadata1 = UploadMetadata(
-            user_id=test_user_id,
-            filename="test_20240101-000000_abc12345",
-            ext="txt",
-            original_filename="test",
-            clean_filename="test",
-            size=1024,
-            mime_type="text/plain",
-        )
-        
-        # First access creates directory
-        filepath1 = metadata1.filepath
-        assert filepath1.parent.exists()
-        
-        # Second access should not fail
-        metadata2 = UploadMetadata(
-            user_id=test_user_id,
-            filename="test_20240101-000000_def67890",
-            ext="txt",
-            original_filename="test",
-            clean_filename="test",
-            size=2048,
-            mime_type="text/plain",
-        )
-        
-        filepath2 = metadata2.filepath
-        assert filepath2.parent.exists()
-        
-        # Should be the same directory
-        assert filepath1.parent == filepath2.parent
-        
-        # Clean up
-        filepath1.parent.rmdir()
+        with patch.object(config, 'storage_path', tmp_path):
+            test_user_id = 999997
+            metadata1 = UploadMetadata(
+                user_id=test_user_id,
+                filename="test_20240101-000000_abc12345",
+                ext="txt",
+                original_filename="test",
+                clean_filename="test",
+                size=1024,
+                mime_type="text/plain",
+            )
+            
+            # First access creates directory
+            filepath1 = metadata1.filepath
+            assert filepath1.parent.exists()
+            
+            # Second access should not fail
+            metadata2 = UploadMetadata(
+                user_id=test_user_id,
+                filename="test_20240101-000000_def67890",
+                ext="txt",
+                original_filename="test",
+                clean_filename="test",
+                size=2048,
+                mime_type="text/plain",
+            )
+            
+            filepath2 = metadata2.filepath
+            assert filepath2.parent.exists()
+            
+            # Should be the same directory
+            assert filepath1.parent == filepath2.parent
+            
+            # Clean up
+            filepath1.parent.rmdir()
