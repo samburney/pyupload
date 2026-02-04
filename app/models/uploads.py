@@ -62,6 +62,10 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         table = "uploads"
 
     class PydanticMeta:
+        # Exclude fields that should not be included in the Pydantic model
+        # - extra: Deprecated value which will be removed from the database model in a future revision
+        # - user: A FK relationship which causes verbose output.  We already know the user (or can fetch it based on `user_id`)
+        # - images.*: We don't need to include these values, we already know them as they are part of the `Upload` model
         exclude = [
             "extra",
             "user",
@@ -158,3 +162,24 @@ class UploadResult(BaseModel):
     message: str
     upload_id: Optional[int]
     metadata: Optional[UploadMetadata]
+
+    @property
+    def url(self) -> str:
+        """Generate the /get/ URL for this upload."""
+        if self.upload_id and self.metadata:
+            return f"{config.app_base_url}/get/{self.upload_id}/{self.metadata.clean_filename}{self.metadata.dot_ext}"
+        return ""
+
+    @property
+    def view_url(self) -> str:
+        """Generate the /view/ URL for this upload."""
+        if self.upload_id and self.metadata:
+            return f"{config.app_base_url}/view/{self.upload_id}/{self.metadata.clean_filename}{self.metadata.dot_ext}"
+        return ""
+
+    @property
+    def download_url(self) -> str:
+        """Generate the /download/ URL for this upload."""
+        if self.upload_id and self.metadata:
+            return f"{config.app_base_url}/download/{self.upload_id}/{self.metadata.clean_filename}{self.metadata.dot_ext}"
+        return ""

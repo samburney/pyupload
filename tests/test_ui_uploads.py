@@ -555,6 +555,9 @@ class TestDownloadEndpoint:
     @pytest.mark.asyncio
     async def test_download_url_property_generates_correct_url(self, db):
         """Test that Upload.download_url property generates correct URL."""
+        from app.lib.config import get_app_config
+        config = get_app_config()
+        
         user = await User.create(
             username="urltest",
             email="url@example.com",
@@ -575,8 +578,8 @@ class TestDownloadEndpoint:
             private=0,
         )
 
-        # Check the download_url property
-        assert upload.download_url == f"/download/{upload.id}/urltest.pdf"
+        # Check the download_url property - now includes app_base_url
+        assert upload.download_url == f"{config.app_base_url}/download/{upload.id}/urltest.pdf"
 
 
 class TestUploadIntegration:

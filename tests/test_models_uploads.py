@@ -389,6 +389,48 @@ class TestUploadMetadata:
             )
             assert metadata.clean_filename == clean_name
 
+    def test_uploadmetadata_dot_ext_with_extension(self):
+        """Test UploadMetadata dot_ext property with extension."""
+        metadata = UploadMetadata(
+            user_id=1,
+            filename="test_20250124-063307_abcd1234",
+            ext="txt",
+            original_filename="test.txt",
+            clean_filename="test",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        assert metadata.dot_ext == ".txt"
+
+    def test_uploadmetadata_dot_ext_without_extension(self):
+        """Test UploadMetadata dot_ext property without extension."""
+        metadata = UploadMetadata(
+            user_id=1,
+            filename="test_20250124-063307_abcd1234",
+            ext=None,
+            original_filename="test",
+            clean_filename="test",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        assert metadata.dot_ext == ""
+
+    def test_uploadmetadata_dot_ext_with_multipart_extension(self):
+        """Test UploadMetadata dot_ext property with multipart extension."""
+        metadata = UploadMetadata(
+            user_id=1,
+            filename="archive_20250124-063307_abcd1234",
+            ext="tar.gz",
+            original_filename="archive.tar.gz",
+            clean_filename="archive",
+            size=5000,
+            mime_type="application/gzip",
+        )
+
+        assert metadata.dot_ext == ".tar.gz"
+
     def test_uploadmetadata_filepath_property(self):
         """Test UploadMetadata filepath property."""
         metadata = UploadMetadata(
@@ -489,6 +531,128 @@ class TestUploadResult:
         assert result.message == "File uploaded"
         # Verify upload_id field is present and accepts None
         assert result.upload_id is None
+
+    def test_uploadresult_url_property_with_metadata(self):
+        """Test UploadResult url property generates correct URL when metadata is present."""
+        metadata = UploadMetadata(
+            user_id=1,
+            filename="test_20250124-063307_abcd1234",
+            ext="txt",
+            original_filename="test.txt",
+            clean_filename="test",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        result = UploadResult(
+            status="success",
+            message="File uploaded",
+            upload_id=42,
+            metadata=metadata,
+        )
+
+        expected_url = f"{config.app_base_url}/get/42/test.txt"
+        assert result.url == expected_url
+
+    def test_uploadresult_url_property_without_metadata(self):
+        """Test UploadResult url property returns empty string when metadata is None."""
+        result = UploadResult(
+            status="error",
+            message="Upload failed",
+            upload_id=None,
+            metadata=None,
+        )
+
+        assert result.url == ""
+
+    def test_uploadresult_url_property_without_upload_id(self):
+        """Test UploadResult url property returns empty string when upload_id is None."""
+        metadata = UploadMetadata(
+            user_id=1,
+            filename="test_20250124-063307_abcd1234",
+            ext="txt",
+            original_filename="test.txt",
+            clean_filename="test",
+            size=100,
+            mime_type="text/plain",
+        )
+
+        result = UploadResult(
+            status="pending",
+            message="Upload in progress",
+            upload_id=None,
+            metadata=metadata,
+        )
+
+        assert result.url == ""
+
+    def test_uploadresult_view_url_property(self):
+        """Test UploadResult view_url property generates correct URL."""
+        metadata = UploadMetadata(
+            user_id=1,
+            filename="image_20250124-063307_12345678",
+            ext="jpg",
+            original_filename="image.jpg",
+            clean_filename="image",
+            size=1024,
+            mime_type="image/jpeg",
+        )
+
+        result = UploadResult(
+            status="success",
+            message="File uploaded",
+            upload_id=123,
+            metadata=metadata,
+        )
+
+        expected_url = f"{config.app_base_url}/view/123/image.jpg"
+        assert result.view_url == expected_url
+
+    def test_uploadresult_download_url_property(self):
+        """Test UploadResult download_url property generates correct URL."""
+        metadata = UploadMetadata(
+            user_id=1,
+            filename="document_20250124-063307_abcdef12",
+            ext="pdf",
+            original_filename="document.pdf",
+            clean_filename="document",
+            size=2048,
+            mime_type="application/pdf",
+        )
+
+        result = UploadResult(
+            status="success",
+            message="File uploaded",
+            upload_id=456,
+            metadata=metadata,
+        )
+
+        expected_url = f"{config.app_base_url}/download/456/document.pdf"
+        assert result.download_url == expected_url
+
+    def test_uploadresult_url_property_without_extension(self):
+        """Test UploadResult url property works correctly when file has no extension."""
+        metadata = UploadMetadata(
+            user_id=1,
+            filename="noext_20250124-063307_abcd1234",
+            ext=None,
+            original_filename="noext",
+            clean_filename="noext",
+            size=512,
+            mime_type="application/octet-stream",
+        )
+
+        result = UploadResult(
+            status="success",
+            message="File uploaded",
+            upload_id=789,
+            metadata=metadata,
+        )
+
+        # Should not have a trailing dot when no extension
+        expected_url = f"{config.app_base_url}/get/789/noext"
+        assert result.url == expected_url
+        assert not result.url.endswith(".")
 
 
 class TestUploadModelIntegration:
