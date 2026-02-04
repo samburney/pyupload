@@ -52,8 +52,9 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
         raise FileNotFoundError("File not found.")
 
     # Sanitise filename
-    if filename is not None:
-        filename = sanitise_filename(filename) if sanitise_filename(filename) is not None else upload.filename
+    santised_filename = sanitise_filename(filename) if filename is not None else None
+    if santised_filename is not None:
+        filename = santised_filename
     else:
         filename = upload.filename
 

@@ -13,13 +13,12 @@ router = APIRouter(prefix="/files", tags=["files"])
 
 @router.get("/{id}")
 async def get_file(
-    request: Request,
     id: int,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """API endpoint providing file metadata."""
     
-    upload = await Upload.get_or_none(id=id).prefetch_related("user")
+    upload = await Upload.get_or_none(id=id).prefetch_related("user", "images")
 
     # Check file exists
     if not upload:
@@ -37,18 +36,17 @@ async def get_file(
     upload_data["is_image"] = upload.is_image
     upload_data["is_private"] = upload.is_private
     upload_data["is_owner"] = upload.is_owner(current_user)
-    url_base = f"{request.url.scheme}://{request.url.hostname}{':' + str(request.url.port) if request.url.port not in [80, 443] else ''}"
-    upload_data["get_url"] = f"{url_base}{upload.url}"
-    upload_data["view_url"] = f"{url_base}{upload.view_url}"
-    upload_data["download_url"] = f"{url_base}{upload.download_url}"
+    upload_data["get_url"] = upload.url
+    upload_data["view_url"] = upload.view_url
+    upload_data["download_url"] = upload.download_url
 
     # Update field names where sensible
     upload_data['name'] = upload_data['originalname']
     upload_data["originalname"] = upload_data['originalname'] + upload.dot_ext
 
     # Add image data if applicable
+    image_data = upload_data.pop("images")
     if upload.is_image:
-        image_data = upload_data.pop("images")
         upload_data["image"] = image_data
     
     return upload_data

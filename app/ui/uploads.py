@@ -1,6 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Request, Depends, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.lib.config import get_app_config
 from app.lib.upload_handler import handle_uploaded_files
@@ -69,7 +69,7 @@ async def create_upload(
     return response
 
 
-@router.get("/get/{id}", response_class=HTMLResponse)
+@router.get("/get/{id}", response_class=Response)
 async def get_upload_without_filename(
     id: int,
 ):
@@ -84,7 +84,7 @@ async def get_upload_without_filename(
     return response
 
 
-@router.get("/get/{id}/{filename}", response_class=HTMLResponse)
+@router.get("/get/{id}/{filename}", response_class=Response)
 async def get_upload(
     id: int,
     filename: str,
@@ -114,7 +114,7 @@ async def get_upload(
         return HTMLResponse(status_code=500)
 
 
-@router.get("/download/{id}/{filename}", response_class=HTMLResponse)
+@router.get("/download/{id}/{filename}", response_class=Response)
 async def download_upload(
     id: int,
     filename: str,

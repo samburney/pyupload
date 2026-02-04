@@ -16,6 +16,9 @@ from pydantic import ValidationError
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadMetadata, UploadResult, make_user_filepath
+from app.lib.config import get_app_config
+
+config = get_app_config()
 
 
 class TestUploadModel:
@@ -763,8 +766,8 @@ class TestUploadUrlProperties:
             extra="0",
         )
 
-        # Expected format: /get/{id}/{cleanname}.{ext}
-        expected_url = f"/get/{upload.id}/testfile.txt"
+        # Expected format: {base_url}/get/{id}/{cleanname}.{ext}
+        expected_url = f"{config.app_base_url}/get/{upload.id}/testfile.txt"
         assert upload.url == expected_url
 
     @pytest.mark.asyncio
@@ -789,8 +792,8 @@ class TestUploadUrlProperties:
             extra="0",
         )
 
-        # Expected format: /download/{id}/{cleanname}.{ext}
-        expected_url = f"/download/{upload.id}/image.jpg"
+        # Expected format: {base_url}/download/{id}/{cleanname}.{ext}
+        expected_url = f"{config.app_base_url}/download/{upload.id}/image.jpg"
         assert upload.download_url == expected_url
 
         # Verify url exists (basic check, implementation may vary)
@@ -821,8 +824,8 @@ class TestUploadUrlProperties:
         )
 
         # Should not have a trailing dot
-        assert upload.url == f"/get/{upload.id}/README"
-        assert upload.download_url == f"/download/{upload.id}/README"
+        assert upload.url == f"{config.app_base_url}/get/{upload.id}/README"
+        assert upload.download_url == f"{config.app_base_url}/download/{upload.id}/README"
 
 
 class TestUploadDotExtProperty:
@@ -1107,3 +1110,68 @@ class TestUploadPagination:
         desc = await Upload.paginate(page=1, page_size=10, sort_by="size", sort_order="desc", user=user)
         assert desc[0].id == u3.id
         assert desc[2].id == u1.id
+
+class TestUploadImageProperty:
+    """Test Upload model is_image property."""
+
+    @pytest.mark.asyncio
+    async def test_is_image_without_images(self, db):
+        """Test is_image returns False when no images are linked."""
+        user = await User.create(username="noimg_prop", email="noimg_prop@test.com", password="pw", fingerprint_hash="fp")
+        upload = await Upload.create(
+            user=user,
+            description="No image",
+            name="test_20250124-063307_a1b2c3d4",
+            cleanname="test",
+            originalname="test.txt",
+            ext="txt",
+            size=512,
+            type="text/plain",
+            extra="0",
+        )
+        
+        # When images are not prefetched, accessing property should raise RuntimeError
+        with pytest.raises(RuntimeError):
+            _ = upload.is_image
+            
+        # Manually fetch with prefetch_related
+        upload_fetched = await Upload.get(id=upload.id).prefetch_related("images")
+        
+        # Now it should be False, not raise error
+        assert upload_fetched.is_image is False
+
+    @pytest.mark.asyncio
+    async def test_is_image_with_images(self, db):
+        """Test is_image returns True when images are linked."""
+        from app.models.images import Image
+        
+        user = await User.create(username="withimg_prop", email="withimg_prop@test.com", password="pw", fingerprint_hash="fp")
+        upload = await Upload.create(
+            user=user,
+            description="With image",
+            name="img_20250124-063307_a1b2c3d4",
+            cleanname="img",
+            originalname="img.jpg",
+            ext="jpg",
+            size=1024,
+            type="image/jpeg",
+            extra="0",
+        )
+        
+        # Must provide required fields
+        await Image.create(
+            upload=upload,
+            type="jpeg",
+            width=800,
+            height=600,
+            bits=8,
+            channels=3
+        )
+
+        # When images are not prefetched, accessing property should raise RuntimeError
+        with pytest.raises(RuntimeError):
+            _ = upload.is_image
+
+        # Manually fetch with prefetch_related
+        upload_fetched = await Upload.get(id=upload.id).prefetch_related("images")
+        assert upload_fetched.is_image is True

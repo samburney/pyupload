@@ -1,7 +1,9 @@
+from tortoise.fields import ReverseRelation
 from typing import Annotated, Optional, TYPE_CHECKING
 from pydantic import BaseModel, StringConstraints
 from pathlib import Path
 from tortoise import fields, models
+from tortoise.exceptions import NoValuesFetched
 
 from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
@@ -84,24 +86,33 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
 
     @property
     def url(self) -> str:
-        url = f'/get/{self.id}/{self.cleanname}{self.dot_ext}'
+        url = f'{config.app_base_url}/get/{self.id}/{self.cleanname}{self.dot_ext}'
         return url
 
     @property
     def view_url(self) -> str:
-        url = f'/view/{self.id}/{self.cleanname}{self.dot_ext}'
+        url = f'{config.app_base_url}/view/{self.id}/{self.cleanname}{self.dot_ext}'
         return url
 
     @property
     def download_url(self) -> str:
-        url = f'/download/{self.id}/{self.cleanname}{self.dot_ext}'
+        url = f'{config.app_base_url}/download/{self.id}/{self.cleanname}{self.dot_ext}'
         return url
     
     @property
     def is_image(self) -> bool:
         """Return whether or not this file has related image metadata."""
-        if hasattr(self, "images") and self.images:
-            return True
+        if hasattr(self, "images"):
+            try:
+                # If it behaves like a list (has len), it's fetched
+                # ReverseRelation attempts to do this but raises NoValuesFetched if not loaded
+                return len(self.images) > 0  # type: ignore[arg-type]
+            except (TypeError, AttributeError, NoValuesFetched):
+                # If it fails, it's likely a Relation manager or not fetched
+                pass
+
+            raise RuntimeError("Images relationship has not been fetched.")
+
         return False
 
     @property

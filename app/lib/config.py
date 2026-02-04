@@ -23,7 +23,7 @@ class AppConfig:
     app_port: int = int(os.getenv("APP_PORT", "8000"))
     app_default_domain: str = str(os.getenv("APP_DEFAULT_DOMAIN", "example.com"))
     app_reload: bool = is_bool(os.getenv("APP_RELOAD", "false")) == True
-    app_base_url: str = os.getenv("APP_BASE_URL", f"http://localhost:{app_port}")
+    app_base_url: str = os.getenv("APP_BASE_URL", f"http://{app_default_domain}:{app_port}")
     app_site_name: str = os.getenv("APP_SITE_NAME", "Simple Upload")
 
     # File storage configuration
