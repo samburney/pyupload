@@ -9,8 +9,26 @@ class TestUserProfileEndpoint:
     """Test GET /profile endpoint."""
 
     @pytest.mark.asyncio
-    async def test_profile_page_default_sorting(self, client):
+    async def test_profile_page_default_sorting(self, client, monkeypatch):
         """Test that profile page uses created_at desc sorting by default."""
+        
+        # Create and authenticate a user
+        mock_user = MagicMock(spec=User)
+        mock_user.id = 1
+        mock_user.username = "testuser"
+        mock_user.is_registered = True
+        mock_user.max_uploads_count = -1  # Unlimited
+        mock_user.uploads_count = AsyncMock(return_value=0)
+        
+        async def mock_get_or_none(**kwargs):
+            if kwargs.get("username") == "testuser":
+                return mock_user
+            return None
+        
+        monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
+        
+        token = create_access_token({"sub": "testuser"})
+        client.cookies = {"access_token": token}
         
         # Mock Upload.paginate and Upload.pages to avoid DB queries and check arguments
         with patch("app.models.uploads.Upload.paginate") as mock_paginate, \
@@ -42,8 +60,26 @@ class TestUserProfileEndpoint:
             assert call_kwargs.get("sort_order") == "desc"
 
     @pytest.mark.asyncio
-    async def test_profile_page_explicit_sorting(self, client):
+    async def test_profile_page_explicit_sorting(self, client, monkeypatch):
         """Test that profile page respects explicit sorting parameters."""
+        
+        # Create and authenticate a user
+        mock_user = MagicMock(spec=User)
+        mock_user.id = 1
+        mock_user.username = "testuser"
+        mock_user.is_registered = True
+        mock_user.max_uploads_count = -1  # Unlimited
+        mock_user.uploads_count = AsyncMock(return_value=0)
+        
+        async def mock_get_or_none(**kwargs):
+            if kwargs.get("username") == "testuser":
+                return mock_user
+            return None
+        
+        monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
+        
+        token = create_access_token({"sub": "testuser"})
+        client.cookies = {"access_token": token}
         
         with patch("app.models.uploads.Upload.paginate") as mock_paginate, \
              patch("app.models.uploads.Upload.pages", new_callable=AsyncMock) as mock_pages:

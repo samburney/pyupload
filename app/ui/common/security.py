@@ -16,7 +16,7 @@ class UnauthorizedException(Exception):
     pass
 
 
-async def get_current_user(request: Request) -> User:
+async def get_current_user(request: Request) -> User | None:
     """Dependency to get the current authenticated user."""
     current_user = await lib_auth.get_current_user_from_request(request)
 

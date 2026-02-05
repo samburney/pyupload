@@ -496,6 +496,7 @@ class TestEdgeCases:
         
         mock_user = Mock(spec=User)
         mock_user.id = 1
+        mock_user.username = "testuser"
         
         mock_refresh = Mock()
         mock_refresh.id = 1

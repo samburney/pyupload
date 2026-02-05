@@ -10,14 +10,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 from starlette.middleware.sessions import SessionMiddleware
-from tortoise.contrib.pydantic import pydantic_model_creator
-
 
 from app.lib.config import get_app_config
 from app.lib.scheduler import scheduler
+from app.lib.auth import delete_token_cookies
 from app.middleware.token_refresh import TokenRefreshMiddleware
 from app.middleware.fingerprint_auto_login import FingerprintAutoLoginMiddleware
-
 
 from app.ui.common.security import LoginRequiredException
 
@@ -52,11 +50,11 @@ app = FastAPI(
 )
 
 # Middleware - Note: Applied to request in reverse order
-# Token refresh middleware
-app.add_middleware(TokenRefreshMiddleware)
-
 # Fingerprint auto-login middleware
 app.add_middleware(FingerprintAutoLoginMiddleware)
+
+# Token refresh middleware
+app.add_middleware(TokenRefreshMiddleware)
 
 # Session middleware
 app.add_middleware(
@@ -115,7 +113,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(LoginRequiredException)
 async def login_required_exception_handler(request: Request, exc: LoginRequiredException):
     ui.common.session.flash_message(request, "Please log in to access this page.", "error")
-    return RedirectResponse(url="/login", status_code=303)
+
+    # Remove invalid cookies and redirect to login page
+    response = RedirectResponse(url="/login", status_code=303)
+    delete_token_cookies(response)
+
+    return response
 
 
 # Run the application server

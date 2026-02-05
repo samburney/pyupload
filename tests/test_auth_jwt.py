@@ -185,6 +185,9 @@ class TestGetCurrentUserFromRequest:
         
         monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
         
+        # Mock request.state.user to ensure we test cookie path
+        mock_request.state.user = None
+        
         # Call get_current_user_from_request
         result = await get_current_user_from_request(mock_request)
         
@@ -198,6 +201,7 @@ class TestGetCurrentUserFromRequest:
         # Mock request without token
         mock_request = Mock(spec=Request)
         mock_request.cookies = {}
+        mock_request.state.user = None
         
         result = await get_current_user_from_request(mock_request)
         
@@ -209,6 +213,7 @@ class TestGetCurrentUserFromRequest:
         # Mock request with invalid token
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": "invalid.token.here"}
+        mock_request.state.user = None
         
         result = await get_current_user_from_request(mock_request)
         
@@ -234,6 +239,7 @@ class TestGetCurrentUserFromRequest:
         # Mock request with expired token
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": expired_token}
+        mock_request.state.user = None
         
         result = await get_current_user_from_request(mock_request)
         
@@ -256,6 +262,9 @@ class TestGetCurrentUserFromRequest:
             return None
         
         monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
+        
+        # Mock request.state.user to ensure we test cookie path
+        mock_request.state.user = None
         
         result = await get_current_user_from_request(mock_request)
         

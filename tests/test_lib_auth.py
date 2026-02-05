@@ -833,6 +833,7 @@ class TestGetCurrentUserFromRequest:
         # Mock request with token cookie
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": token}
+        mock_request.state.user = None  # Ensure we test cookie path, not middleware-injected user
         
         user = await get_current_user_from_request(mock_request)
         
@@ -843,6 +844,7 @@ class TestGetCurrentUserFromRequest:
         """Test that missing token returns None."""
         mock_request = Mock(spec=Request)
         mock_request.cookies = {}
+        mock_request.state.user = None
         
         user = await get_current_user_from_request(mock_request)
         
@@ -853,6 +855,7 @@ class TestGetCurrentUserFromRequest:
         """Test that invalid token returns None."""
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": "invalid_token"}
+        mock_request.state.user = None
         
         user = await get_current_user_from_request(mock_request)
         
@@ -873,6 +876,7 @@ class TestGetCurrentUserFromRequest:
         
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": expired_token}
+        mock_request.state.user = None
         
         user = await get_current_user_from_request(mock_request)
         
@@ -891,6 +895,7 @@ class TestGetCurrentUserFromRequest:
         
         mock_request = Mock(spec=Request)
         mock_request.cookies = {"access_token": token}
+        mock_request.state.user = None
         
         user = await get_current_user_from_request(mock_request)
         

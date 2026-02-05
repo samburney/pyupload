@@ -10,7 +10,7 @@ from app.models.uploads import Upload
 
 from app.ui.common import templates
 from app.ui.common.security import flash_message
-from app.ui.common.security import get_or_create_authenticated_user
+from app.ui.common.security import get_current_authenticated_user
 
 
 config = get_app_config()
@@ -28,7 +28,7 @@ class ProfilePaginationParams(PaginationParams):
 @router.get("/profile", response_class=HTMLResponse)
 async def show_profile_page(
     request: Request,
-    current_user: Annotated[User, Depends(get_or_create_authenticated_user)],
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
     pagination: Annotated[ProfilePaginationParams, Depends()],
 ):
     """Render the users profile page."""
