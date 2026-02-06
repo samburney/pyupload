@@ -1,1 +1,61 @@
 {% extends "layout/base.html.j2" %}
+
+{% block content %}
+<main class="columns-1 md:columns-2 xl:columns-3 2xl:columns-4 gap-4 mb-4">
+    {% for upload in uploads %}
+    <div class="rounded-lg p-4 mb-4 border border-gray-100 shadow-sm shadow-gray-300 h-min break-inside-avoid-column flex-col justify-center">
+        {% if upload.image %}
+        <img alt="{{ upload.description }}" src="{{ upload.url }}" class="h-min w-full rounded-md object-cover">
+        {% else %}
+        <a class="block border border-dashed text-gray-600 hover:text-gray-400 border-gray-600 hover:border-gray-400 rounded-md object-cover w-32 h-32 mx-auto" href="{{ upload.url }}">
+            <div class="flex items-end justify-end h-full w-full p-2">
+                {{ upload.dot_ext }}
+            </div>
+        </a>
+        {% endif %}
+        <div class="mt-2">
+            <dl>
+                <div class="flex items-center gap-2">
+                    <dd class="text-sm text-gray-500">{{ upload.type }}</dd>
+                    {# If this is an image, show image metadata #}
+                    {% if upload.image %}
+                    <dd class="text-sm text-gray-500">{{ upload.image.width }}x{{ upload.image.height }}</dd>
+                    {% endif %}
+                </div>
+                <div>
+                    <dd class="font-medium overflow-hidden overflow-ellipsis whitespace-nowrap" title="{{ upload.description }}">{{ upload.description }}</dd>
+                </div>
+            </dl>
+<!--            <div class="mt-6 flex items-center gap-8 text-xs">
+                <div class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-2">
+                    <svg class="size-4 text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path>
+                    </svg>
+                    <div class="mt-1.5 sm:mt-0">
+                    <p class="text-gray-500">Parking</p>
+                    <p class="font-medium">2 spaces</p>
+                    </div>
+                </div>
+                <div class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-2">
+                    <svg class="size-4 text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                    <div class="mt-1.5 sm:mt-0">
+                    <p class="text-gray-500">Bathroom</p>
+                    <p class="font-medium">2 rooms</p>
+                    </div>
+                </div>
+                <div class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-2">
+                    <svg class="size-4 text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                    <div class="mt-1.5 sm:mt-0">
+                    <p class="text-gray-500">Bedroom</p>
+                    <p class="font-medium">4 rooms</p>
+                </div>
+            </div>-->
+        </div>
+    </div>
+    {% endfor %}
+</main>
+{% endblock %}
