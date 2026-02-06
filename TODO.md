@@ -163,5 +163,5 @@
 
 ## Fixes or Minor Enhancements
 
-- [ ] Review refresh_token functionality.  Sessions appear to be getting logged out after 30 minutes, but the refresh token is set to expire in 7 days.
+- [x] Review refresh_token functionality.  Sessions appear to be getting logged out after 30 minutes, but the refresh token is set to expire in 7 days.
       This could indicate that the refresh_token logic is not working as expected.
