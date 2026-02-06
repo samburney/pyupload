@@ -1,6 +1,7 @@
 from tortoise import models, fields
 from pydantic import BaseModel
 from typing import Optional
+from tortoise_serializer import Serializer
 
 from app.models.common.base import TimestampMixin
 
@@ -16,6 +17,19 @@ class Image(models.Model, TimestampMixin):
 
     class Meta:  # type: ignore[override]
         table = "images"
+
+
+class ImageSerializer(Serializer):
+    """Serializer for the Image model."""
+
+    # Model fields
+    id: int
+    upload_id: int
+    type: str
+    width: int
+    height: int
+    bits: int
+    channels: int
 
 
 class ImageMetadata(BaseModel):

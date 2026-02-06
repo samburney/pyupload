@@ -1,9 +1,9 @@
-from tortoise.fields import ReverseRelation
 from typing import Annotated, Optional, TYPE_CHECKING
 from pydantic import BaseModel, StringConstraints
 from pathlib import Path
 from tortoise import fields, models
 from tortoise.exceptions import NoValuesFetched
+from tortoise_serializer import Serializer, ContextType
 
 from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
@@ -11,6 +11,7 @@ from app.lib.helpers import MIME_TYPE_PATTERN
 from app.models.common.base import TimestampMixin
 from app.models.common.pagination import PaginationMixin
 from app.models.users import User
+from app.models.images import ImageSerializer
 
 if TYPE_CHECKING:
     from app.models.images import Image
@@ -66,14 +67,14 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         # - extra: Deprecated value which will be removed from the database model in a future revision
         # - user: A FK relationship which causes verbose output.  We already know the user (or can fetch it based on `user_id`)
         # - images.*: We don't need to include these values, we already know them as they are part of the `Upload` model
-        exclude = [
+        exclude = (
             "extra",
             "user",
             "images.created_at",
             "images.updated_at",
             "images.id",
             "images.upload_id",
-        ]
+        )
 
     @property
     def dot_ext(self) -> str:
@@ -127,6 +128,47 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     def is_owner(self, user: User) -> bool:
         """Return whether or not this file is owned by the current user."""
         return getattr(self, "user_id") == user.id
+
+
+class UploadSerializer(Serializer):
+    """Serializer for the Upload model."""
+
+    # Model fields
+    id: int
+    user_id: int
+    description: str
+    name: str
+    cleanname: str
+    originalname: str
+    ext: str
+    size: int
+    type: str
+    extra: str
+    viewed: int
+    private: int
+    image: ImageSerializer | None = None
+
+    @classmethod
+    async def resolve_image(cls, instance: Upload, context: ContextType) -> ImageSerializer | None:
+        """Resolve the image for the upload."""
+        if instance.images:
+            # Get related image records
+            images_queryset = instance.images.all()
+            images = await ImageSerializer.from_queryset(images_queryset)
+            if len(images) == 1:
+                return images[0]
+
+        return None
+
+    # Computed fields
+    dot_ext: str
+    filepath: Path
+    filename: str
+    url: str
+    view_url: str
+    download_url: str
+    is_image: bool
+    is_private: bool
 
 
 class UploadMetadata(BaseModel):
