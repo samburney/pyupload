@@ -120,6 +120,10 @@ def time_ago(dt: datetime) -> str:
     return humanize.naturaltime(dt)
 
 
+def humanize_bytes(size: int) -> str:
+    """Return a human-readable file size string."""
+    return humanize.naturalsize(size)
+
 def sanitise_filename(filename: str) -> str | None:
     """Sanitize a filename to prevent directory traversal and other attacks.
     
