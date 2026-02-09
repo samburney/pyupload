@@ -3,14 +3,14 @@ from pydantic import BaseModel, StringConstraints
 from pathlib import Path
 from tortoise import fields, models
 from tortoise.exceptions import NoValuesFetched
-from tortoise_serializer import Serializer, ContextType
+from tortoise_serializer import ModelSerializer, ContextType
 
 from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
 
-from app.models.common.base import TimestampMixin
+from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 from app.models.common.pagination import PaginationMixin
-from app.models.users import User
+from app.models.users import User, UserSerializer
 from app.models.images import ImageSerializer
 
 if TYPE_CHECKING:
@@ -130,12 +130,12 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         return getattr(self, "user_id") == user.id
 
 
-class UploadSerializer(Serializer):
+class UploadSerializer(ModelSerializer, SerializerTimestampMixin):
     """Serializer for the Upload model."""
 
     # Model fields
     id: int
-    user_id: int
+    user: UserSerializer
     description: str
     name: str
     cleanname: str

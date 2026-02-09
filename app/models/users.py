@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
 from typing_extensions import Self, Optional, Annotated, TYPE_CHECKING
 from tortoise import fields, models
+from tortoise_serializer import ModelSerializer
 from pydantic import BaseModel, model_validator, EmailStr, StringConstraints
 from email_validator import validate_email, EmailNotValidError
 
 from app.lib.config import get_app_config
 from app.lib.security import verify_password, generate_username
 
-from app.models.common.base import TimestampMixin
+from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 
 if TYPE_CHECKING:
     from tortoise.queryset import QuerySet
@@ -107,6 +108,22 @@ class User(models.Model, TimestampMixin):
 
 
 # Pydantic models for Users
+# tortoise-serializer model
+class UserSerializer(ModelSerializer, SerializerTimestampMixin):
+    id: int
+    username: str
+    email: str
+    is_registered: bool
+    is_abandoned: bool
+    is_admin: bool
+    is_disabled: bool
+    fingerprint_hash: Optional[str]
+    fingerprint_data: Optional[str]
+    registration_ip: Optional[str]
+    last_login_ip: str
+    last_seen_at: datetime
+
+
 # Base User model
 class UserPydanticBase(BaseModel):
     username: str
