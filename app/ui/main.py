@@ -27,7 +27,7 @@ async def index(request: Request):
         query = Q(private=False)
 
     # Get uploads
-    uploads_models = Upload.filter(query).order_by("-created_at").limit(24).prefetch_related("images")
+    uploads_models = Upload.filter(query).order_by("-created_at").limit(24).prefetch_related("user", "images")
     uploads = await UploadSerializer.from_queryset(uploads_models)
- 
+
     return templates.TemplateResponse(request, "index.html.j2", {"current_user": current_user, "uploads": uploads})
