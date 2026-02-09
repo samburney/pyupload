@@ -13,6 +13,21 @@ class PaginationParams(BaseModel):
     page_size: int = 10
     sort_order: str = "asc"
     sort_by: str = "id"
+    count: int = 0
+
+    @property
+    def pages(self) -> int:
+        """Return the number of pages."""
+        return ceil(self.count / self.page_size)
+
+    def page_data(self) -> dict[str, Any]:
+        """Return the page data."""
+        return {
+            "page": self.page,
+            "page_size": self.page_size,
+            "sort_order": self.sort_order,
+            "sort_by": self.sort_by,
+        }
 
 
 class PaginationMixin(_ModelBase):
@@ -30,6 +45,8 @@ class PaginationMixin(_ModelBase):
         page_size: int = 10,
         sort_order: str = "asc",
         sort_by: str = "id",
+        count: int = 0,
+        query: Q | None = None,
         *args: Q, **kwargs: Any
     ) -> "QuerySet[Any]":
         """Paginate user uploads."""
@@ -38,7 +55,10 @@ class PaginationMixin(_ModelBase):
         limit = page_size
         order = f'-{sort_by}' if sort_order == 'desc' else sort_by
 
-        return cls.filter(*args, **kwargs).offset(offset).limit(limit).order_by(order)
+        qs = cls.filter(*args, **kwargs).offset(offset).limit(limit).order_by(order)
+        if query:
+            qs = qs.filter(query)
+        return qs
 
     @classmethod
     async def pages(
