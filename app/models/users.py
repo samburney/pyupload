@@ -118,7 +118,7 @@ class UserSerializer(ModelSerializer, SerializerTimestampMixin):
     is_admin: bool
     is_disabled: bool
     fingerprint_hash: Optional[str]
-    fingerprint_data: Optional[str]
+    fingerprint_data: Optional[dict]
     registration_ip: Optional[str]
     last_login_ip: str
     last_seen_at: datetime
