@@ -43,9 +43,9 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - `app/models/uploads.py` (if needed)
 
 **Tasks**:
-1. [ ] Update home route to fetch public uploads
-2. [ ] Filter for public uploads only (private=0)
-3. [ ] Order by created_at descending (newest first)
+1. [x] Update home route to fetch public uploads
+2. [x] Filter for public uploads only (private=0) - also including owned, private uploads if logged in
+3. [x] Order by created_at descending (newest first)
 4. [ ] Add pagination support
 5. [ ] Prefetch related data (images, user)
 6. [ ] Pass uploads and pagination data to template
