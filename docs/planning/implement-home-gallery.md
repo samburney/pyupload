@@ -15,24 +15,28 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - Empty state with upload CTA (works for all users via auto-account creation)
 
 ### Current State
-- Home page exists at `/` but is nearly empty
-- Template extends base layout but has no content
-- Upload model has pagination support via `PaginationMixin`
-- Upload model has `url` property for linking
-- No gallery component exists
-- No filtering for public uploads
-- Profile page has similar gallery for user's uploads
+- Home route fetches public uploads and owner's private uploads (Step 1 complete)
+- Gallery grid renders with CSS multi-column layout (Step 2 partial)
+- Pagination component reused and working (Step 4 complete)
+- Empty state component created (Step 6 complete)
+- Database index migration created for `private` column (Step 7 partial)
+- `UploadSerializer`, `UserSerializer`, `ImageSerializer` added via `tortoise-serializer`
+- `PaginationParams` enhanced with `count`, `pages`, `page_data()`
+- `humanize_bytes` helper and Jinja filter added
+- Base layout refactored with semantic HTML (`<nav>`, `<main>`, `<footer>`)
+- 35 new tests passing (615 total)
 
 ### Target State
-- Home page displays grid of latest public uploads
-- Only public uploads (private=0) shown
-- Pagination working with page controls
-- Responsive grid layout (1-4 columns based on screen size)
-- Each upload shows thumbnail, title, view count
-- Click on upload navigates to view page
-- Clean, modern design matching site theme
-- Fast page load with optimized queries
-- All tests passing
+- ~~Home page displays grid of latest public uploads~~ ✅
+- ~~Only public uploads (private=0) shown~~ ✅ (also includes owner's private uploads when logged in)
+- ~~Pagination working with page controls~~ ✅
+- ~~Responsive grid layout (1-4 columns based on screen size)~~ ✅
+- Each upload shows thumbnail, title, view count — **view count not yet displayed**
+- Click on upload navigates to view page — **image cards not yet linked**
+- ~~Clean, modern design matching site theme~~ ✅
+- Fast page load with optimized queries — **partial** (index added, no caching headers)
+- ~~All tests passing~~ ✅
+- Remaining: extract reusable card/grid components, add hover effects, link image cards, display view count, add relative date
 
 ---
 
@@ -52,19 +56,19 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 7. [x] Handle empty state (no uploads)
 
 **Tests**:
-1. [ ] Test home route returns public uploads only
-2. [ ] Test private uploads excluded
-3. [ ] Test uploads ordered by newest first
-4. [ ] Test pagination works
-5. [ ] Test related data prefetched
-6. [ ] Test empty state handled
+1. [x] Test home route returns public uploads only
+2. [x] Test private uploads excluded
+3. [x] Test uploads ordered by newest first
+4. [x] Test pagination works
+5. [x] Test related data prefetched
+6. [x] Test empty state handled
 
 **Acceptance Criteria**:
-- [ ] Home route fetches correct uploads
-- [ ] Only public uploads returned
-- [ ] Pagination functional
-- [ ] Efficient database queries
-- [ ] All tests passing
+- [x] Home route fetches correct uploads
+- [x] Only public uploads returned (plus owner's private uploads when logged in — exceeds plan)
+- [x] Pagination functional
+- [x] Efficient database queries
+- [x] All tests passing (35 tests in `test_ui_home_gallery.py`)
 
 **Implementation Notes**:
 - Query: `Upload.filter(private=0).order_by('-created_at').prefetch_related('images', 'user')`
@@ -72,6 +76,12 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - Page size: 24 uploads (works well with 4x6, 3x8, 2x12 grid layouts)
 - Add database index via migration: `CREATE INDEX idx_uploads_private_created ON uploads(private, created_at DESC)`
 - Handle case where no public uploads exist yet
+
+**Deviation Notes** (reviewed 2026-02-10):
+- Uses `Q(private=False) | Q(user=current_user)` to also show logged-in user's private uploads. This exceeds the plan's intent and is a good UX improvement.
+- Uses `UploadSerializer` (via `tortoise-serializer`) instead of passing ORM models directly to templates.  This is a good architectural decision for clean data flow.
+- `HomePaginationParams` subclass provides default sort/page_size.  Clean approach.
+- Database index migration adds index on `private` column only (not composite `(private, created_at DESC)` as noted).  Still functional.
 
 ---
 
@@ -83,15 +93,15 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - `app/ui/templates/components/upload-card.html.j2` (new)
 
 **Tasks**:
-1. [ ] Create reusable upload grid component
-2. [ ] Create upload card component for individual items
-3. [ ] Implement responsive grid layout (CSS Grid or Tailwind)
-4. [ ] Display upload thumbnail/preview
-5. [ ] Display upload title (or filename if no title)
-6. [ ] Display view count
-7. [ ] Display uploader username
-8. [ ] Link card to upload view page
-9. [ ] Add hover effects
+1. [ ] Create reusable upload grid component — *currently inline in `index.html.j2`, not extracted*
+2. [ ] Create upload card component for individual items — *currently inline in `index.html.j2`, not extracted*
+3. [x] Implement responsive grid layout (CSS Grid or Tailwind) — *uses CSS multi-column layout (`columns-*`)*
+4. [x] Display upload thumbnail/preview
+5. [x] Display upload title (or filename if no title) — *displays `upload.description`*
+6. [ ] Display view count — **not yet displayed**
+7. [x] Display uploader username
+8. [ ] Link card to upload view page — **image cards are not linked, only non-image file icons are**
+9. [ ] Add hover effects — **not yet implemented**
 
 **Tests**:
 1. [ ] Test grid renders with uploads
@@ -172,30 +182,30 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - `app/ui/templates/components/pagination.html.j2` (new, or reuse from profile)
 
 **Tasks**:
-1. [ ] Create pagination component (or reuse existing)
-2. [ ] Display page numbers
-3. [ ] Add previous/next buttons
-4. [ ] Show current page indicator
-5. [ ] Calculate total pages
-6. [ ] Generate page links with query parameters
-7. [ ] Handle edge cases (first page, last page)
-8. [ ] Make mobile-friendly
+1. [x] Create pagination component (or reuse existing) — *reused and updated existing component*
+2. [x] Display page numbers
+3. [x] Add previous/next buttons
+4. [x] Show current page indicator
+5. [x] Calculate total pages — *via `PaginationParams.pages` property*
+6. [x] Generate page links with query parameters
+7. [x] Handle edge cases (first page, last page)
+8. [x] Make mobile-friendly
 
 **Tests**:
-1. [ ] Test pagination displays correctly
-2. [ ] Test page links work
-3. [ ] Test previous/next buttons
-4. [ ] Test first page (no previous)
-5. [ ] Test last page (no next)
-6. [ ] Test middle pages
+1. [x] Test pagination displays correctly
+2. [x] Test page links work
+3. [x] Test previous/next buttons
+4. [x] Test first page (no previous)
+5. [x] Test last page (no next)
+6. [x] Test middle pages
 7. [ ] Test mobile display
 
 **Acceptance Criteria**:
-- [ ] Pagination functional
-- [ ] All page navigation works
-- [ ] Edge cases handled
-- [ ] Mobile responsive
-- [ ] All tests passing
+- [x] Pagination functional
+- [x] All page navigation works
+- [x] Edge cases handled
+- [x] Mobile responsive
+- [x] All tests passing
 
 **Implementation Notes**:
 - Reuse existing pagination component: `app/ui/templates/components/pagination.html.j2`
@@ -262,25 +272,25 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - `app/ui/templates/components/empty-state.html.j2` (new)
 
 **Tasks**:
-1. [ ] Create empty state component
-2. [ ] Display message when no uploads exist
-3. [ ] Add CTA button linking to upload page
+1. [x] Create empty state component — `components/empty-content.html.j2` with SVG illustration
+2. [x] Display message when no uploads exist
+3. [x] Add CTA button linking to upload page — Upload + Home buttons included
 4. [ ] Add loading skeleton for initial page load
 5. [ ] Add loading states for pagination
-6. [ ] Style empty state attractively
+6. [x] Style empty state attractively
 
 **Tests**:
-1. [ ] Test empty state displays when no uploads
-2. [ ] Test empty state hidden when uploads exist
+1. [x] Test empty state displays when no uploads
+2. [x] Test empty state hidden when uploads exist
 3. [ ] Test loading skeleton displays
-4. [ ] Test CTA button links to /upload
+4. [x] Test CTA button links to /upload
 5. [ ] Test loading states for pagination
 
 **Acceptance Criteria**:
-- [ ] Empty state displays correctly
+- [x] Empty state displays correctly
 - [ ] Loading states improve UX
-- [ ] CTA functional
-- [ ] All tests passing
+- [x] CTA functional
+- [x] All tests passing
 
 **Implementation Notes**:
 - Message: "No uploads yet. Be the first to upload!"
@@ -379,3 +389,64 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 
 **Dependencies**:
 - All previous steps must be complete
+
+---
+
+## Potential Issues Identified
+
+The following issues were identified during the branch review (2026-02-10).  These should be addressed before merging or in a follow-up.
+
+### Bug: `UserSerializer.last_seen_at` typed as non-optional
+
+**File**: `app/models/users.py` (line 124)
+
+`last_seen_at` is typed as `datetime` in `UserSerializer`, but the database field is `DatetimeField(null=True)`.  When a user has never logged in (e.g. freshly created), serialisation fails with a Pydantic validation error.  The same issue may apply to `last_login_ip` (line 123) which is also `null=True` in the model but typed as `str`.
+
+**Fix**: Change `UserSerializer` to:
+- `last_seen_at: Optional[datetime]`
+- `last_login_ip: Optional[str]`
+
+**Workaround in tests**: `test_ui_home_gallery.py` uses a `_create_user()` helper that always provides `last_seen_at` to avoid this serialisation failure.  **Once the bug is fixed, remove the workaround** and verify tests still pass without setting `last_seen_at` explicitly.
+
+### Bug: `PaginationMixin.paginate()` double-applies offset/limit/order
+
+**File**: `app/models/common/pagination.py` (lines 58-62)
+
+When a `query` argument is provided, the method builds an initial queryset with `.offset().limit().order_by()`, then calls `.filter(query).offset().limit().order_by()` again on top of that.  This redundantly applies the same clauses.  While it appears to produce correct results in SQLite testing, it could cause unexpected behaviour with other database backends.
+
+**Fix**: Apply offset/limit/order_by only once, after all filters are composed:
+```python
+qs = cls.filter(*args, **kwargs)
+if query:
+    qs = qs.filter(query)
+return qs.offset(offset).limit(limit).order_by(order)
+```
+
+### Issue: Template assumes `current_user` is not None
+
+**File**: `app/ui/templates/index.html.j2` (line 54)
+
+The expression `upload.user.id == current_user.id` will raise `AttributeError` if `current_user` is `None` (anonymous visitor viewing public uploads that were uploaded by another user).  This currently doesn't crash because `current_user` is set by middleware, but it deserves a guard.
+
+**Fix**: Add a null check, e.g. `{% if current_user and upload.user.id == current_user.id %}`
+
+### Issue: Image cards are not clickable
+
+**File**: `app/ui/templates/index.html.j2` (line 9)
+
+The `<img>` tag for image uploads is not wrapped in an `<a>` link, so users cannot click through to view the upload detail page.  Non-image file icons *are* linked (line 11).
+
+**Fix**: Wrap the image `<img>` in an `<a href="{{ upload.view_url }}">` tag.
+
+### Missing: View count not displayed on cards
+
+**File**: `app/ui/templates/index.html.j2`
+
+The implementation plan specifies displaying view count (`upload.viewed`) on each card, but this is not currently rendered in the template.
+
+### Task: Remove test workarounds after bug fixes
+
+Once the `UserSerializer.last_seen_at` bug is fixed:
+1. Remove the `_create_user()` helper from `tests/test_ui_home_gallery.py`
+2. Replace all `_create_user()` calls with direct `User.create()` calls (without providing `last_seen_at`)
+3. Verify all 35 gallery tests still pass

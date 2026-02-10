@@ -70,6 +70,7 @@
   - [ ] Delete button for owners/admins
 
 ### Gallery & Discovery Pages (v0.1)
+- [ ] Home gallery page (latest public uploads) — *in progress on `implement_home_gallery` branch, see `docs/planning/implement-home-gallery.md`*
 - [ ] Random uploads page (/random)
 - [ ] Popular uploads page (/popular - most viewed)
 - [ ] All uploads page (/all - latest public uploads)
@@ -92,7 +93,6 @@
 ## Future Release (v0.2) - Extended Feature Parity
 
 ### Gallery & Discovery Pages
-- [ ] Home gallery page (latest public uploads)
 - [ ] Sort and filter options (newest, most viewed, file type)
 - [ ] Random uploads page
 - [ ] Popular uploads page (most viewed)
@@ -165,3 +165,5 @@
 
 - [x] Review refresh_token functionality.  Sessions appear to be getting logged out after 30 minutes, but the refresh token is set to expire in 7 days.
       This could indicate that the refresh_token logic is not working as expected.
+- [ ] Fix `UserSerializer.last_seen_at` and `last_login_ip` typed as non-optional but nullable in database model.  See `docs/planning/implement-home-gallery.md` Potential Issues.
+- [ ] Fix `PaginationMixin.paginate()` double-applying offset/limit/order when `query` argument is provided.
