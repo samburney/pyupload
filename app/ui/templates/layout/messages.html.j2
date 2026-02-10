@@ -4,7 +4,7 @@
 {% set warning_messages = warning_messages | default([]) + flashed_messages['warning'] %}
 <div
     id="messages"
-    class="container mx-auto"
+    class="container mx-auto -mt-2"
     x-show="infoMessagesCount > 0 || errorMessagesCount > 0 || warningMessagesCount > 0"
     x-transition
     x-data="{

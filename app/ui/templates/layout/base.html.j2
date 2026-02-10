@@ -13,13 +13,13 @@
         </style>
     </head>
     <body hx-ext="response-targets" class="flex flex-col min-h-screen">
-        <nav class="sm:mx-2">
+        <nav class="sm:mx-2 mb-2">
             {% include "layout/navbar.html.j2" %}
         </nav>
         <section class="mx-2">
             {% include "layout/messages.html.j2" %}
         </section>
-        <main class="mx-2 flex flex-col grow">
+        <main class="mx-2 mb-2 flex flex-col grow">
             {% block content %}{% endblock %}
         </main>
 
