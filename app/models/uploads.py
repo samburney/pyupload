@@ -53,7 +53,7 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     type = fields.CharField(max_length=255)
     extra = fields.CharField(max_length=32)
     viewed = fields.IntField(default=0)
-    private = fields.IntField(default=0) # tinyint(1) in MySQL
+    private = fields.IntField(default=0, index=True) # tinyint(1) in MySQL
 
     # Type hints for reverse relationships
     if TYPE_CHECKING:
