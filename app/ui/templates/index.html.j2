@@ -15,42 +15,59 @@
         {% endif %}
         <div class="mt-2">
             <dl>
-                <div class="flex items-center gap-2">
-                    <dd class="text-sm text-gray-500">{{ upload.type}}</dd>
+                <div class="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                    <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
+                        <svg class="size-4 text-gray-500 fill-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+                            <path d="M27.218 9.838c-0.008-0.059-0.018-0.111-0.032-0.162l0.002 0.008c-0.052-0.222-0.158-0.414-0.303-0.568l0.001 0.001-8-8c-0.155-0.146-0.348-0.252-0.563-0.302l-0.008-0.002c-0.041-0.012-0.092-0.022-0.143-0.029l-0.006-0.001c-0.046-0.013-0.101-0.024-0.158-0.032l-0.006-0.001h-12c-0.69 0-1.25 0.56-1.25 1.25v0 28c0 0.69 0.56 1.25 1.25 1.25h20c0.69-0.001 1.249-0.56 1.25-1.25v-20c-0.008-0.062-0.019-0.117-0.034-0.171l0.002 0.009zM22.982 8.75h-3.732v-3.732zM7.25 28.75v-25.5h9.5v6.75c0 0.69 0.56 1.25 1.25 1.25v0h6.75v17.5z"></path>
+                        </svg>
+                        <div class="mt-1.5 sm:mt-0">
+                            <p class="font-medium">{{ upload.type | lower }}</p>
+                        </div>
+                    </dd>
+                    {% if upload.image %}
+                    <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
+                        <svg class="size-4 text-gray-500 stroke-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M6 17h17V3H6zm16-1H7v-3.386l1.771-1.771a1.38 1.38 0 0 0 1.402-.334l2.288-2.29 2.27 1.892a1.376 1.376 0 0 0 1.708.043l1.245-.933L22 12.681zm0-12v7.399l-4.035-3.234a.377.377 0 0 0-.493-.035l-1.633 1.225a.377.377 0 0 1-.468-.012l-2.706-2.256a.377.377 0 0 0-.509.023L9.466 9.8a.377.377 0 0 1-.533 0 .377.377 0 0 0-.533 0L7 11.2V4zm-6.5 1.521v-.043a.979.979 0 0 1 .979-.978A1.021 1.021 0 0 1 17.5 5.521a.979.979 0 0 1-.979.979h-.043a.981.981 0 0 1-.978-.979zM21 18.824l2.058 1.676L21 22.176V21H8v1.176L5.942 20.5 8 18.824V20h13zM3 5v10h1.176L2.5 17.058.824 15H2V5H.824L2.5 2.942 4.176 5z"/>
+                        </svg>
+                        <div class="mt-1.5 sm:mt-0">
+                            <p class="font-medium">{{ upload.image.height }}x{{ upload.image.width }}</p>
+                        </div>
+                    </dd>
+                    {% endif %}
+                    <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
+                        <svg class="size-4 text-gray-500 stroke-gray-500" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="none" stroke-width="2" d="M2,5.07692308 C2,5.07692308 3.66666667,2 12,2 C20.3333333,2 22,5.07692308 22,5.07692308 L22,18.9230769 C22,18.9230769 20.3333333,22 12,22 C3.66666667,22 2,18.9230769 2,18.9230769 L2,5.07692308 Z M2,13 C2,13 5.33333333,16 12,16 C18.6666667,16 22,13 22,13 M2,7 C2,7 5.33333333,10 12,10 C18.6666667,10 22,7 22,7"/>
+                        </svg>
+                        <div class="mt-1.5 sm:mt-0">
+                            <p class="font-medium">{{ upload.size | humanize_bytes }}</p>
+                        </div>
+                    </dd>
                 </div>
-                <div>
-                    <dd class="font-medium overflow-hidden overflow-ellipsis whitespace-nowrap" title="{{ upload.description }}">{{ upload.description }}</dd>
+                <div class="mt-1">
+                    <dd class="text-md overflow-hidden overflow-ellipsis whitespace-nowrap" title="{{ upload.description }}">{{ upload.description }}</dd>
                 </div>
             </dl>
-            <div class="mt-2 flex items-center gap-8 text-xs">
+            <div class="mt-2 flex items-center gap-4">
+                {% if not upload.private %}
                 <div class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-2">
-                    <svg class="size-6 text-indigo-700" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg class="size-6 text-gray-700{% if upload.user.id == current_user.id %} fill-blue-400{% endif %}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 1.2A4.8 4.8 0 1 0 16.8 6 4.805 4.805 0 0 0 12 1.2zm0 8.6A3.8 3.8 0 1 1 15.8 6 3.804 3.804 0 0 1 12 9.8zM20 22H4v-4.5A5.506 5.506 0 0 1 9.5 12h5a5.506 5.506 0 0 1 5.5 5.5zM5 21h14v-3.5a4.505 4.505 0 0 0-4.5-4.5h-5A4.505 4.505 0 0 0 5 17.5z"/>
                         <path fill="none" d="M0 0h24v24H0z"/>
                     </svg>
                     <div class="mt-1.5 sm:mt-0">
-                        <p class="text-gray-500">Owner</p>
-                        <p class="font-medium">{{ upload.user.username }}</p>
+                        <p class="text-xs text-gray-500">Uploaded by</p>
+                        <p class="text-sm font-medium">{{ upload.user.username }}</p>
                     </div>
                 </div>
+                {% else %}
                 <div class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-2">
-                    <svg class="size-6 text-indigo-700" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path fill="none" stroke="#000000" stroke-width="1" d="M2,5.07692308 C2,5.07692308 3.66666667,2 12,2 C20.3333333,2 22,5.07692308 22,5.07692308 L22,18.9230769 C22,18.9230769 20.3333333,22 12,22 C3.66666667,22 2,18.9230769 2,18.9230769 L2,5.07692308 Z M2,13 C2,13 5.33333333,16 12,16 C18.6666667,16 22,13 22,13 M2,7 C2,7 5.33333333,10 12,10 C18.6666667,10 22,7 22,7"/>
+                    <svg class="size-6 text-gray-700 fill-green-400" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20,20V17a4,4,0,0,0-8,0v3a2.0025,2.0025,0,0,0-2,2v6a2.0025,2.0025,0,0,0,2,2h8a2.0025,2.0025,0,0,0,2-2V22A2.0025,2.0025,0,0,0,20,20Zm-6-3a2,2,0,0,1,4,0v3H14ZM12,28V22h8l.0012,6Z" transform="translate(0)"/>
+                        <path d="M25.8288,10.1152A10.0067,10.0067,0,0,0,17.89,2.1816,10.0025,10.0025,0,0,0,6.17,10.1152,7.502,7.502,0,0,0,7.4912,25H8V23H7.4953a5.5019,5.5019,0,0,1-.9694-10.9165l1.3488-.2441.2591-1.3457a8.0109,8.0109,0,0,1,15.7312,0l.259,1.3457,1.3489.2441A5.5019,5.5019,0,0,1,24.5076,23H24v2h.5076a7.502,7.502,0,0,0,1.3212-14.8848Z" transform="translate(0)"/>
                     </svg>
                     <div class="mt-1.5 sm:mt-0">
-                        <p class="text-gray-500">File size</p>
-                        <p class="font-medium">{{ upload.size | humanize_bytes }}</p>
-                    </div>
-                </div>
-                {% if upload.image %}
-                <div class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-2">
-                    <svg class="size-6 text-indigo-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <path d="M6 17h17V3H6zm16-1H7v-3.386l1.771-1.771a1.38 1.38 0 0 0 1.402-.334l2.288-2.29 2.27 1.892a1.376 1.376 0 0 0 1.708.043l1.245-.933L22 12.681zm0-12v7.399l-4.035-3.234a.377.377 0 0 0-.493-.035l-1.633 1.225a.377.377 0 0 1-.468-.012l-2.706-2.256a.377.377 0 0 0-.509.023L9.466 9.8a.377.377 0 0 1-.533 0 .377.377 0 0 0-.533 0L7 11.2V4zm-6.5 1.521v-.043a.979.979 0 0 1 .979-.978A1.021 1.021 0 0 1 17.5 5.521a.979.979 0 0 1-.979.979h-.043a.981.981 0 0 1-.978-.979zM21 18.824l2.058 1.676L21 22.176V21H8v1.176L5.942 20.5 8 18.824V20h13zM3 5v10h1.176L2.5 17.058.824 15H2V5H.824L2.5 2.942 4.176 5z"/>
-                        <path fill="none" d="M0 0h24v24H0z"/>
-                    </svg>
-                    <div class="mt-1.5 sm:mt-0">
-                        <p class="text-gray-500">Resolution</p>
-                        <p class="font-medium">{{ upload.image.height }}x{{ upload.image.width }}</p>
+                        <p class="text-xs text-gray-500">Private upload</p>
+                        <p class="text-sm font-medium">{{ upload.user.username }}</p>
                     </div>
                 </div>
                 {% endif %}

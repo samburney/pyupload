@@ -55,9 +55,10 @@ class PaginationMixin(_ModelBase):
         limit = page_size
         order = f'-{sort_by}' if sort_order == 'desc' else sort_by
 
+        # Handle query argument if it's provided
         qs = cls.filter(*args, **kwargs).offset(offset).limit(limit).order_by(order)
         if query:
-            qs = qs.filter(query)
+            qs = qs.filter(query).offset(offset).limit(limit).order_by(order)
         return qs
 
     @classmethod

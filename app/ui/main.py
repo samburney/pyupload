@@ -15,10 +15,19 @@ config = get_app_config()
 router = APIRouter(tags=["main"])
 
 
+class HomePaginationParams(PaginationParams):
+    """Default pagination parameters for the home page."""
+
+    # Override default sort_by and sort_order if not specified
+    sort_by: str = "created_at"
+    sort_order: str = "desc"
+    page_size: int = 24
+
+
 @router.get("/", response_class=HTMLResponse)
 async def index(
     request: Request,
-    pagination: Annotated[PaginationParams, Depends()],
+    pagination: Annotated[HomePaginationParams, Depends()],
 ):
     """Render the main index page."""
     
@@ -35,10 +44,8 @@ async def index(
     pagination.count = await Upload.filter(query).count()
 
     # Get uploads
-    uploads_models = Upload.paginate(**pagination.page_data(), query=query).order_by("-created_at").limit(24).prefetch_related("user", "images")
+    uploads_models = Upload.paginate(**pagination.page_data(), query=query).prefetch_related("user", "images")
     uploads = await UploadSerializer.from_queryset(uploads_models)
-
-    print(pagination.model_dump())
 
     # Template context
     context = {
