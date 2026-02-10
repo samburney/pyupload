@@ -1,4 +1,4 @@
-{% if pagination is defined %}
+{% if pagination is defined and pagination.pages > 1 %}
 <div class="pagination">
     <ul class="flex justify-center gap-1 text-gray-900">
         {% if pagination.page > 1 %}

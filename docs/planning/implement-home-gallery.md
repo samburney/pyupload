@@ -49,7 +49,7 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 4. [x] Add pagination support
 5. [x] Prefetch related data (images, user)
 6. [x] Pass uploads and pagination data to template
-7. [ ] Handle empty state (no uploads)
+7. [x] Handle empty state (no uploads)
 
 **Tests**:
 1. [ ] Test home route returns public uploads only
