@@ -104,12 +104,12 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 9. [x] Add hover effects — *implemented 2026-02-13: card scale + shadow, image brightness*
 
 **Tests**:
-1. [ ] Test grid renders with uploads
-2. [ ] Test grid responsive at different breakpoints
-3. [ ] Test card displays all metadata
-4. [ ] Test card links to correct view page
-5. [ ] Test hover effects work
-6. [ ] Test empty grid state
+1. [x] Test grid renders with uploads
+2. [x] Test grid responsive at different breakpoints
+3. [x] Test card displays all metadata
+4. [x] Test card links to correct view page
+5. [x] Test hover effects work
+6. [x] Test empty grid state
 
 **Component Architecture** (implemented 2026-02-13):
 
@@ -161,11 +161,11 @@ context = {"uploads": uploads, "pagination": pagination, "current_user": current
 This validates that the component architecture is truly reusable and maintainable.
 
 **Acceptance Criteria**:
-- [ ] Grid displays uploads in clean layout
-- [ ] Responsive design works on all screen sizes
-- [ ] All metadata visible
-- [ ] Links functional
-- [ ] All tests passing
+- [x] Grid displays uploads in clean layout
+- [x] Responsive design works on all screen sizes
+- [x] All metadata visible
+- [x] Links functional
+- [x] All tests passing
 
 **Implementation Notes**:
 - Use Tailwind CSS grid: `grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4`
