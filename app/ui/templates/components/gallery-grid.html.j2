@@ -1,0 +1,12 @@
+{% if uploads and uploads | length > 0 %}
+<article class="columns-1 md:columns-2 xl:columns-3 2xl:columns-4 gap-4 mb-4">
+    {% for upload in uploads %}
+    {% include("components/gallery-card.html.j2") %}
+    {% endfor %}
+</article>
+{% include("components/pagination.html.j2") %}
+{% else %}
+<article class="flex flex-col grow justify-center items-center">
+    {% include("components/empty-content.html.j2") %}
+</article>
+{% endif %}

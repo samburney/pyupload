@@ -6,7 +6,7 @@ from app.lib.config import get_app_config
 
 from app.models.common.pagination import PaginationParams
 from app.models.users import User
-from app.models.uploads import Upload
+from app.models.uploads import Upload, UploadSerializer
 
 from app.ui.common import templates
 from app.ui.common.security import flash_message
@@ -45,16 +45,13 @@ If you would like to upgrade to a full account, please [login](/login) or [regis
             message_type="warning",
         )
 
-    # Get pagination data
-    pagination_data = pagination.model_dump()
+    # Update item pagination parameter
+    pagination.count = await Upload.filter(user=current_user).count()
 
     # Get list of files uploaded
-    uploads = await Upload.paginate(**pagination_data, user=current_user) \
-        .all() \
-        .prefetch_related("images")
-
-    # Add page count to pagination data
-    pagination_data["pages"] = await Upload.pages(page_size=pagination.page_size, user=current_user)
+    upload_models = Upload.paginate(**pagination.page_data(), user=current_user) \
+        .prefetch_related("user","images")
+    uploads = await UploadSerializer.from_queryset(upload_models)
 
     return templates.TemplateResponse(
         request,
@@ -62,6 +59,6 @@ If you would like to upgrade to a full account, please [login](/login) or [regis
         {
             "current_user": current_user,
             "uploads": uploads,
-            "pagination": pagination_data,
+            "pagination": pagination,
         }
     )

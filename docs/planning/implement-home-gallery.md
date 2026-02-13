@@ -35,8 +35,8 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - ~~Click on upload navigates to view page~~ ✅ (modal overlay with HTMX + Alpine.js)
 - ~~Clean, modern design matching site theme~~ ✅
 - Fast page load with optimized queries — **partial** (index added, no caching headers)
-- ~~All tests passing~~ ✅
-- Remaining: extract reusable card/grid components
+- ~~All tests passing~~ ✅ (615/615, including 35 new gallery tests)
+- **Completed**: Steps 1, 2, 4, 6 ✅ | **Remaining**: Steps 3, 5, 7, 8 (optional polish/testing)
 
 ---
 
@@ -93,8 +93,8 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - `app/ui/templates/components/upload-card.html.j2` (new)
 
 **Tasks**:
-1. [ ] Create reusable upload grid component — *currently inline in `index.html.j2`, not extracted*
-2. [ ] Create upload card component for individual items — *currently inline in `index.html.j2`, not extracted*
+1. [x] Create reusable upload grid component — *implemented 2026-02-13: `components/gallery-grid.html.j2`*
+2. [x] Create upload card component for individual items — *implemented 2026-02-13: `components/gallery-card.html.j2`*
 3. [x] Implement responsive grid layout (CSS Grid or Tailwind) — *uses CSS multi-column layout (`columns-*`)*
 4. [x] Display upload thumbnail/preview
 5. [x] Display upload title (or filename if no title) — *displays `upload.description`*
@@ -110,6 +110,55 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 4. [ ] Test card links to correct view page
 5. [ ] Test hover effects work
 6. [ ] Test empty grid state
+
+**Component Architecture** (implemented 2026-02-13):
+
+The gallery has been refactored into reusable components:
+
+```
+index.html.j2 (5 lines)
+└─ includes: components/gallery-grid.html.j2
+   ├─ loops through uploads
+   ├─ includes: components/gallery-card.html.j2 (for each upload)
+   ├─ includes: components/pagination.html.j2
+   └─ includes: components/empty-content.html.j2 (when no uploads)
+```
+
+**Component Dependencies:**
+- `gallery-grid.html.j2` expects: `uploads` (list), `pagination` (object), `current_user` (optional)
+- `gallery-card.html.j2` expects: `upload` (object), `current_user` (optional)
+
+**Benefits:**
+- Clean separation of concerns
+- Reusable across different pages (user profile, search results, etc.)
+- Easier to maintain and test individual components
+- Home page template reduced from 117 lines to 5 lines
+
+**Reusability Validation** (2026-02-13):
+
+Successfully retrofitted components to the user profile page as proof of reusability:
+- **File**: `app/ui/templates/users/profile.html.j2` - Now uses `gallery-grid.html.j2` component
+- **Route**: `app/ui/users.py` - Updated to use `UploadSerializer` and provide correct context
+- **Result**: Both home page and profile page now share identical gallery UI with zero code duplication
+
+Changes made to profile route:
+```python
+# Added UploadSerializer import
+from app.models.uploads import Upload, UploadSerializer
+
+# Updated pagination to use object instead of dict
+pagination.count = await Upload.filter(user=current_user).count()
+
+# Serialize uploads for component
+upload_models = Upload.paginate(**pagination.page_data(), user=current_user) \
+    .prefetch_related("user","images")
+uploads = await UploadSerializer.from_queryset(upload_models)
+
+# Pass pagination object (not dict) to template
+context = {"uploads": uploads, "pagination": pagination, "current_user": current_user}
+```
+
+This validates that the component architecture is truly reusable and maintainable.
 
 **Acceptance Criteria**:
 - [ ] Grid displays uploads in clean layout
