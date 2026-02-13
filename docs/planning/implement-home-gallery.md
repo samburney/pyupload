@@ -31,12 +31,12 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - ~~Only public uploads (private=0) shown~~ ✅ (also includes owner's private uploads when logged in)
 - ~~Pagination working with page controls~~ ✅
 - ~~Responsive grid layout (1-4 columns based on screen size)~~ ✅
-- Each upload shows thumbnail, title, view count — **view count not yet displayed**
-- Click on upload navigates to view page — **image cards not yet linked**
+- ~~Each upload shows thumbnail, title, view count~~ ✅
+- ~~Click on upload navigates to view page~~ ✅ (modal overlay with HTMX + Alpine.js)
 - ~~Clean, modern design matching site theme~~ ✅
 - Fast page load with optimized queries — **partial** (index added, no caching headers)
 - ~~All tests passing~~ ✅
-- Remaining: extract reusable card/grid components, add hover effects, link image cards, display view count, add relative date
+- Remaining: extract reusable card/grid components
 
 ---
 
@@ -98,10 +98,10 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 3. [x] Implement responsive grid layout (CSS Grid or Tailwind) — *uses CSS multi-column layout (`columns-*`)*
 4. [x] Display upload thumbnail/preview
 5. [x] Display upload title (or filename if no title) — *displays `upload.description`*
-6. [ ] Display view count — **not yet displayed**
+6. [x] Display view count — *implemented 2026-02-13*
 7. [x] Display uploader username
-8. [ ] Link card to upload view page — **image cards are not linked, only non-image file icons are**
-9. [ ] Add hover effects — **not yet implemented**
+8. [x] Link card to upload view page — *implemented 2026-02-13 with modal overlay (HTMX + Alpine.js)*
+9. [x] Add hover effects — *implemented 2026-02-13: card scale + shadow, image brightness*
 
 **Tests**:
 1. [ ] Test grid renders with uploads
@@ -392,61 +392,98 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 
 ---
 
-## Potential Issues Identified
+## ~~Potential Issues Identified~~ ✅ ALL RESOLVED
 
-The following issues were identified during the branch review (2026-02-10).  These should be addressed before merging or in a follow-up.
+The following issues were identified during the branch review (2026-02-10) and have all been resolved (2026-02-13).
 
-### Bug: `UserSerializer.last_seen_at` typed as non-optional
+### ~~Bug: `UserSerializer.last_seen_at` typed as non-optional~~ ✅ FIXED
 
-**File**: `app/models/users.py` (line 124)
+**File**: `app/models/users.py` (line 123-124)
 
-`last_seen_at` is typed as `datetime` in `UserSerializer`, but the database field is `DatetimeField(null=True)`.  When a user has never logged in (e.g. freshly created), serialisation fails with a Pydantic validation error.  The same issue may apply to `last_login_ip` (line 123) which is also `null=True` in the model but typed as `str`.
+~~`last_seen_at` is typed as `datetime` in `UserSerializer`, but the database field is `DatetimeField(null=True)`.  When a user has never logged in (e.g. freshly created), serialisation fails with a Pydantic validation error.  The same issue may apply to `last_login_ip` (line 123) which is also `null=True` in the model but typed as `str`.~~
 
-**Fix**: Change `UserSerializer` to:
+**Fix Applied (2026-02-13)**:
 - `last_seen_at: Optional[datetime]`
 - `last_login_ip: Optional[str]`
 
-**Workaround in tests**: `test_ui_home_gallery.py` uses a `_create_user()` helper that always provides `last_seen_at` to avoid this serialisation failure.  **Once the bug is fixed, remove the workaround** and verify tests still pass without setting `last_seen_at` explicitly.
+**Workaround removed**: The `_create_user()` helper has been removed from `test_ui_home_gallery.py` and all tests now use direct `User.create()` calls. All 35 tests still passing.
 
-### Bug: `PaginationMixin.paginate()` double-applies offset/limit/order
+### ~~Bug: `PaginationMixin.paginate()` double-applies offset/limit/order~~ ✅ FIXED
 
-**File**: `app/models/common/pagination.py` (lines 58-62)
+**File**: `app/models/common/pagination.py` (lines 56-63)
 
-When a `query` argument is provided, the method builds an initial queryset with `.offset().limit().order_by()`, then calls `.filter(query).offset().limit().order_by()` again on top of that.  This redundantly applies the same clauses.  While it appears to produce correct results in SQLite testing, it could cause unexpected behaviour with other database backends.
+~~When a `query` argument is provided, the method builds an initial queryset with `.offset().limit().order_by()`, then calls `.filter(query).offset().limit().order_by()` again on top of that.  This redundantly applies the same clauses.  While it appears to produce correct results in SQLite testing, it could cause unexpected behaviour with other database backends.~~
 
-**Fix**: Apply offset/limit/order_by only once, after all filters are composed:
+**Fix Applied (2026-02-13)**: Refactored to treat `query` and `*args/**kwargs` as mutually exclusive filter sources, applying offset/limit/order_by only once at the end:
 ```python
-qs = cls.filter(*args, **kwargs)
+# Handle query argument if it's provided
 if query:
-    qs = qs.filter(query)
+    qs = cls.filter(query)
+else:
+    qs = cls.filter(*args, **kwargs)
 return qs.offset(offset).limit(limit).order_by(order)
 ```
 
-### Issue: Template assumes `current_user` is not None
+This approach is cleaner and aligns with the intended usage pattern where `query` (a Q expression for complex filters) is used instead of simple `*args/**kwargs` filters.
+
+### ~~Issue: Template assumes `current_user` is not None~~ ✅ FIXED
 
 **File**: `app/ui/templates/index.html.j2` (line 54)
 
-The expression `upload.user.id == current_user.id` will raise `AttributeError` if `current_user` is `None` (anonymous visitor viewing public uploads that were uploaded by another user).  This currently doesn't crash because `current_user` is set by middleware, but it deserves a guard.
+~~The expression `upload.user.id == current_user.id` will raise `AttributeError` if `current_user` is `None` (anonymous visitor viewing public uploads that were uploaded by another user).  This currently doesn't crash because `current_user` is set by middleware, but it deserves a guard.~~
 
-**Fix**: Add a null check, e.g. `{% if current_user and upload.user.id == current_user.id %}`
+**Fix Applied (2026-02-13)**: Added null check: `{% if current_user and upload.user.id == current_user.id %}`
 
-### Issue: Image cards are not clickable
+**Additional Improvements**:
+- Updated `PaginationMixin.pages()` to support the `query` parameter (matching `paginate()` signature)
+- Added zero-count guard to return 1 page minimum (prevents division issues and improves UX)
 
-**File**: `app/ui/templates/index.html.j2` (line 9)
+### ~~Issue: Image cards are not clickable~~ ✅ IMPLEMENTED
 
-The `<img>` tag for image uploads is not wrapped in an `<a>` link, so users cannot click through to view the upload detail page.  Non-image file icons *are* linked (line 11).
+**Files**: 
+- `app/ui/templates/index.html.j2`
+- `app/ui/templates/uploads/view-modal.html.j2` (new)
+- `app/ui/templates/uploads/view.html.j2` (new)
+- `app/ui/templates/layout/error.html.j2` (new)
+- `app/ui/uploads.py`
 
-**Fix**: Wrap the image `<img>` in an `<a href="{{ upload.view_url }}">` tag.
+~~The `<img>` tag for image uploads is not wrapped in an `<a>` link, so users cannot click through to view the upload detail page.  Non-image file icons *are* linked (line 11).~~
 
-### Missing: View count not displayed on cards
+**Implementation Applied (2026-02-13)**:
+
+**Modal View System:**
+- Images are now clickable and open in a **modal overlay** using HTMX + Alpine.js
+- HTMX loads the modal content dynamically: `hx-get="{{ upload.view_url }}?modal=true"`
+- Modal injected into DOM with `hx-target="body"` and `hx-swap="beforeend"`
+
+**New Route:**
+- Added `/view/{id}/{filename}` endpoint in `app/ui/uploads.py`
+- Supports `?modal=true` query param to render modal view vs full page view
+- Returns 404 error messages for modal vs error page depending on context
+
+**Modal Features:**
+- Full-screen semi-transparent backdrop (click to close)
+- Close button in top-right corner
+- Responsive image sizing: `max-h-[calc(100dvh-1rem)]`
+- Description overlay with link to full page view
+- Click image content doesn't close modal (`@click.stop`)
+- **Smooth transitions**: Fades in on open, fades out on close
+- **Auto-cleanup**: Modal removed from DOM after close animation completes using `@transitionend.self`
+
+**Technical Details:**
+- Alpine.js state: starts `open: false`, then `$nextTick(() => open = true)` to trigger enter transition
+- Explicit transition duration: `x-transition.opacity.duration.300ms` (required for reliable `transitionend` firing)
+- Inner content has separate transition: `x-transition.duration.150ms` for staggered effect
+- Self-removing: `@transitionend.self="if (!open) { $el.remove(); }"` prevents DOM accumulation
+
+
+### ~~Missing: View count not displayed on cards~~ ✅ IMPLEMENTED
 
 **File**: `app/ui/templates/index.html.j2`
 
-The implementation plan specifies displaying view count (`upload.viewed`) on each card, but this is not currently rendered in the template.
+~~The implementation plan specifies displaying view count (`upload.viewed`) on each card, but this is not currently rendered in the template.~~
 
-### Task: Remove test workarounds after bug fixes
-
-Once the `UserSerializer.last_seen_at` bug is fixed:
-1. Remove the `_create_user()` helper from `tests/test_ui_home_gallery.py`
-2. Replace all `_create_user()` calls with direct `User.create()` calls (without providing `last_seen_at`)
-3. Verify all 35 gallery tests still pass
+**Implementation Applied (2026-02-13)**:
+- Added view count icon and value to the metadata row
+- View count displays as `{{ upload.viewed }}` with an eye icon SVG
+- Also fixed dimension order to display as `width x height` (standard format)

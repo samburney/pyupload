@@ -165,5 +165,5 @@
 
 - [x] Review refresh_token functionality.  Sessions appear to be getting logged out after 30 minutes, but the refresh token is set to expire in 7 days.
       This could indicate that the refresh_token logic is not working as expected.
-- [ ] Fix `UserSerializer.last_seen_at` and `last_login_ip` typed as non-optional but nullable in database model.  See `docs/planning/implement-home-gallery.md` Potential Issues.
-- [ ] Fix `PaginationMixin.paginate()` double-applying offset/limit/order when `query` argument is provided.
+- [x] Fix `UserSerializer.last_seen_at` and `last_login_ip` typed as non-optional but nullable in database model.
+- [x] Fix `PaginationMixin.paginate()` double-applying offset/limit/order when `query` argument is provided.

@@ -6,7 +6,7 @@ from app.lib.config import get_app_config
 from app.lib.upload_handler import handle_uploaded_files
 from app.lib.file_serving import serve_file, NotAuthorisedError
 
-from app.models.uploads import Upload
+from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 
 from app.ui.common import templates
@@ -123,3 +123,43 @@ async def download_upload(
     """Download an uploaded file."""
 
     return await get_upload(id=id, filename=filename, current_user=current_user, download=True)
+
+
+@router.get("/view/{id}/{filename}", response_class=HTMLResponse)
+async def view_upload(
+    request: Request,
+    id: int,
+    filename: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    modal: bool | None = False,
+):
+    """View an uploaded file."""
+
+    # Get upload from database
+    upload_model = await Upload.get_or_none(id=id).prefetch_related("user", "images")
+    if upload_model is None:
+        if modal:
+            return templates.TemplateResponse(
+                request, "layout/messages.html.j2",
+                status_code=404,
+                context={"error_messages": ["Upload not found"]},
+            )
+        else:
+            return templates.TemplateResponse(
+                request, "layout/error.html.j2",
+                status_code=404,
+                context={"error_messages": ["Upload not found"]},
+            )
+    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+    print(upload)
+
+    # Template context
+    context = {
+        "current_user": current_user,
+        "upload": upload,
+    }
+
+    if modal:
+        return templates.TemplateResponse(request, "uploads/view-modal.html.j2", context=context)
+    else:
+        return templates.TemplateResponse(request, "uploads/view.html.j2", context=context)

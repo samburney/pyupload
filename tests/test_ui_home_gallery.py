@@ -19,7 +19,6 @@ Validates:
 
 import pytest
 import pytest_asyncio
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from app.models.users import User
@@ -29,22 +28,6 @@ from app.models.users import UserSerializer
 from app.models.common.pagination import PaginationParams
 from app.ui.main import HomePaginationParams
 from app.lib.helpers import humanize_bytes
-
-
-# Helper to create a user with all required fields for serialization.
-# Note: last_seen_at is required here because UserSerializer types it as
-# non-optional datetime, even though the DB field allows null. This is a
-# known bug tracked for fixing in UserSerializer.
-async def _create_user(**kwargs):
-    """Create a user with sensible defaults including last_seen_at."""
-    defaults = {
-        "password": "hashed_password",
-        "registration_ip": "127.0.0.1",
-        "last_login_ip": "127.0.0.1",
-        "last_seen_at": datetime.now(timezone.utc),
-    }
-    defaults.update(kwargs)
-    return await User.create(**defaults)
 
 
 class TestHomeRoute:
@@ -66,7 +49,8 @@ class TestHomeRoute:
     @pytest.mark.anyio
     async def test_home_page_shows_public_uploads(self, client):
         """Test home page shows public uploads."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="gallery_user",
             email="gallery@test.com",
         )
@@ -90,7 +74,8 @@ class TestHomeRoute:
     @pytest.mark.anyio
     async def test_home_page_excludes_private_uploads_for_anonymous(self, client):
         """Test home page excludes private uploads for anonymous users."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="private_user",
             email="private@test.com",
         )
@@ -114,11 +99,13 @@ class TestHomeRoute:
     @pytest.mark.anyio
     async def test_home_page_shows_both_public_and_owned_private(self, client):
         """Test home page shows public + owned private uploads for authenticated user."""
-        owner = await _create_user(
+        owner = await User.create(
+            password="hashed_password",
             username="owner_user",
             email="owner@test.com",
         )
-        other = await _create_user(
+        other = await User.create(
+            password="hashed_password",
             username="other_user",
             email="other@test.com",
         )
@@ -191,7 +178,8 @@ class TestUploadSerializer:
     @pytest.mark.anyio
     async def test_upload_serializer_fields(self, db):
         """Test UploadSerializer includes expected fields."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="serializer_user",
             email="serializer@test.com",
         )
@@ -232,7 +220,8 @@ class TestUploadSerializer:
     @pytest.mark.anyio
     async def test_upload_serializer_computed_fields(self, db):
         """Test UploadSerializer computed fields work correctly."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="computed_user",
             email="computed@test.com",
         )
@@ -265,7 +254,8 @@ class TestUploadSerializer:
     @pytest.mark.anyio
     async def test_upload_serializer_with_image(self, db):
         """Test UploadSerializer resolves image relation."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="img_serializer_user",
             email="imgser@test.com",
         )
@@ -303,7 +293,8 @@ class TestUploadSerializer:
     @pytest.mark.anyio
     async def test_upload_serializer_without_image(self, db):
         """Test UploadSerializer returns None for image when no Image record."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="noimg_serializer_user",
             email="noimgser@test.com",
         )
@@ -331,7 +322,8 @@ class TestUploadSerializer:
     @pytest.mark.anyio
     async def test_upload_serializer_user_field(self, db):
         """Test UploadSerializer includes user serializer data."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="user_field_test",
             email="userfield@test.com",
         )
@@ -360,7 +352,8 @@ class TestUploadSerializer:
     @pytest.mark.anyio
     async def test_upload_serializer_timestamps(self, db):
         """Test UploadSerializer includes timestamp fields."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="ts_serializer_user",
             email="tsser@test.com",
         )
@@ -392,7 +385,8 @@ class TestUserSerializer:
     @pytest.mark.anyio
     async def test_user_serializer_fields(self, db):
         """Test UserSerializer includes expected fields."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="user_ser_test",
             email="userser@test.com",
             registration_ip="192.168.1.1",
@@ -418,7 +412,8 @@ class TestUserSerializer:
     @pytest.mark.anyio
     async def test_user_serializer_timestamps(self, db):
         """Test UserSerializer includes timestamp fields."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="user_ts_test",
             email="userts@test.com",
         )
@@ -438,7 +433,8 @@ class TestImageSerializer:
     @pytest.mark.anyio
     async def test_image_serializer_fields(self, db):
         """Test ImageSerializer includes expected fields."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="imgser_user",
             email="imgser2@test.com",
         )
@@ -563,7 +559,8 @@ class TestPaginationMixin:
         """Test paginate method accepts Q query argument."""
         from tortoise.expressions import Q
 
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="paginate_user",
             email="paginate@test.com",
         )
@@ -611,7 +608,8 @@ class TestPaginationMixin:
     @pytest.mark.anyio
     async def test_paginate_without_query_parameter(self, db):
         """Test paginate method works without query argument."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="paginate_noquery_user",
             email="paginatenoq@test.com",
         )
@@ -636,7 +634,8 @@ class TestPaginationMixin:
     @pytest.mark.anyio
     async def test_paginate_respects_page_size(self, db):
         """Test paginate method respects page size."""
-        user = await _create_user(
+        user = await User.create(
+            password="hashed_password",
             username="paginate_size_user",
             email="paginatesize@test.com",
         )

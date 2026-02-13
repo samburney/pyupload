@@ -120,8 +120,8 @@ class UserSerializer(ModelSerializer, SerializerTimestampMixin):
     fingerprint_hash: Optional[str]
     fingerprint_data: Optional[dict]
     registration_ip: Optional[str]
-    last_login_ip: str
-    last_seen_at: datetime
+    last_login_ip: Optional[str]
+    last_seen_at: Optional[datetime]
 
 
 # Base User model

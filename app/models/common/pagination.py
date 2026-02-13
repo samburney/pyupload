@@ -56,20 +56,31 @@ class PaginationMixin(_ModelBase):
         order = f'-{sort_by}' if sort_order == 'desc' else sort_by
 
         # Handle query argument if it's provided
-        qs = cls.filter(*args, **kwargs).offset(offset).limit(limit).order_by(order)
         if query:
-            qs = qs.filter(query).offset(offset).limit(limit).order_by(order)
-        return qs
+            qs = cls.filter(query)
+        else:
+            qs = cls.filter(*args, **kwargs)
+        return qs.offset(offset).limit(limit).order_by(order)
 
     @classmethod
     async def pages(
         cls,
         page_size: int = 10,
+        query: Q | None = None,
         *args: Q, **kwargs: Any
     ) -> int:
         """Paginate user uploads."""
 
-        count = await cls.filter(*args, **kwargs).count()
+        # Handle query argument if it's provided
+        if query:
+            qs = cls.filter(query)
+        else:
+            qs = cls.filter(*args, **kwargs)
+        count = await qs.count()
+
+        # Return 1 page if no items
+        if count == 0:
+            return 1
         pages = ceil(count / page_size)
         
         return pages

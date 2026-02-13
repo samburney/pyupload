@@ -133,7 +133,7 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         return getattr(self, "user_id") == user.id
 
 
-class UploadSerializer(ModelSerializer, SerializerTimestampMixin):
+class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     """Serializer for the Upload model."""
 
     # Model fields

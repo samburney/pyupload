@@ -1,0 +1,8 @@
+{% extends "layout/base.html.j2" %}
+
+{% block content %}
+<h2>{{ upload.description }}{{ upload.dot_ext }}</h2>
+<div class="flex flex-col items-center justify-center">
+    <img src="{{ upload.url }}" alt="{{ upload.description }}">
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+<div class="fixed inset-0 z-50 grid place-content-center bg-black/50 sm:p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modalTitle"
+    x-data="{ open: false }"
+    x-init="$nextTick(() => open = true)"
+    x-show="open"
+    x-transition.opacity.duration.300ms
+    @click="open = false"
+    @transitionend.self="if (!open) { $el.remove(); }">
+    <div class="rounded-none sm:rounded-lg bg-white ml-2 mr-2 sm:mx-0 sm:p-1 shadow-lg"
+            x-show="open"
+            x-transition.duration.150ms
+            @click.stop>
+        <div class="relative">
+            <button class="absolute top-2 right-2 z-10 rounded-full bg-black/25 p-1 text-white hover:bg-black/50" @click="open = false">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            <img class="rounded-none sm:rounded-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]" src="{{ upload.url }}" alt="{{ upload.description }}">
+            <p class="absolute bottom-2 left-0 flex w-full justify-center text-xs sm:text-sm md:text-base font-medium bg-black/25 p-1">
+                <a href="{{ upload.view_url }}" class="text-white hover:text-gray-300">
+                    {{ upload.description }}{{ upload.dot_ext }}
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
