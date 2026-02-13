@@ -20,7 +20,9 @@
             {% include "layout/messages.html.j2" %}
         </section>
         <main class="mx-2 mb-2 flex flex-col grow">
+            <div class="container mx-auto">
             {% block content %}{% endblock %}
+            </div>
         </main>
 
         <footer class="bg-gray-100 border-t border-gray-300 py-2">
