@@ -1,40 +1,4 @@
 <!-- File upload widget -->
-<script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.store('uploadWidget', {
-            files: [],
-            dragActive: false,
-            
-            addFiles(fileList) {
-                this.files = [...this.files, ...Array.from(fileList)];
-                this.dragActive = false;
-                this.updateFileInput();
-            },
-            
-            removeFile(index) {
-                this.files.splice(index, 1);
-                this.updateFileInput();
-            },
-            
-            handleDrop(event) {
-                this.addFiles(event.dataTransfer.files);
-            },
-            
-            updateFileInput() {
-                const dt = new DataTransfer();
-                this.files.forEach(file => dt.items.add(file));
-                const input = document.getElementById('file-upload-picker');
-                if (input) input.files = dt.files;
-            },
-            
-            formatFileSize(bytes) {
-                if (bytes < 1024) return bytes + ' B';
-                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-                return (bytes / 1048576).toFixed(1) + ' MB';
-            }
-        });
-    });
-</script>
 <div id="file-upload-widget"
     x-data
     class="flex flex-col items-center rounded border p-4 text-gray-900 shadow-sm sm:p-6"

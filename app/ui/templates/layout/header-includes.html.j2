@@ -1,7 +1,84 @@
-        <script src="/static/js/htmx.min.js"></script>
-        <script src="/static/js/htmx-ext-response-targets.js"></script>
-        <script defer src="/static/js/alpine.min.js"></script>
-        <link href="/static/css/tailwind.css" rel="stylesheet">
-        <style>
-            [x-cloak] { display: none !important; }
-        </style>
+<script src="/static/js/htmx.min.js"></script>
+<script src="/static/js/htmx-ext-response-targets.js"></script>
+<script defer src="/static/js/alpine.min.js"></script>
+<link href="/static/css/tailwind.css" rel="stylesheet">
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+</style>
+<script>
+    document.addEventListener('alpine:init', () => {
+        // Image placeholder resize hack
+        Alpine.data('imagePlaceholder', (naturalW, naturalH) => ({
+            width: 0,
+            height: 0,
+            ready: false,
+
+            init() {
+                this.calculateSize();
+            },
+
+            calculateSize() {
+                // Use -1rem (16px) for <sm, -2rem (32px) for >=sm (640px)
+                const isSm = window.innerWidth >= 640;
+                const padding = isSm ? 32 : 16;
+                const maxW = window.innerWidth - padding;
+                const maxH = window.innerHeight - padding;
+
+                let w = naturalW;
+                let h = naturalH;
+
+                // Scale down if wider than viewport
+                if (w > maxW) {
+                    h = (maxW / w) * h;
+                    w = maxW;
+                }
+
+                // Scale down if taller than viewport
+                if (h > maxH) {
+                    w = (maxH / h) * w;
+                    h = maxH;
+                }
+
+                this.width = w;
+                this.height = h;
+                this.ready = true;
+            }
+        }));
+
+        // Upload widget store
+        Alpine.store('uploadWidget', {
+            files: [],
+            dragActive: false,
+
+            addFiles(fileList) {
+                this.files = [...this.files, ...Array.from(fileList)];
+                this.dragActive = false;
+                this.updateFileInput();
+            },
+
+            removeFile(index) {
+                this.files.splice(index, 1);
+                this.updateFileInput();
+            },
+
+            handleDrop(event) {
+                this.addFiles(event.dataTransfer.files);
+            },
+
+            updateFileInput() {
+                const dt = new DataTransfer();
+                this.files.forEach(file => dt.items.add(file));
+                const input = document.getElementById('file-upload-picker');
+                if (input) input.files = dt.files;
+            },
+
+            formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+        });
+    });
+</script>

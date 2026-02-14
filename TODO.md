@@ -70,7 +70,7 @@
   - [ ] Delete button for owners/admins
 
 ### Gallery & Discovery Pages (v0.1)
-- [ ] Home gallery page (latest public uploads) — *in progress on `implement_home_gallery` branch, see `docs/planning/implement-home-gallery.md`*
+- [x] Home gallery page (latest public uploads) — *implemented on `implement_home_gallery` branch with modal overlay, see `docs/planning/implement-home-gallery.md`*
 - [ ] Random uploads page (/random)
 - [ ] Popular uploads page (/popular - most viewed)
 - [ ] All uploads page (/all - latest public uploads)
