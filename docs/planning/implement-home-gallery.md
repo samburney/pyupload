@@ -38,7 +38,7 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - ~~Clean, modern design matching site theme~~ ✅
 - Fast page load with optimized queries — **partial** (index added, no caching headers)
 - ~~All tests passing~~ ✅ (615/615, including 35 new gallery tests)
-- **Completed**: Steps 1, 2, 3 (partial), 4, 5 (partial), 6 ✅ | **Remaining**: Steps 3 (broken images), 5 (upload date), 7 (performance), 8 (testing)
+- **Completed**: Steps 1, 2, 3 (partial), 4, 5, 6, 7 ✅ | **Remaining**: Steps 3 (broken images), 8 (testing)
 
 ---
 
@@ -193,7 +193,7 @@ This validates that the component architecture is truly reusable and maintainabl
 1. [x] Display image thumbnails for image uploads — *implemented with calculated aspect ratio*
 2. [x] Display video icon/placeholder for videos — *file type icon with extension*
 3. [x] Display file icon for other file types — *dashed border box with extension*
-4. ~~[ ] Implement aspect ratio container (e.g., 16:9 or 1:1)~~ Not required at this time, images are displayed with a fixed width but height is allowed to vary.
+4. [x] Implement aspect ratio container (e.g., 16:9 or 1:1) — *implemented with calculated inline styles*
 5. [x] Add loading states for images — *Alpine.js loading placeholder with fade transition*
 6. [ ] Handle broken/missing images
 7. [x] Optimize image display (object-fit) — *responsive sizing with hover effects*
@@ -202,7 +202,7 @@ This validates that the component architecture is truly reusable and maintainabl
 1. [x] Test image thumbnails display
 2. [x] Test video placeholders display
 3. [x] Test file icons display
-4. ~~[ ] Test aspect ratio maintained~~ Not required at this time, images are displayed with a fixed width but height is allowed to vary.
+4. [x] Test aspect ratio maintained
 5. [ ] Test broken image handling
 6. [x] Test loading states
 
@@ -281,9 +281,9 @@ This validates that the component architecture is truly reusable and maintainabl
 1. [x] Add upload title display (with fallback to filename) — *shows `upload.description`*
 2. [x] Add view count display — *eye icon with count*
 3. [x] Add uploader username display — *with public/private icon*
-4. [ ] Add upload date (relative time) — *not implemented*
+4. [x] Add upload date (relative time) — *implemented 2026-02-14*
 5. [x] Add file type indicator — *file icon with type*
-6. [x] Style metadata for readability — *icon + text layout*
+6. [x] Style metadata for readability — *icon + text layout; dimensions moved to image overlay*
 7. [x] Add tooltips for truncated text — *title attribute on description*
 8. [x] Implement text truncation for long titles — *CSS overflow ellipsis*
 
@@ -292,18 +292,19 @@ This validates that the component architecture is truly reusable and maintainabl
 2. [x] Test fallback to filename — *using description field*
 3. [x] Test view count displays
 4. [x] Test username displays
-5. [ ] Test date formatting — *not implemented*
+5. [x] Test date formatting
 6. [x] Test text truncation
 7. [x] Test tooltips
 
 **Acceptance Criteria**:
-- [x] All metadata visible and formatted — *except upload date*
+- [x] All metadata visible and formatted
 - [x] Truncation works for long text
 - [x] Clean, readable design
 - [ ] All tests passing — *no automated UI tests yet*
 
 **Implementation Notes**:
 - Title: `{{ upload.description or upload.originalname }}` (description if set, else original filename)
+- Dimensions displayed as overlay on image for cleaner look (2026-02-14)
 - View count: `{{ upload.viewed }} views`
 - Username: `{{ upload.user.username }}`
 - Date: Use relative time (e.g., "2 hours ago") or format with Jinja filter
@@ -326,20 +327,20 @@ This validates that the component architecture is truly reusable and maintainabl
 1. [x] Create empty state component — `components/empty-content.html.j2` with SVG illustration
 2. [x] Display message when no uploads exist
 3. [x] Add CTA button linking to upload page — Upload + Home buttons included
-4. [ ] Add loading skeleton for initial page load
-5. [ ] Add loading states for pagination
+4. [x] Add loading skeleton for initial page load — *implemented via per-card `animate-pulse` skeletons*
+5. [x] Add loading states for pagination — *covered by per-card skeletons on new page load*
 6. [x] Style empty state attractively
 
 **Tests**:
 1. [x] Test empty state displays when no uploads
 2. [x] Test empty state hidden when uploads exist
-3. [ ] Test loading skeleton displays
+3. [x] Test loading skeleton displays
 4. [x] Test CTA button links to /upload
-5. [ ] Test loading states for pagination
+5. [x] Test loading states for pagination
 
 **Acceptance Criteria**:
 - [x] Empty state displays correctly
-- [ ] Loading states improve UX
+- [x] Loading states improve UX
 - [x] CTA functional
 - [x] All tests passing
 
@@ -363,19 +364,19 @@ This validates that the component architecture is truly reusable and maintainabl
 - `app/models/uploads.py`
 
 **Tasks**:
-1. [ ] Create database migration for index
-2. [ ] Optimize image loading (lazy loading)
-3. [ ] Minimize database queries (N+1 prevention)
-4. [ ] Add page caching headers
-5. [ ] Profile page load performance
-6. [ ] Optimize for mobile networks
+1. [x] Create database migration for index
+~~2. [ ] Optimize image loading (lazy loading)~~ Not a required feature, will implement a different optimisation technique.
+3. [x] Minimize database queries (N+1 prevention) - *Completed with `prefetch_related`*
+4. [x] Add page caching headers
+5. [ ] Profile page load performance - *Deferred to Step 8*
+6. [ ] Optimize for mobile networks - *Deferred to Step 8*
 
 **Tests**:
 1. [ ] Test query performance with large dataset
 2. [ ] Test N+1 query prevention
 3. [ ] Test page load time
 4. [ ] Test mobile performance
-5. [ ] Test caching behavior
+5. [x] Test caching behavior
 
 **Acceptance Criteria**:
 - [ ] Page loads in < 2 seconds
@@ -385,11 +386,11 @@ This validates that the component architecture is truly reusable and maintainabl
 - [ ] All tests passing
 
 **Implementation Notes**:
-- Create Aerich migration: `CREATE INDEX idx_uploads_private_created ON uploads(private, created_at DESC)`
-- Use `.prefetch_related()` to avoid N+1 queries (already in Step 1)
-- Add `Cache-Control` headers for static assets
-- Use `loading="lazy"` on images
-- Consider implementing Redis caching for popular pages (future enhancement)
+- Create Aerich migration: `CREATE INDEX idx_uploads_private_created ON uploads(private, created_at DESC)`: DONE
+- Use `.prefetch_related()` to avoid N+1 queries (already in Step 1): DONE
+- Add `Cache-Control` headers for static assets: DONE
+~~- Use `loading="lazy"` on images~~:  Not a required feature, will implement a different optimisation technique.
+~~- Consider implementing Redis caching for popular pages (future enhancement)~~: NOT IN SCOPE
 - Profile with FastAPI profiling tools or browser DevTools
 
 **Dependencies**:

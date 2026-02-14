@@ -128,6 +128,20 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         """Return whether or not this file is private."""
         return self.private == 1
 
+    @property
+    def short_type(self) -> str:
+        """Return the short type of the file."""
+
+        type_split = self.type.split("/")
+
+        if type_split[0] in ("image", "video", "audio"):
+            return type_split[1]
+
+        if self.ext != "":
+            return self.ext
+
+        return type_split[0]
+
     def is_owner(self, user: User) -> bool:
         """Return whether or not this file is owned by the current user."""
         return getattr(self, "user_id") == user.id
@@ -172,6 +186,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     download_url: str
     is_image: bool
     is_private: bool
+    short_type: str
 
 
 class UploadMetadata(BaseModel):
