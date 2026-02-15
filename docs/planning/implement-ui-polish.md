@@ -23,8 +23,14 @@ Polish the user interface with improved navigation, responsive design refinement
 - Flash messages fully implemented with Alpine.js (needs icons and auto-dismiss)
 - Footer exists with copyright (needs version info and additional links)
 - No breadcrumbs
-- Forms functional with HTMX but desperately need styling
+- Forms are functional with HTMX and baseline Tailwind styling, but need consistency and validation polish
 - Navbar links to unimplemented pages (/tags, /collections, /random, /popular, /all)
+
+### Review Snapshot (2026-02-15)
+- Core Tailwind + Alpine UI scaffolding is in place and functional.
+- Responsive/navbar polish tasks are still largely open.
+- Discovery routes (`/random`, `/popular`, `/all`) and static routes (`/about`, `/privacy`, `/terms`, `/contact`) are still not implemented.
+- Breadcrumbs, footer versioning, and accessibility pass are still pending.
 
 ### Target State
 - Fully responsive navbar with backdrop and conditional user content

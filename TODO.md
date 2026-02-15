@@ -62,7 +62,7 @@
   - [x] Security: SQL injection protection verified
   - [x] Edge cases: Special characters, concurrent access, missing files
 - [x] **File serving complete (569/569 tests passing, 74 file serving tests)**
-- [ ] Individual upload detail/view page
+- [ ] Individual upload detail/view page *(partial: `/view/{id}/{filename}` route and basic view template exist; metadata/share/edit/privacy/delete features are not yet implemented)*
   - [ ] Display file metadata (size, dimensions, type, view count)
   - [ ] Social/direct link sharing options
   - [ ] Inline editing for title/description (owner only)
@@ -70,7 +70,7 @@
   - [ ] Delete button for owners/admins
 
 ### Gallery & Discovery Pages (v0.1)
-- [x] Home gallery page (latest public uploads) — *implemented on `implement_home_gallery` branch with modal overlay, see `docs/planning/implement-home-gallery.md`*
+- [x] Home gallery page (latest public uploads) — *implemented in current codebase (serializer-backed gallery components + pagination + modal overlay), see `docs/planning/implement-home-gallery.md`*
 - [ ] Handle missing/broken image metadata in gallery with placeholder UX (currently returns processing error)
 - [ ] Random uploads page (/random)
 - [ ] Popular uploads page (/popular - most viewed)

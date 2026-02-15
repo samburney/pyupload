@@ -17,15 +17,24 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Access control: private uploads only viewable by owner
 
 ### Current State
-- No individual upload view page exists
+- Basic individual upload view page exists at `/view/{id}/{filename}`
+- Modal view variant exists via `?modal=true`
+- No `/view/{id}` redirect route exists yet
 - Upload model has all necessary metadata fields
 - Image model has dimension data for images
 - Upload model has `url` property for file serving
 - Image processing now enforces metadata integrity and raises error if related image metadata is missing
+- Current `/view/{id}/{filename}` handler fetches upload + related data but does not enforce owner-only access for private uploads
 - No UI for editing upload metadata
 - No UI for privacy controls
 - No delete functionality implemented
 - Profile page shows list of user's uploads
+
+### Review Snapshot (2026-02-15)
+- The main view route and template exist and render for valid uploads.
+- Private upload access enforcement for view pages is still missing.
+- SEO redirect route (`/view/{id}`) is still missing.
+- Metadata/share/edit/privacy/delete workflows and tests remain pending.
 
 ### Target State
 - `/view/{id}/{filename}` endpoint renders upload detail page
@@ -49,13 +58,13 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Tasks**:
 1. [ ] Create GET `/view/{id}` route (redirects to add filename)
-2. [ ] Create GET `/view/{id}/{filename}` route (main view page)
-3. [ ] Fetch upload from database with related data (images, user)
-4. [ ] Validate upload exists (404 if not)
-5. [ ] Get current user for permission checks
+2. [x] Create GET `/view/{id}/{filename}` route (main view page)
+3. [x] Fetch upload from database with related data (images, user)
+4. [x] Validate upload exists (404 if not)
+5. [x] Get current user for permission checks
 6. [ ] Enforce privacy: private uploads only accessible to owner (403 if not)
-7. [ ] Create base template with layout
-8. [ ] Pass upload data and permissions to template
+7. [x] Create base template with layout
+8. [x] Pass upload data and permissions to template
 9. [ ] Redirect `/view/{id}` to `/view/{id}/{cleanname}` with 301
 
 **Tests**:
@@ -70,7 +79,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 9. [ ] Test correct data passed to template
 
 **Acceptance Criteria**:
-- [ ] View page route functional
+- [x] View page route functional
 - [ ] Privacy enforced (private uploads owner-only)
 - [ ] SEO-friendly URLs with filename
 - [ ] Proper error handling (404, 403)

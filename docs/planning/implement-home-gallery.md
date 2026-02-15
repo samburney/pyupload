@@ -27,7 +27,13 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - `humanize_bytes` helper and Jinja filter added
 - Base layout refactored with semantic HTML (`<nav>`, `<main>`, `<footer>`)
 - Alpine.js components globally registered in `header-includes.html.j2`
-- 35 new tests passing (615 total)
+- 35 new tests passing (617 total project tests currently passing)
+
+### Review Snapshot (2026-02-15)
+- Route and serialization flow for the home gallery are implemented and tested.
+- Reusable gallery components are in active use on home and profile pages.
+- Broken/missing image metadata fallback UX is still pending.
+- Performance validation tasks in Step 8 remain pending.
 
 ### Target State
 - ~~Home page displays grid of latest public uploads~~ ✅
@@ -38,7 +44,7 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - ~~Click on upload navigates to view page~~ ✅ (modal overlay with HTMX + Alpine.js)
 - ~~Clean, modern design matching site theme~~ ✅
 - Fast page load with optimized queries — **partial** (index added, no caching headers)
-- ~~All tests passing~~ ✅ (615/615, including 35 new gallery tests)
+- ~~All tests passing~~ ✅ (617/617 current full-suite status)
 - **Completed**: Steps 1, 2, 3 (partial), 4, 5, 6, 7 ✅ | **Remaining**: Steps 3 (broken images), 8 (testing)
 
 ---
@@ -369,7 +375,7 @@ This validates that the component architecture is truly reusable and maintainabl
 1. [x] Create database migration for index
 ~~2. [ ] Optimize image loading (lazy loading)~~ Not a required feature, will implement a different optimisation technique.
 3. [x] Minimize database queries (N+1 prevention) - *Completed with `prefetch_related`*
-4. [x] Add page caching headers
+4. [ ] Add page caching headers
 5. [ ] Profile page load performance - *Deferred to Step 8*
 6. [ ] Optimize for mobile networks - *Deferred to Step 8*
 
@@ -390,7 +396,7 @@ This validates that the component architecture is truly reusable and maintainabl
 **Implementation Notes**:
 - Create Aerich migration: `CREATE INDEX idx_uploads_private_created ON uploads(private, created_at DESC)`: DONE
 - Use `.prefetch_related()` to avoid N+1 queries (already in Step 1): DONE
-- Add `Cache-Control` headers for static assets: DONE
+- Add `Cache-Control` headers for page responses: pending
 ~~- Use `loading="lazy"` on images~~:  Not a required feature, will implement a different optimisation technique.
 ~~- Consider implementing Redis caching for popular pages (future enhancement)~~: NOT IN SCOPE
 - Profile with FastAPI profiling tools or browser DevTools

@@ -10,14 +10,14 @@ Initially, `pyupload` will adopt the underlying database and filesystem structur
 
 The following technologies have been selected for `pyupload` to ensure a modern, testable, and maintainable codebase:
 
-| Component            | Selected Technology           |
-| -------------------- | ----------------------------- |
-| Programming language | Python 3.13                   |
-| Web/API framework    | FastAPI                       |
-| Front-end Strategy   | HTMX + Jinja2 + Bootstrap 5   |
-| Database backend     | MariaDB 11.8.x                |
-| Database ORM         | Tortoise ORM                  |
-| Template engine      | Jinja2                        |
+| Component            | Selected Technology             |
+| -------------------- | ------------------------------- |
+| Programming language | Python 3.13                     |
+| Web/API framework    | FastAPI                         |
+| Front-end Strategy   | HTMX + Tailwind CSS + Alpine.js |
+| Database backend     | MariaDB 11.8.x                  |
+| Database ORM         | Tortoise ORM                    |
+| Template engine      | Jinja2                          |
 
 ### Feature Parity Goals
 
