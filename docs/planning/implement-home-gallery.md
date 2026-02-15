@@ -21,6 +21,7 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - Empty state component created (Step 6 complete)
 - Database index migration created for `private` column (Step 7 partial)
 - **Modal view with placeholder sizing** - Images open in modal overlay with JavaScript-calculated placeholder
+- Image processing requests now fail with explicit `ImageProcessingError` when related image metadata is missing (strict data integrity path)
 - `UploadSerializer`, `UserSerializer`, `ImageSerializer` added via `tortoise-serializer`
 - `PaginationParams` enhanced with `count`, `pages`, `page_data()`
 - `humanize_bytes` helper and Jinja filter added
@@ -195,7 +196,7 @@ This validates that the component architecture is truly reusable and maintainabl
 3. [x] Display file icon for other file types — *dashed border box with extension*
 4. [x] Implement aspect ratio container (e.g., 16:9 or 1:1) — *implemented with calculated inline styles*
 5. [x] Add loading states for images — *Alpine.js loading placeholder with fade transition*
-6. [ ] Handle broken/missing images
+6. [ ] Handle broken/missing images (render placeholder UI instead of backend 500 where appropriate)
 7. [x] Optimize image display (object-fit) — *responsive sizing with hover effects*
 
 **Tests**:
@@ -203,7 +204,7 @@ This validates that the component architecture is truly reusable and maintainabl
 2. [x] Test video placeholders display
 3. [x] Test file icons display
 4. [x] Test aspect ratio maintained
-5. [ ] Test broken image handling
+5. [ ] Test broken image handling and placeholder fallback for missing image metadata
 6. [x] Test loading states
 
 **Acceptance Criteria**:
@@ -216,6 +217,7 @@ This validates that the component architecture is truly reusable and maintainabl
 **Implementation Notes**:
 - For images: `<img src="{{ upload.url }}" class="object-cover w-full h-full">`
 - For now, use full image (thumbnail generation is future enhancement)
+- Current backend behavior raises `ImageProcessingError` when image metadata is missing; future UI work should present a missing-image placeholder rather than a server error page.
 - Use `upload.is_image` to check if upload has image metadata
 - Consider using placeholder images from a service or local assets
 - Add `loading="lazy"` for performance

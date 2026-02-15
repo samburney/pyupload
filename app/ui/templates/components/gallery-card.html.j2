@@ -3,7 +3,7 @@
             duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101">
     {% if upload.image %}
     {%- set ar_decimal = (upload.image.width / upload.image.height) | round(3) %}
-    {%- set thumb_max_width = 614 %}
+    {%- set thumb_max_width = 640 %}
     {%- set thumb_max_height = (thumb_max_width / ar_decimal) | round(0, 'ceil') | int %}
     <a href="{{ upload.view_url }}" hx-get="{{ upload.view_url }}?modal=true" hx-select=".modal-image" hx-target="body"
         hx-swap="beforeend" hx-select-oob="#messages" hx-target-4*="#messages" x-data="{ loaded: false }"
@@ -20,7 +20,12 @@
             </div>
         </div>
         <img class="h-min w-full rounded-md transition-normal duration-150 hover:brightness-80"
-             alt="{{ upload.description }}" src="{{ upload.url }}"
+             alt="{{ upload.description }}"
+             {% if upload.image.supports_processing %}
+             src="{{ upload.url | split_filename | first }}-{{ thumb_max_width }}x0.jpg"
+             {% else %}
+             src="{{ upload.url }}"
+             {% endif %}
              x-show="loaded"
              x-transition.opacity.duration.150ms
              x-cloak

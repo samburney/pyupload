@@ -662,3 +662,42 @@ class TestUploadIntegration:
         
         # Should mention the filename
         assert "important" in html.lower() or "test" in html.lower()
+
+
+class TestUploadGetErrorHandling:
+    """Error handling tests for GET file serving endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_get_upload_skips_processing_when_image_metadata_missing(self, client, tmp_path, monkeypatch):
+        """Serving should succeed when image metadata is missing because processing is not requested."""
+        import app.models.uploads
+        monkeypatch.setattr(app.models.uploads.config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="missingmetauser",
+            email="missingmeta@example.com",
+            password="password",
+            fingerprint_hash="fp-hash-missingmeta",
+        )
+
+        # Create the physical file, but intentionally do not create related Image metadata.
+        test_file = tmp_path / f"user_{user.id}" / "missing_meta.jpg"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake image bytes")
+
+        upload = await Upload.create(
+            user=user,
+            description="Missing image metadata upload",
+            name="missing_meta",
+            cleanname="missingmeta",
+            originalname="missing_meta.jpg",
+            ext="jpg",
+            size=16,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+
+        response = await client.get(f"/get/{upload.id}/missing_meta-320x0.jpg")
+
+        assert response.status_code == 200

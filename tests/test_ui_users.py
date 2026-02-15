@@ -11,7 +11,7 @@ class TestUserProfileEndpoint:
     @pytest.mark.asyncio
     async def test_profile_page_default_sorting(self, client, monkeypatch):
         """Test that profile page uses created_at desc sorting by default."""
-        
+
         # Create and authenticate a user
         mock_user = MagicMock(spec=User)
         mock_user.id = 1
@@ -19,41 +19,30 @@ class TestUserProfileEndpoint:
         mock_user.is_registered = True
         mock_user.max_uploads_count = -1  # Unlimited
         mock_user.uploads_count = AsyncMock(return_value=0)
-        
+
         async def mock_get_or_none(**kwargs):
             if kwargs.get("username") == "testuser":
                 return mock_user
             return None
-        
+
         monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
-        
+
         token = create_access_token({"sub": "testuser"})
         client.cookies = {"access_token": token}
-        
+
         # Mock Upload.paginate and Upload.pages to avoid DB queries and check arguments
         with patch("app.models.uploads.Upload.paginate") as mock_paginate, \
-             patch("app.models.uploads.Upload.pages", new_callable=AsyncMock) as mock_pages:
-            
-            # Set up the mock chain for paginate
-            # await Upload.paginate(...).all().prefetch_related("images")
-            mock_qs_after_paginate = MagicMock()
-            mock_qs_after_all = MagicMock()
-            
-            # Create a real coroutine to return
-            async def get_results():
-                return []
-                
-            mock_paginate.return_value = mock_qs_after_paginate
-            mock_qs_after_paginate.all.return_value = mock_qs_after_all
-            mock_qs_after_all.prefetch_related.return_value = get_results()
-            
+             patch("app.models.uploads.Upload.pages", new_callable=AsyncMock) as mock_pages, \
+             patch("app.models.uploads.UploadSerializer.from_queryset", new_callable=AsyncMock) as mock_from_queryset:
+            mock_paginate.return_value = MagicMock()
             mock_pages.return_value = 1
-            
+            mock_from_queryset.return_value = []
+
             # Make request
             response = await client.get("/profile")
-            
+
             assert response.status_code == 200
-            
+
             # Verify default sorting was applied
             call_kwargs = mock_paginate.call_args[1]
             assert call_kwargs.get("sort_by") == "created_at"
@@ -62,7 +51,7 @@ class TestUserProfileEndpoint:
     @pytest.mark.asyncio
     async def test_profile_page_explicit_sorting(self, client, monkeypatch):
         """Test that profile page respects explicit sorting parameters."""
-        
+
         # Create and authenticate a user
         mock_user = MagicMock(spec=User)
         mock_user.id = 1
@@ -70,37 +59,29 @@ class TestUserProfileEndpoint:
         mock_user.is_registered = True
         mock_user.max_uploads_count = -1  # Unlimited
         mock_user.uploads_count = AsyncMock(return_value=0)
-        
+
         async def mock_get_or_none(**kwargs):
             if kwargs.get("username") == "testuser":
                 return mock_user
             return None
-        
+
         monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
-        
+
         token = create_access_token({"sub": "testuser"})
         client.cookies = {"access_token": token}
-        
+
         with patch("app.models.uploads.Upload.paginate") as mock_paginate, \
-             patch("app.models.uploads.Upload.pages", new_callable=AsyncMock) as mock_pages:
-            
-            mock_qs_after_paginate = MagicMock()
-            mock_qs_after_all = MagicMock()
-            
-            async def get_results():
-                return []
-            
-            mock_paginate.return_value = mock_qs_after_paginate
-            mock_qs_after_paginate.all.return_value = mock_qs_after_all
-            mock_qs_after_all.prefetch_related.return_value = get_results()
-            
+             patch("app.models.uploads.Upload.pages", new_callable=AsyncMock) as mock_pages, \
+             patch("app.models.uploads.UploadSerializer.from_queryset", new_callable=AsyncMock) as mock_from_queryset:
+            mock_paginate.return_value = MagicMock()
             mock_pages.return_value = 1
-            
+            mock_from_queryset.return_value = []
+
             # Make request with explicit sorting
             response = await client.get("/profile?sort_by=size&sort_order=asc")
-            
+
             assert response.status_code == 200
-            
+
             # Verify explicit sorting was applied
             call_kwargs = mock_paginate.call_args[1]
             assert call_kwargs.get("sort_by") == "size"
@@ -126,9 +107,9 @@ class TestUserProfileIntegration:
         
         assert "Profile" in html
         assert user.username in html
-        # Should not show Files section
-        assert "Files" not in html
-        assert "Filename:" not in html
+        # Should not show uploads section when user has no uploads
+        assert "<strong>Uploads</strong>" not in html
+        assert "break-inside-avoid-column" not in html
 
     @pytest.mark.asyncio
     async def test_profile_renders_uploads(self, client):
@@ -181,16 +162,18 @@ class TestUserProfileIntegration:
         
         # Check text upload rendering
         assert "notes.txt" in html
-        assert "text/plain" in html
+        assert text_upload.url in html
+        assert ">txt<" in html
         # Should have generic placeholder (div with ext)
         assert ".txt" in html
         
         # Check image upload rendering
         assert "photo.jpg" in html
-        assert "image/jpeg" in html
+        assert ">jpeg<" in html
         # Should have img tag
         assert "<img" in html
-        assert f'src="{image_upload.url}"' in html
+        expected_thumbnail_url = f"{image_upload.url.rsplit('.', 1)[0]}-640x0.jpg"
+        assert f'src="{expected_thumbnail_url}"' in html
 
     @pytest.mark.asyncio
     async def test_profile_pagination_integration(self, client):

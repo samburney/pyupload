@@ -2,7 +2,9 @@
 from fastapi.responses import FileResponse
 
 from app.lib.helpers import sanitise_filename
+from app.lib.image_processing import get_processed_image_path
 
+from app.models.images import IMAGE_FORMATS
 from app.models.uploads import Upload
 from app.models.users import User
 
@@ -34,14 +36,13 @@ def is_inline_mimetype(mimetype: str) -> bool:
     return False
 
 
-async def serve_file(upload: Upload, filename: str | None = None, user: User | None = None, download: bool | None = False) -> FileResponse:
+def validate_file_request(upload: Upload, user: User | None = None) -> bool:
     """
-    Serve a file with proper access control and view counter increment.
+    Validate a file request based on access control and filename.
     """
     
     is_private = upload.is_private
     is_owner = user is not None and upload.is_owner(user)
-    is_download = True
 
     # Check if the file is private and the user is not the owner
     if is_private and not is_owner:
@@ -51,15 +52,43 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
     if not upload.filepath.exists():
         raise FileNotFoundError("File not found.")
 
-    # Sanitise filename
+    return True
+
+
+async def serve_file(upload: Upload, filename: str | None = None, user: User | None = None, download: bool | None = False) -> FileResponse:
+    """
+    Serve a file with proper access control and view counter increment.
+    """
+    
+    is_private = upload.is_private
+    is_owner = user is not None and upload.is_owner(user)
+    is_download = True
+    file_path = upload.filepath
+    media_type = upload.type
+
+    await upload.fetch_related("images")
+
+    # Validate the file request
+    # TODO: Return appropriate HTTP responses instead of raising exceptions
+    validate_file_request(upload, user)
+
+    # Get sanitised filename
     santised_filename = sanitise_filename(filename) if filename is not None else None
     if santised_filename is not None:
         filename = santised_filename
     else:
         filename = upload.filename
 
+    # Handle image processing if requested based on filename
+    if upload.is_image and media_type in IMAGE_FORMATS.values():
+        processed_file_path = await get_processed_image_path(upload, filename)
+
+        if processed_file_path is not None:
+            file_path = processed_file_path
+            media_type = IMAGE_FORMATS[file_path.suffix.lower()]
+
     # Check if the file should be displayed inline
-    if not download and is_inline_mimetype(upload.type):
+    if not download and is_inline_mimetype(media_type):
         is_download = False
     
     # Increment view counter if the user is not the owner
@@ -68,7 +97,7 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
         await upload.save()
 
     # Return file response
-    response = FileResponse(upload.filepath, media_type=upload.type)
+    response = FileResponse(file_path, media_type=media_type)
     response.headers["Content-Disposition"] = f"attachment; filename={filename}" if is_download else f"inline; filename={filename}"
     response.headers["Cache-Control"] = f"{'private' if is_private else 'public'}, max-age=3600"
 

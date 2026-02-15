@@ -1,8 +1,9 @@
 from fastapi.templating import Jinja2Templates
 
 from app.lib.config import get_app_config
-from app.lib.helpers import sanitised_markdown, time_ago, humanize_bytes
+from app.lib.helpers import sanitised_markdown, time_ago, humanize_bytes, split_filename
 
+from app.ui.common import security, session
 from app.ui.common.session import get_flashed_messages
 
 
@@ -22,6 +23,7 @@ templates.env.globals['get_flashed_messages'] = get_flashed_messages
 templates.env.filters['markdown'] = sanitised_markdown
 templates.env.filters['ago'] = time_ago
 templates.env.filters['humanize_bytes'] = humanize_bytes
+templates.env.filters['split_filename'] = split_filename
 
 
 def error_response(request, error_messages, status_code=400):

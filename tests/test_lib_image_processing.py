@@ -11,6 +11,7 @@ from PIL import Image as Pillow
 
 from app.lib.image_processing import (
     make_image_metadata,
+    make_image_filename_metadata,
     process_uploaded_image,
     ImageProcessingError,
     ImageInvalidError,
@@ -606,3 +607,31 @@ class TestImageProcessingIntegration:
         # This is implicitly tested by test_lib_file_storage.py integration tests
         # which call process_uploaded_file and verify Image records are created
         pass
+
+
+class TestImageFilenameMetadataValidation:
+    """Validation tests for processed image metadata generation."""
+
+    @pytest.mark.asyncio
+    async def test_make_image_filename_metadata_raises_when_image_metadata_missing(self, db):
+        """Image processing requests must fail if related image metadata does not exist."""
+        user = await User.create(
+            username="missingimgmeta",
+            email="missingimgmeta@example.com",
+            password="hashedpass",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Missing image metadata",
+            name="missing_meta",
+            cleanname="missing_meta",
+            originalname="missing_meta.jpg",
+            ext="jpg",
+            size=123,
+            type="image/jpeg",
+            extra="0",
+        )
+
+        with pytest.raises(ImageProcessingError, match="No image metadata found for upload"):
+            await make_image_filename_metadata(upload, "missing_meta-320x0.jpg")

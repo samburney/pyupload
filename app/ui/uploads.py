@@ -151,7 +151,6 @@ async def view_upload(
                 context={"error_messages": ["Upload not found"]},
             )
     upload = await UploadSerializer.from_tortoise_orm(upload_model)
-    print(upload)
 
     # Template context
     context = {

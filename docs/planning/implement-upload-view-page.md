@@ -21,6 +21,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Upload model has all necessary metadata fields
 - Image model has dimension data for images
 - Upload model has `url` property for file serving
+- Image processing now enforces metadata integrity and raises error if related image metadata is missing
 - No UI for editing upload metadata
 - No UI for privacy controls
 - No delete functionality implemented
@@ -96,7 +97,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 3. [ ] Display videos with `<video>` player
 4. [ ] Display audio with `<audio>` player
 5. [ ] Display file icon for other types
-6. [ ] Add loading states and error handling
+6. [ ] Add loading states and error handling (including missing image metadata placeholder)
 7. [ ] Make preview responsive
 
 **Tests**:
@@ -105,7 +106,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 3. [ ] Test audio preview with controls
 4. [ ] Test generic file icon for documents
 5. [ ] Test responsive sizing
-6. [ ] Test broken image handling
+6. [ ] Test broken image handling and missing image metadata placeholder behavior
 
 **Acceptance Criteria**:
 - [ ] Images display inline
@@ -119,6 +120,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Use `upload.url` for file source
 - Check `upload.type` (MIME type) to determine preview type
 - For images, check `upload.is_image` property
+- If image metadata is missing or invalid, prefer rendering a missing-image placeholder instead of exposing server errors.
 - Consider max-width constraints for large images
 - Add alt text for accessibility
 - Use Alpine.js for interactive elements if needed
