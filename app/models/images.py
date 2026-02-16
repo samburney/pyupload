@@ -18,18 +18,21 @@ IMAGE_FORMATS = {
 }
 
 # Supported image formats for additional processing
-# TODO: Expand processing to all formats supported by Pillow
 IMAGE_PROCESSING_FORMATS = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
 }
 
 # Supported image conversion destination formats
 IMAGE_CONVERSION_DST_FORMATS = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
+#    '.png': 'image/png',
+#    '.gif': 'image/gif',
 }
 
 # Supported image 'short' dimension strings

@@ -214,10 +214,18 @@ async def get_image_bytes(upload: "Upload", filename: str) -> IO[bytes]:
             )
 
         # Return the image bytes in requested format
-        if image_filename_metadata.new_type is None:
-            raise ImageProcessingError("No output image type specified for processed image.")
-        image_obj.save(image_bytes, format=image_filename_metadata.new_type.upper()) # type: ignore
-        image_bytes.seek(0)
+        output_format = image_filename_metadata.new_type.lower() if image_filename_metadata.new_type else None
+        if output_format is None:
+            raise ImageProcessingError(f"Cannot process {filename}; No output image type specified for processed image.")
+
+        if output_format == 'jpeg':
+            get_image_as_jpeg(image_obj, image_bytes)
+        elif f"image/{output_format}" not in IMAGE_CONVERSION_DST_FORMATS.values():
+            raise ImageProcessingError(
+                f"Cannot process {filename}; Unsupported output image type '{output_format}' for processed image."
+        )
+        else:
+            raise NotImplementedError(f"Cannot process {filename}; processing for output image type '{output_format}' is not yet implemented.")
 
     # Return the image bytes
     return image_bytes
@@ -305,7 +313,7 @@ async def make_image_filename_metadata(upload: "Upload", filename: str) -> Proce
         
     else:
         if getattr(upload, 'type') not in IMAGE_PROCESSING_FORMATS.values():
-            logger.warning(f"Image type '{getattr(upload, 'type')}' is not supported for processing {filename}.")
+            logger.warning(f"Cannot process {filename}; image type '{getattr(upload, 'type')}' is not supported for processing.")
 
         new_image_props['type'] = getattr(upload, 'type')
 
@@ -407,3 +415,25 @@ async def get_processed_image_path(upload: "Upload", filename: str) -> Path | No
         return image_cache_filepath
 
     return None
+
+
+def get_image_as_jpeg(image_obj: Pillow.Image, image_bytes: IO[bytes] | None, quality: int = 80) -> IO[bytes]:
+    """Convert an image object to JPEG format and write to output bytes."""
+    
+    # If no image_bytes provided, create a new in-memory bytes object
+    if image_bytes is None:
+        image_bytes = SpooledTemporaryFile()
+    
+    # Handle images with transparency by pasting onto white background before saving as JPEG
+    if image_obj.mode in ("RGBA", "LA") or (image_obj.mode == "P" and "transparency" in image_obj.info): # Image with alpha channel
+        image_obj = image_obj.convert("RGBA")
+        background = Pillow.new("RGB", image_obj.size, (255, 255, 255))
+        background.paste(image_obj, mask=image_obj.getchannel(3))  # 3 is the alpha channel
+        background.save(image_bytes, format="JPEG", quality=quality)
+
+    # For other images, convert to RGB and save as JPEG
+    else:
+        image_obj.convert("RGB").save(image_bytes, format="JPEG", quality=quality)
+    image_bytes.seek(0)
+
+    return image_bytes
