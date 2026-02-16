@@ -12,11 +12,17 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 ENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(dotenv_path=ENV_PATH)
 
-logger = logging.getLogger(__name__)
-
 
 class AppConfig:
     """Application configuration loader."""
+
+    # Debug and development configuration
+    debug: bool = is_bool(os.getenv("DEBUG", "false")) == True
+
+    # Set up shared logger for app
+    if debug:
+        logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
     # Web server configuration
     app_host: str = os.getenv("APP_HOST", "0.0.0.0")
@@ -109,3 +115,7 @@ class AppConfig:
 def get_app_config() -> AppConfig:
     """Get the application configuration."""
     return AppConfig()
+
+
+# Set up module-level logger for easy access throughout app
+logger = AppConfig.logger

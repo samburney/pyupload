@@ -31,8 +31,8 @@ IMAGE_PROCESSING_FORMATS = {
 IMAGE_CONVERSION_DST_FORMATS = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
-#    '.png': 'image/png',
-#    '.gif': 'image/gif',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
 }
 
 # Supported image 'short' dimension strings

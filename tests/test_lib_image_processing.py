@@ -11,8 +11,10 @@ from unittest.mock import AsyncMock, patch
 from PIL import Image as Pillow
 
 from app.lib.image_processing import (
+    count_gif_frames,
     get_image_as_jpeg,
     get_image_bytes,
+    get_processed_image_path,
     make_image_metadata,
     make_image_filename_metadata,
     process_uploaded_image,
@@ -690,7 +692,7 @@ class TestGetImageBytes:
 
     @pytest.mark.asyncio
     async def test_get_image_bytes_raises_for_unsupported_output_type(self):
-        """Unsupported output types should raise ImageProcessingError."""
+        """Unsupported output types should raise NotImplementedError."""
         img = Pillow.new("RGB", (32, 32), color="purple")
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             img.save(tmp, format="PNG")
@@ -713,14 +715,14 @@ class TestGetImageBytes:
 
         try:
             with patch("app.lib.image_processing.make_image_filename_metadata", new=AsyncMock(return_value=processed_metadata)):
-                with pytest.raises(ImageProcessingError, match="Unsupported output image type"):
+                with pytest.raises(NotImplementedError, match="not yet implemented"):
                     await get_image_bytes(upload, "demo.tiff")
         finally:
             tmp_path.unlink(missing_ok=True)
 
     @pytest.mark.asyncio
-    async def test_get_image_bytes_raises_not_implemented_for_supported_non_jpeg(self):
-        """Supported destination formats without implementation should raise NotImplementedError."""
+    async def test_get_image_bytes_writes_png_for_processed_request(self):
+        """Processed PNG requests should return non-empty PNG bytes."""
         img = Pillow.new("RGB", (32, 32), color="teal")
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             img.save(tmp, format="PNG")
@@ -743,9 +745,44 @@ class TestGetImageBytes:
 
         try:
             with patch("app.lib.image_processing.make_image_filename_metadata", new=AsyncMock(return_value=processed_metadata)):
-                with patch.dict("app.lib.image_processing.IMAGE_CONVERSION_DST_FORMATS", {".png": "image/png"}, clear=False):
-                    with pytest.raises(NotImplementedError, match="not yet implemented"):
-                        await get_image_bytes(upload, "demo.png")
+                image_bytes = await get_image_bytes(upload, "demo.png")
+                payload = image_bytes.read()
+
+            assert len(payload) > 0
+            assert payload.startswith(b"\x89PNG")
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+    @pytest.mark.asyncio
+    async def test_get_image_bytes_writes_gif_for_processed_request(self):
+        """Processed GIF requests should return non-empty GIF bytes."""
+        img = Pillow.new("RGB", (32, 32), color="cyan")
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            img.save(tmp, format="PNG")
+            tmp_path = Path(tmp.name)
+
+        upload = SimpleNamespace(filepath=tmp_path, images=_DummyImagesRelation(object()))
+        processed_metadata = ProcessedImageMetadata(
+            upload_id=1,
+            type="png",
+            width=32,
+            height=32,
+            bits=24,
+            channels=3,
+            requested_props={"width": None, "height": None, "type": "image/gif"},
+            mime_type="image/png",
+            new_type="gif",
+            new_mime_type="image/gif",
+            resized=False,
+        )
+
+        try:
+            with patch("app.lib.image_processing.make_image_filename_metadata", new=AsyncMock(return_value=processed_metadata)):
+                image_bytes = await get_image_bytes(upload, "demo.gif")
+                payload = image_bytes.read()
+
+            assert len(payload) > 0
+            assert payload.startswith((b"GIF87a", b"GIF89a"))
         finally:
             tmp_path.unlink(missing_ok=True)
 
@@ -761,3 +798,103 @@ class TestGetImageAsJpeg:
         payload = image_bytes.read()
 
         assert len(payload) > 0
+
+
+class TestGifFrameHandling:
+    """Tests for GIF frame counting and animated resize prerequisites."""
+
+    def test_count_gif_frames_returns_full_count(self):
+        """Two-frame GIFs should report a frame count of 2."""
+        frame1 = Pillow.new("RGBA", (10, 10), color=(255, 0, 0, 255))
+        frame2 = Pillow.new("RGBA", (10, 10), color=(0, 255, 0, 255))
+
+        image_bytes = BytesIO()
+        frame1.save(
+            image_bytes,
+            format="GIF",
+            save_all=True,
+            append_images=[frame2],
+            duration=100,
+            loop=0,
+        )
+        image_bytes.seek(0)
+
+        gif_obj = Pillow.open(image_bytes)
+        assert count_gif_frames(gif_obj) == 2
+
+
+class TestProcessedImageCacheBehavior:
+    """Tests for processed-image cache behavior in non-debug mode."""
+
+    @pytest.mark.asyncio
+    async def test_get_processed_image_path_uses_existing_cache_when_not_debug(self, tmp_path):
+        """When debug is disabled and cache exists, processing should not rerun."""
+        user_dir = tmp_path / "user_1"
+        user_dir.mkdir(parents=True, exist_ok=True)
+        source_path = user_dir / "source.png"
+        source_path.write_bytes(b"source")
+
+        upload = SimpleNamespace(name="demo", filepath=source_path, type="image/png")
+        processed_metadata = ProcessedImageMetadata(
+            upload_id=1,
+            type="png",
+            width=64,
+            height=64,
+            bits=24,
+            channels=3,
+            requested_props={"width": 64, "height": 64, "type": "image/png"},
+            mime_type="image/png",
+            new_type="png",
+            new_mime_type="image/png",
+            resized=True,
+        )
+
+        cache_path = user_dir / "cache" / "demo-64_64.png"
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_bytes(b"cached")
+
+        with patch("app.lib.image_processing.config.debug", False):
+            with patch("app.lib.image_processing.make_image_filename_metadata", new=AsyncMock(return_value=processed_metadata)):
+                with patch("app.lib.image_processing.get_image_bytes", new=AsyncMock(return_value=BytesIO(b"new-data"))) as get_image_bytes_mock:
+                    result = await get_processed_image_path(upload, "demo-64x64.png")
+
+        assert result == cache_path
+        get_image_bytes_mock.assert_not_awaited()
+        assert cache_path.read_bytes() == b"cached"
+
+    @pytest.mark.asyncio
+    async def test_get_processed_image_path_builds_cache_when_missing_and_not_debug(self, tmp_path):
+        """When debug is disabled and cache is missing, processing should populate cache."""
+        user_dir = tmp_path / "user_1"
+        user_dir.mkdir(parents=True, exist_ok=True)
+        source_path = user_dir / "source.png"
+        source_path.write_bytes(b"source")
+
+        upload = SimpleNamespace(name="demo", filepath=source_path, type="image/png")
+        processed_metadata = ProcessedImageMetadata(
+            upload_id=1,
+            type="png",
+            width=64,
+            height=64,
+            bits=24,
+            channels=3,
+            requested_props={"width": 64, "height": 64, "type": "image/png"},
+            mime_type="image/png",
+            new_type="png",
+            new_mime_type="image/png",
+            resized=True,
+        )
+
+        cache_path = user_dir / "cache" / "demo-64_64.png"
+        if cache_path.exists():
+            cache_path.unlink()
+
+        with patch("app.lib.image_processing.config.debug", False):
+            with patch("app.lib.image_processing.make_image_filename_metadata", new=AsyncMock(return_value=processed_metadata)):
+                with patch("app.lib.image_processing.get_image_bytes", new=AsyncMock(return_value=BytesIO(b"new-data"))) as get_image_bytes_mock:
+                    result = await get_processed_image_path(upload, "demo-64x64.png")
+
+        assert result == cache_path
+        get_image_bytes_mock.assert_awaited_once()
+        assert cache_path.exists()
+        assert cache_path.read_bytes() == b"new-data"

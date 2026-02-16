@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, IO
+from typing import TYPE_CHECKING, IO, List
 from tempfile import SpooledTemporaryFile
-from PIL import Image as Pillow, UnidentifiedImageError
+from PIL import Image as Pillow, UnidentifiedImageError, ImageSequence
 
-from app.lib.config import logger
+from app.lib.config import get_app_config, logger
 from app.lib.helpers import split_filename
 
 from app.models.images import (
@@ -14,6 +14,9 @@ from app.models.images import (
     IMAGE_CONVERSION_DST_FORMATS,
     IMAGE_SHORT_DIMENSIONS
 )
+
+
+config = get_app_config()
 
 
 if TYPE_CHECKING:
@@ -220,10 +223,10 @@ async def get_image_bytes(upload: "Upload", filename: str) -> IO[bytes]:
 
         if output_format == 'jpeg':
             get_image_as_jpeg(image_obj, image_bytes)
-        elif f"image/{output_format}" not in IMAGE_CONVERSION_DST_FORMATS.values():
-            raise ImageProcessingError(
-                f"Cannot process {filename}; Unsupported output image type '{output_format}' for processed image."
-        )
+        elif output_format == 'gif':
+            get_image_as_gif(image_obj, image_bytes)
+        elif output_format == 'png':
+            get_image_as_png(image_obj, image_bytes)
         else:
             raise NotImplementedError(f"Cannot process {filename}; processing for output image type '{output_format}' is not yet implemented.")
 
@@ -233,18 +236,18 @@ async def get_image_bytes(upload: "Upload", filename: str) -> IO[bytes]:
 
 def get_resized_image_obj(
     upload: "Upload", new_width: int | None, new_height: int | None, maintain_aspect_ratio: bool = True
-) -> Pillow.Image:
+) -> Pillow.Image | List[Pillow.Image]:
     """Resize an image to the specified dimensions while optionally maintaining aspect ratio."""
 
     # Open the original image
     try:
-        image_object = Pillow.open(upload.filepath)
+        image_obj = Pillow.open(upload.filepath)
     except (UnidentifiedImageError, OSError):
         raise ImageInvalidError("Uploaded file is not a valid image.")
 
     # If maintaining aspect ratio, calculate new dimensions
     if maintain_aspect_ratio:
-        original_width, original_height = image_object.size
+        original_width, original_height = image_obj.size
         aspect_ratio = original_width / original_height
 
         if new_width is not None and new_height is not None:
@@ -262,18 +265,55 @@ def get_resized_image_obj(
     # Otherwise, if not maintaining aspect ratio, set any missing dimension to original
     else:
         if new_width is None:
-            new_width = image_object.width
+            new_width = image_obj.width
         if new_height is None:
-            new_height = image_object.height
+            new_height = image_obj.height
 
     # Resize the image and return the new image object
-    if new_width != image_object.width or new_height != image_object.height:
-        resized_image = image_object.resize((new_width, new_height))
+    if new_width and new_height and (new_width != image_obj.width or new_height != image_obj.height):
+        resized_image = handle_image_resize(image_obj, new_width, new_height)
         return resized_image
 
     # If we're not resizing, return the original image object
     else:
-        return image_object
+        return image_obj
+
+
+def handle_image_resize(image_obj: Pillow.Image, new_width: int, new_height: int) -> Pillow.Image | List[Pillow.Image]:
+    """Resize an image object to the specified dimensions."""
+
+    # Handle animated images by saving all frames as GIF
+    # When source image is an animated GIF, save including all frames
+    if is_gif(image_obj) and count_gif_frames(image_obj) > 1:
+        image_objs = []
+        for frame in ImageSequence.Iterator(image_obj):
+            resized_frame = frame.resize((new_width, new_height))
+            image_objs.append(resized_frame)
+        return image_objs            
+
+    return image_obj.resize((new_width, new_height))
+
+
+def is_gif(image_obj: Pillow.Image) -> bool:
+    """Check if an image object is a GIF."""
+    return 'version' in image_obj.info and b'GIF' in image_obj.info.get('version', '')
+
+
+def count_gif_frames(image_obj: Pillow.Image) -> int:
+    """Count the number of frames in a GIF image."""
+
+    frame_count = 1
+    try:
+        while True:
+            image_obj.seek(image_obj.tell() + 1)
+            frame_count += 1
+    except EOFError:
+        pass
+    
+    # Reset to first frame after counting frames
+    image_obj.seek(0)  
+
+    return frame_count
 
 
 async def make_image_filename_metadata(upload: "Upload", filename: str) -> ProcessedImageMetadata | None:
@@ -405,7 +445,8 @@ async def get_processed_image_path(upload: "Upload", filename: str) -> Path | No
         image_cache_filepath = upload.filepath.parent / "cache" / image_cache_filename
         
         # If the processed image doesn't exist, create it and save to the cache directory
-        if not image_cache_filepath.exists():
+        if not image_cache_filepath.exists() or config.debug:
+            logger.info(f"Processed image not found in cache for {filename}. Processing and caching new image at {image_cache_filepath}.")
             image_data = await get_image_bytes(upload, filename)
             if image_data is not None:
                 image_cache_filepath.parent.mkdir(exist_ok=True)
@@ -417,9 +458,13 @@ async def get_processed_image_path(upload: "Upload", filename: str) -> Path | No
     return None
 
 
-def get_image_as_jpeg(image_obj: Pillow.Image, image_bytes: IO[bytes] | None, quality: int = 80) -> IO[bytes]:
+def get_image_as_jpeg(image_obj: Pillow.Image | List[Pillow.Image], image_bytes: IO[bytes] | None, quality: int = 80) -> IO[bytes]:
     """Convert an image object to JPEG format and write to output bytes."""
     
+    # JPEG does not support multiple frames, just use the first one
+    if isinstance(image_obj, list):
+        image_obj = image_obj[0]
+
     # If no image_bytes provided, create a new in-memory bytes object
     if image_bytes is None:
         image_bytes = SpooledTemporaryFile()
@@ -437,3 +482,53 @@ def get_image_as_jpeg(image_obj: Pillow.Image, image_bytes: IO[bytes] | None, qu
     image_bytes.seek(0)
 
     return image_bytes
+
+
+def get_image_as_gif(image_obj: Pillow.Image | List[Pillow.Image], image_bytes: IO[bytes] | None) -> IO[bytes]:
+    """Convert an image object to GIF format and write to output bytes."""
+    
+    # If no image_bytes provided, create a new in-memory bytes object
+    if image_bytes is None:
+        image_bytes = SpooledTemporaryFile()
+    
+    # Handle animated images by saving all frames as GIF
+    if isinstance(image_obj, list):
+        image_obj[0].save(
+            image_bytes,
+            format="GIF",
+            save_all=True,
+            append_images=image_obj[1:],
+        )
+        image_bytes.seek(0)
+        return image_bytes
+
+    # Handle transparent images (Except GIFs with existing transparency which can be saved directly)
+    if image_obj.mode in ("RGBA", "LA") and not is_gif(image_obj):
+        image_obj = image_obj.convert("RGBA")
+        image_obj.save(image_bytes, format="GIF", transparency=0)
+
+    else:
+        image_obj.save(image_bytes, format="GIF")
+
+    image_bytes.seek(0)
+
+    return image_bytes
+
+
+def get_image_as_png(image_obj: Pillow.Image | List[Pillow.Image], image_bytes: IO[bytes] | None) -> IO[bytes]:
+    """Convert an image object to PNG format and write to output bytes."""
+    
+    # PNG does not support multiple frames, just use the first one
+    if isinstance(image_obj, list):
+        image_obj = image_obj[0]
+
+    # If no image_bytes provided, create a new in-memory bytes object
+    if image_bytes is None:
+        image_bytes = SpooledTemporaryFile()
+    
+    image_obj.save(image_bytes, format="PNG")
+    image_bytes.seek(0)
+
+    return image_bytes
+
+
