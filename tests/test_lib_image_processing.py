@@ -5,18 +5,21 @@ import tempfile
 import time
 from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from PIL import Image as Pillow
 
 from app.lib.image_processing import (
+    get_image_as_jpeg,
+    get_image_bytes,
     make_image_metadata,
     make_image_filename_metadata,
     process_uploaded_image,
     ImageProcessingError,
     ImageInvalidError,
 )
-from app.models.images import Image, ImageMetadata
+from app.models.images import Image, ImageMetadata, ProcessedImageMetadata
 from app.models.users import User
 from app.models.uploads import Upload
 from app.lib.config import get_app_config
@@ -635,3 +638,126 @@ class TestImageFilenameMetadataValidation:
 
         with pytest.raises(ImageProcessingError, match="No image metadata found for upload"):
             await make_image_filename_metadata(upload, "missing_meta-320x0.jpg")
+
+
+class _DummyImagesRelation:
+    """Minimal relation helper for tests that don't need DB-backed QuerySets."""
+
+    def __init__(self, first_result):
+        self._first_result = first_result
+
+    def all(self):
+        return self
+
+    async def first(self):
+        return self._first_result
+
+
+class TestGetImageBytes:
+    """Tests for get_image_bytes new processing branches."""
+
+    @pytest.mark.asyncio
+    async def test_get_image_bytes_writes_jpeg_for_processed_request(self):
+        """Processed JPEG requests should return non-empty converted bytes."""
+        img = Pillow.new("RGB", (64, 64), color="orange")
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            img.save(tmp, format="PNG")
+            tmp_path = Path(tmp.name)
+
+        upload = SimpleNamespace(filepath=tmp_path, images=_DummyImagesRelation(object()))
+        processed_metadata = ProcessedImageMetadata(
+            upload_id=1,
+            type="png",
+            width=64,
+            height=64,
+            bits=24,
+            channels=3,
+            requested_props={"width": None, "height": None, "type": "image/jpeg"},
+            mime_type="image/png",
+            new_type="jpeg",
+            new_mime_type="image/jpeg",
+            resized=False,
+        )
+
+        try:
+            with patch("app.lib.image_processing.make_image_filename_metadata", new=AsyncMock(return_value=processed_metadata)):
+                image_bytes = await get_image_bytes(upload, "demo.jpg")
+                payload = image_bytes.read()
+
+            assert len(payload) > 0
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+    @pytest.mark.asyncio
+    async def test_get_image_bytes_raises_for_unsupported_output_type(self):
+        """Unsupported output types should raise ImageProcessingError."""
+        img = Pillow.new("RGB", (32, 32), color="purple")
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            img.save(tmp, format="PNG")
+            tmp_path = Path(tmp.name)
+
+        upload = SimpleNamespace(filepath=tmp_path, images=_DummyImagesRelation(object()))
+        processed_metadata = ProcessedImageMetadata(
+            upload_id=1,
+            type="png",
+            width=32,
+            height=32,
+            bits=24,
+            channels=3,
+            requested_props={"width": None, "height": None, "type": "image/tiff"},
+            mime_type="image/png",
+            new_type="tiff",
+            new_mime_type="image/tiff",
+            resized=False,
+        )
+
+        try:
+            with patch("app.lib.image_processing.make_image_filename_metadata", new=AsyncMock(return_value=processed_metadata)):
+                with pytest.raises(ImageProcessingError, match="Unsupported output image type"):
+                    await get_image_bytes(upload, "demo.tiff")
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+    @pytest.mark.asyncio
+    async def test_get_image_bytes_raises_not_implemented_for_supported_non_jpeg(self):
+        """Supported destination formats without implementation should raise NotImplementedError."""
+        img = Pillow.new("RGB", (32, 32), color="teal")
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            img.save(tmp, format="PNG")
+            tmp_path = Path(tmp.name)
+
+        upload = SimpleNamespace(filepath=tmp_path, images=_DummyImagesRelation(object()))
+        processed_metadata = ProcessedImageMetadata(
+            upload_id=1,
+            type="png",
+            width=32,
+            height=32,
+            bits=24,
+            channels=3,
+            requested_props={"width": None, "height": None, "type": "image/png"},
+            mime_type="image/png",
+            new_type="png",
+            new_mime_type="image/png",
+            resized=True,
+        )
+
+        try:
+            with patch("app.lib.image_processing.make_image_filename_metadata", new=AsyncMock(return_value=processed_metadata)):
+                with patch.dict("app.lib.image_processing.IMAGE_CONVERSION_DST_FORMATS", {".png": "image/png"}, clear=False):
+                    with pytest.raises(NotImplementedError, match="not yet implemented"):
+                        await get_image_bytes(upload, "demo.png")
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+
+class TestGetImageAsJpeg:
+    """Tests for JPEG conversion helper paths."""
+
+    def test_get_image_as_jpeg_handles_la_images(self):
+        """LA mode images should be composited and encoded as JPEG successfully."""
+        image_obj = Pillow.new("LA", (20, 20), color=(200, 100))
+
+        image_bytes = get_image_as_jpeg(image_obj, None)
+        payload = image_bytes.read()
+
+        assert len(payload) > 0
