@@ -84,10 +84,10 @@
         c-29.115-13.188-48.103,12.209-48.103,12.209C196.805,136.965,221.879,107.515,256.249,98.219z"/>
     </svg>
 
-  <h2 class="mt-6 text-2xl font-bold text-gray-900">There's nothing here!</h2>
+  <h2 class="mt-6 text-2xl font-bold text-gray-900">{{ empty_content_title | default("There's nothing here!") }}</h2>
 
   <p class="mt-4 text-pretty text-gray-700">
-    We didn't find what you were looking for!  You can try looking for something else, or you can upload your own content.
+    {{ empty_content_message | default("We didn't find what you were looking for!  You can try looking for something else, or you can upload your own content.") }}
   </p>
 
   <div class="mt-6 space-y-2 w-full grid grid-cols-2 gap-2">

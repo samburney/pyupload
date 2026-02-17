@@ -11,23 +11,14 @@ from app.lib.helpers import (
     make_unique_filename,
 )
 from app.lib.config import get_app_config, logger
-from app.lib.image_processing import process_uploaded_image, ImageInvalidError, ImageProcessingError
+from app.lib.error_handling import UserQuotaExceeded, UserFileTypeNotAllowed, ImageInvalidError, ImageProcessingError
+from app.lib.image_processing import process_uploaded_image
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadMetadata, UploadResult
 
 
 config = get_app_config()
-
-
-# User validation exceptions
-class UserQuotaExceeded(Exception):
-    """Exception raised when a user exceeds their upload quotas."""
-    pass
-
-class UserFileTypeNotAllowed(Exception):
-    """Exception raised when a user uploads a disallowed file type."""
-    pass
 
 
 async def make_upload_metadata(user: User, file: UploadFile | BinaryIO | SpooledTemporaryFile, filename: str | None = None) -> UploadMetadata:

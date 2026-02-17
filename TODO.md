@@ -169,6 +169,7 @@
       This could indicate that the refresh_token logic is not working as expected.
 - [x] Fix `UserSerializer.last_seen_at` and `last_login_ip` typed as non-optional but nullable in database model.
 - [x] Fix `PaginationMixin.paginate()` double-applying offset/limit/order when `query` argument is provided.
+- [x] Add `/get` error response mapping and validation fallback handling (image conversion requests now receive generated image errors; non-image requests receive HTML status responses) with regression tests.
 - [ ] Return specific HTTP errors from `serve_file()` instead of raising broad exceptions (map processing failures to user-facing responses).
 - [ ] Make home gallery page size user-configurable.
 - [ ] Scheduler: delete files owned by abandoned users when marked private.

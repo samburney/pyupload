@@ -3,56 +3,9 @@ from pydantic import BaseModel
 from typing import Optional
 from tortoise_serializer import Serializer
 
+from app.lib.helpers import IMAGE_FORMATS, IMAGE_PROCESSING_FORMATS, IMAGE_CONVERSION_DST_FORMATS, IMAGE_SHORT_DIMENSIONS
+
 from app.models.common.base import TimestampMixin
-
-
-# Supported image formats
-IMAGE_FORMATS = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.bmp': 'image/bmp',
-    '.svg': 'image/svg+xml',
-}
-
-# Supported image formats for additional processing
-IMAGE_PROCESSING_FORMATS = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.bmp': 'image/bmp',
-}
-
-# Supported image conversion destination formats
-IMAGE_CONVERSION_DST_FORMATS = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-}
-
-# Supported image 'short' dimension strings
-IMAGE_SHORT_DIMENSIONS = {
-    'sm': '320x320',
-    'small': '320x320',
-    'md': '640x640',
-    'medium': '640x640',
-    'lg': '1024x1024',
-    'large': '1024x1024',
-    'big': '1024x1024',
-    'xl': '1280x1280',
-    'vga': '640x480',
-    'svga': '800x600',
-    'xga': '1024x768',
-    'hd': '1280x720',
-    'fhd': '1920x1080',
-    'qhd': '2560x1440',
-    '4k': '3840x2160',
-}
 
 
 class Image(models.Model, TimestampMixin):

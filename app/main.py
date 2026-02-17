@@ -1,6 +1,7 @@
 from app.models import init_db
 import uvicorn
 
+from pathlib import Path
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from urllib.parse import urlencode
@@ -14,9 +15,13 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.lib.config import get_app_config
 from app.lib.scheduler import scheduler
 from app.lib.auth import delete_token_cookies
+from app.lib.helpers import IMAGE_CONVERSION_DST_FORMATS
+from app.lib.error_handling import get_error_image_response
+
 from app.middleware.token_refresh import TokenRefreshMiddleware
 from app.middleware.fingerprint_auto_login import FingerprintAutoLoginMiddleware
 
+from app.ui.common import templates
 from app.ui.common.security import LoginRequiredException
 
 from app import api
@@ -101,6 +106,32 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             url = f'{request.url.path}?{urlencode(query_params)}'
             response = RedirectResponse(url=url, status_code=307)
             return response
+        
+        # Define error message details
+        error_message_title = "Error 422: Unprocessable Content"
+        error_message_body = exc.errors()[0]['msg'] if exc.errors() else "An unknown error occurred while processing your request."
+
+        # Return image with error message for invalid requests for a supported image conversion
+        url_path = Path(request.url.path)
+        if url_path.suffix in IMAGE_CONVERSION_DST_FORMATS.keys():
+            return get_error_image_response(
+                error_title=error_message_title,
+                error_message=error_message_body,
+                filename=url_path.name,
+                status_code=422,
+            )
+
+        # Return 400 Bad Request for other exceptions related to `/get/` endpoint
+        return templates.TemplateResponse(
+            request,
+            "layout/error.html.j2",
+            context={
+                "request": request,
+                "empty_content_title": error_message_title,
+                "empty_content_message": error_message_body,
+            },
+            status_code=422,
+        )
 
     # HTTPException handler for UI endpoints
     error_messages = []

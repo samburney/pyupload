@@ -4,16 +4,11 @@ from tempfile import SpooledTemporaryFile
 from PIL import Image as Pillow, UnidentifiedImageError, ImageSequence
 
 from app.lib.config import get_app_config, logger
-from app.lib.helpers import split_filename
+from app.lib.helpers import split_filename, IMAGE_PROCESSING_FORMATS, IMAGE_CONVERSION_DST_FORMATS, IMAGE_SHORT_DIMENSIONS
 
-from app.models.images import (
-    Image,
-    ImageMetadata,
-    ProcessedImageMetadata,
-    IMAGE_PROCESSING_FORMATS,
-    IMAGE_CONVERSION_DST_FORMATS,
-    IMAGE_SHORT_DIMENSIONS
-)
+from app.lib.error_handling import ImageInvalidError, ImageProcessingError
+
+from app.models.images import Image, ImageMetadata, ProcessedImageMetadata
 
 
 config = get_app_config()
@@ -21,15 +16,6 @@ config = get_app_config()
 
 if TYPE_CHECKING:
     from app.models.uploads import Upload
-
-
-class ImageInvalidError(Exception):
-    """Exception raised when an uploaded file is not a valid image."""
-    pass
-
-class ImageProcessingError(Exception):
-    """Exception raised for errors in image metadata processing."""
-    pass
 
 
 async def make_image_metadata(upload: "Upload") -> ImageMetadata:

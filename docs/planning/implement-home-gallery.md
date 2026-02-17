@@ -16,24 +16,31 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 
 ### Current State
 - Home route fetches public uploads and owner's private uploads (Step 1 complete)
-- Gallery grid renders with CSS multi-column layout (Step 2 partial)
+- Gallery grid renders with CSS multi-column layout (Step 2 complete)
 - Pagination component reused and working (Step 4 complete)
 - Empty state component created (Step 6 complete)
 - Database index migration created for `private` column (Step 7 partial)
 - **Modal view with placeholder sizing** - Images open in modal overlay with JavaScript-calculated placeholder
-- Image processing requests now fail with explicit `ImageProcessingError` when related image metadata is missing (strict data integrity path)
+- `/get` error handling now returns generated image error responses for supported image conversion requests and HTML fallback responses for non-image requests
+- Image processing requests with missing related image metadata still return a backend error path (current behavior does not yet provide gallery placeholder UX)
 - `UploadSerializer`, `UserSerializer`, `ImageSerializer` added via `tortoise-serializer`
 - `PaginationParams` enhanced with `count`, `pages`, `page_data()`
 - `humanize_bytes` helper and Jinja filter added
 - Base layout refactored with semantic HTML (`<nav>`, `<main>`, `<footer>`)
 - Alpine.js components globally registered in `header-includes.html.j2`
-- 35 new tests passing (617 total project tests currently passing)
+- Home gallery remains covered by 35 focused tests, with additional `/get` error-response regression coverage added
+- Current full project suite status: 637 passing tests
 
 ### Review Snapshot (2026-02-15)
 - Route and serialization flow for the home gallery are implemented and tested.
 - Reusable gallery components are in active use on home and profile pages.
 - Broken/missing image metadata fallback UX is still pending.
 - Performance validation tasks in Step 8 remain pending.
+
+### Review Update (2026-02-17)
+- Added backend regression coverage for `/get` error response behavior (image vs non-image fallback and validation-error handling).
+- This improves user-facing failure responses for broken requests but does not complete gallery placeholder UX in Step 3 Task 6.
+- Step 3 Task 6 remains open until missing image metadata for gallery/display requests renders placeholder UX instead of backend error output.
 
 ### Target State
 - ~~Home page displays grid of latest public uploads~~ ✅
@@ -44,7 +51,7 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - ~~Click on upload navigates to view page~~ ✅ (modal overlay with HTMX + Alpine.js)
 - ~~Clean, modern design matching site theme~~ ✅
 - Fast page load with optimized queries — **partial** (index added, no caching headers)
-- ~~All tests passing~~ ✅ (617/617 current full-suite status)
+- ~~All tests passing~~ ✅ (637/637 current full-suite status)
 - **Completed**: Steps 1, 2, 3 (partial), 4, 5, 6, 7 ✅ | **Remaining**: Steps 3 (broken images), 8 (testing)
 
 ---

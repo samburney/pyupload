@@ -25,6 +25,7 @@ from unittest.mock import AsyncMock, patch
 from app.models.users import User
 from app.models.uploads import Upload, UploadResult, UploadMetadata
 from app.lib.auth import create_access_token
+from app.lib.file_serving import NotAuthorisedError
 
 
 class TestUploadGetEndpoint:
@@ -701,3 +702,52 @@ class TestUploadGetErrorHandling:
         response = await client.get(f"/get/{upload.id}/missing_meta-320x0.jpg")
 
         assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_get_missing_non_image_returns_html_404(self, client):
+        """Missing non-image files should return plain 404 instead of image-processing failure."""
+        response = await client.get("/get/999999/missing.txt")
+
+        assert response.status_code == 404
+        assert "image/" not in response.headers.get("content-type", "")
+
+    @pytest.mark.asyncio
+    async def test_get_unauthorised_non_image_returns_403(self, client, monkeypatch):
+        """Unauthorized non-image file requests should return 403."""
+        user = await User.create(
+            username="owneruser",
+            email="owner@example.com",
+            password="password",
+            fingerprint_hash="fp-owner",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Private file",
+            name="private_file",
+            cleanname="private-file",
+            originalname="private.txt",
+            ext="txt",
+            size=10,
+            type="text/plain",
+            extra="",
+            private=1,
+        )
+
+        async def mock_serve_file(*args, **kwargs):
+            raise NotAuthorisedError("Access denied")
+
+        monkeypatch.setattr("app.ui.uploads.serve_file", mock_serve_file)
+
+        response = await client.get(f"/get/{upload.id}/private.txt")
+
+        assert response.status_code == 403
+        assert "image/" not in response.headers.get("content-type", "")
+
+    @pytest.mark.asyncio
+    async def test_get_missing_image_returns_error_image(self, client):
+        """Missing image conversion requests should still return generated error images."""
+        response = await client.get("/get/999999/missing.jpg")
+
+        assert response.status_code == 404
+        assert response.headers.get("content-type") == "image/jpeg"
