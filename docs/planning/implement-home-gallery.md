@@ -236,6 +236,22 @@ This validates that the component architecture is truly reusable and maintainabl
 - Add `loading="lazy"` for performance
 - Use Tailwind's `aspect-w-16 aspect-h-9` or similar for aspect ratio
 
+**Task 6 Implementation Notes (next work item)**:
+- **Goal**: For image requests where related image metadata is missing/broken, return a user-facing placeholder response (not backend 500), while preserving strict logging for diagnostics.
+- **Backend mapping point**: In `app/ui/uploads.py` `get_upload()`, add a specific `except ImageProcessingError` branch before the generic `except Exception` and route it to `error_response_for_get(...)` with status `422` or `404` (pick one and keep consistent with tests).
+- **Use existing helper**: Reuse `app/lib/error_handling.py:error_response_for_get` so image requests get generated error-image payloads and non-image requests fall back to HTML responses.
+- **Message shape**: Use stable user text (for example: "Image preview unavailable" and "Image metadata is missing for this file") to keep assertions deterministic and UX clear.
+- **Do not broaden scope**: Keep this task to response handling only; do not add thumbnail generation/caching changes here.
+- **Test additions**:
+  - Add/extend `tests/test_ui_uploads.py` to verify missing image metadata requests no longer return 500.
+  - Assert image extension requests return image response with non-500 status.
+  - Assert non-image extension requests return HTML fallback with non-500 status.
+  - Keep existing successful-image path tests unchanged to prevent regressions.
+- **Plan completion criteria for Task 6**:
+  - Missing/broken image metadata path returns placeholder response (image or HTML fallback as appropriate).
+  - No backend 500 for this known scenario.
+  - Automated tests added for both image and non-image request variants.
+
 **Dependencies**:
 - Step 2 must be complete
 
