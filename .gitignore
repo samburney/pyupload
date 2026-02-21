@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 .vscode/
 *.egg-info/
+temp/
 data/*
 
 .DS_Store

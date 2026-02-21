@@ -8,7 +8,8 @@
     {%- set thumb_max_height = (thumb_max_width / ar_decimal) | round(0, 'ceil') | int %}
     <a href="{{ upload.view_url }}" hx-get="{{ upload.view_url }}?modal=true" hx-select=".modal-image" hx-target="body"
         hx-swap="beforeend" hx-select-oob="#messages" hx-target-4*="#messages" x-data="{ loaded: false }"
-        x-init="loaded = $el.querySelector('img')?.complete || false" class="relative">
+        x-init="loaded = $el.querySelector('img')?.complete || false" class="relative"
+        aria-label="{{ upload.image.width }}x{{ upload.image.height }} Open upload {{ display_title }}">
         <div class="space-y-8 animate-pulse md:space-y-0 md:space-x-8 rtl:space-x-reverse md:flex md:items-center text-gray-500"
             x-show="!loaded">
             <div class="flex items-center justify-center w-full bg-neutral-quaternary rounded-base bg-gray-200 rounded-md"
@@ -47,6 +48,7 @@
     </a>
     {% else %}
     <a class="block border border-dashed text-gray-600 hover:text-gray-400 border-gray-600 hover:border-gray-400 rounded-md object-cover w-16 h-16 mx-auto"
+        aria-label="Download {{ display_title }}"
         href="{{ upload.url }}">
         <div class="flex items-end justify-end h-full w-full p-2">
             {{ upload.dot_ext }}

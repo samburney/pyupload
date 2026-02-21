@@ -8,6 +8,7 @@
     aria-labelledby="modalTitle" x-data="{ open: false, modalReady: false }" x-init="$nextTick(() => open = true)"
     x-show="open" x-transition.opacity.duration.300ms @click="open = false"
     @placeholder-ready.window="modalReady = true" @transitionend.self="if (!open) { $el.remove(); }">
+    <h2 id="modalTitle" class="sr-only">Upload preview</h2>
     <div class="rounded-none sm:rounded-lg bg-white ml-2 mr-2 sm:mx-0 sm:p-1 shadow-lg"
          x-show="modalReady"
          x-transition.duration.150ms
@@ -15,6 +16,7 @@
          @click.stop >
         <div class="relative" x-data="{ loaded: false}" x-init="loaded = $el.querySelector('img')?.complete || false;">
             <button class="absolute top-2 right-2 z-10 rounded-full bg-black/25 p-1 text-white hover:bg-black/50"
+                aria-label="Close upload preview"
                 @click="open = false">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
@@ -38,7 +40,7 @@
             <!-- Image -->
             <img class="rounded-none sm:rounded-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]"
                  src="{{ upload.url }}"
-                 alt="{{ upload.description }}"
+                  alt="{{ upload.description or upload.originalname }}"
                  @load="loaded = true"
                  x-show="loaded"
                  x-transition.opacity.duration.150ms

@@ -20,6 +20,7 @@ Validates:
 import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
+from tortoise import connections
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadSerializer
@@ -170,6 +171,158 @@ class TestHomeRoute:
         """Test home page with page number beyond available pages returns 200."""
         response = await client.get("/?page=999")
         assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_home_page_sets_document_cache_headers(self, client):
+        """Test home page response includes cache-related headers for repeat loads."""
+        response = await client.get("/")
+
+        assert response.status_code == 200
+        assert response.headers.get("cache-control") == "private, max-age=60, must-revalidate"
+        assert response.headers.get("vary") == "Cookie"
+        assert response.headers.get("etag", "").startswith('W/"home-gallery-')
+
+    @pytest.mark.anyio
+    async def test_home_page_returns_304_when_if_none_match_matches(self, client):
+        """Test home page returns 304 Not Modified when ETag matches request header."""
+        first_response = await client.get("/")
+        etag = first_response.headers.get("etag")
+        assert etag
+
+        second_response = await client.get("/", headers={"If-None-Match": etag})
+
+        assert second_response.status_code == 304
+        assert second_response.headers.get("etag") == etag
+        assert second_response.headers.get("cache-control") == "private, max-age=60, must-revalidate"
+
+
+class TestHomeRouteDatabaseQueryPerformance:
+    """Step 7 database-focused performance regression coverage."""
+
+    SELECT_QUERY_BASELINE_BUDGET = 29
+
+    async def _count_home_page_select_queries(self, client, path: str = "/?page=1") -> int:
+        """Count SELECT queries executed during a single home page request."""
+        connection = connections.get("default")
+        select_query_count = 0
+
+        original_execute_query = connection.execute_query
+        original_execute_query_dict = connection.execute_query_dict
+
+        async def counted_execute_query(sql, *args, **kwargs):
+            nonlocal select_query_count
+            if isinstance(sql, str) and sql.lstrip().upper().startswith("SELECT"):
+                select_query_count += 1
+            return await original_execute_query(sql, *args, **kwargs)
+
+        async def counted_execute_query_dict(sql, *args, **kwargs):
+            nonlocal select_query_count
+            if isinstance(sql, str) and sql.lstrip().upper().startswith("SELECT"):
+                select_query_count += 1
+            return await original_execute_query_dict(sql, *args, **kwargs)
+
+        with patch.object(connection, "execute_query", new=counted_execute_query), patch.object(
+            connection, "execute_query_dict", new=counted_execute_query_dict
+        ):
+            response = await client.get(path)
+
+        assert response.status_code == 200
+        return select_query_count
+
+    @pytest.mark.anyio
+    async def test_home_page_query_count_baseline_page_1(self, client):
+        """Step 7 DB baseline: page 1 render stays within a bounded SELECT query envelope."""
+        owner = await User.create(
+            password="hashed_password",
+            username="db_query_baseline_owner",
+            email="db.query.baseline.owner@test.com",
+        )
+
+        for index in range(24):
+            upload = await Upload.create(
+                user=owner,
+                description=f"DB Baseline Item {index:02d}",
+                name=f"db_baseline_item_{index:02d}",
+                cleanname=f"db_baseline_item_{index:02d}",
+                originalname=f"db_baseline_item_{index:02d}.jpg",
+                ext="jpg",
+                size=2048,
+                type="image/jpeg",
+                extra="",
+                private=0,
+            )
+            await Image.create(
+                upload=upload,
+                type="image/jpeg",
+                width=1280,
+                height=720,
+                bits=8,
+                channels=3,
+            )
+
+        select_query_count = await self._count_home_page_select_queries(client, "/?page=1")
+
+        assert select_query_count <= self.SELECT_QUERY_BASELINE_BUDGET
+
+    @pytest.mark.anyio
+    async def test_home_page_query_count_non_scaling_between_24_and_100_plus(self, client):
+        """Step 7 N+1 guard: query-count envelope is stable from 24 items to 100+ items."""
+        owner = await User.create(
+            password="hashed_password",
+            username="db_query_scaling_owner",
+            email="db.query.scaling.owner@test.com",
+        )
+
+        for index in range(24):
+            upload = await Upload.create(
+                user=owner,
+                description=f"DB Scale Seed 24 Item {index:02d}",
+                name=f"db_scale_seed_24_item_{index:02d}",
+                cleanname=f"db_scale_seed_24_item_{index:02d}",
+                originalname=f"db_scale_seed_24_item_{index:02d}.jpg",
+                ext="jpg",
+                size=2048,
+                type="image/jpeg",
+                extra="",
+                private=0,
+            )
+            await Image.create(
+                upload=upload,
+                type="image/jpeg",
+                width=1280,
+                height=720,
+                bits=8,
+                channels=3,
+            )
+
+        query_count_with_24 = await self._count_home_page_select_queries(client, "/?page=1")
+
+        for index in range(24, 120):
+            upload = await Upload.create(
+                user=owner,
+                description=f"DB Scale Seed 120 Item {index:03d}",
+                name=f"db_scale_seed_120_item_{index:03d}",
+                cleanname=f"db_scale_seed_120_item_{index:03d}",
+                originalname=f"db_scale_seed_120_item_{index:03d}.jpg",
+                ext="jpg",
+                size=2048,
+                type="image/jpeg",
+                extra="",
+                private=0,
+            )
+            await Image.create(
+                upload=upload,
+                type="image/jpeg",
+                width=1280,
+                height=720,
+                bits=8,
+                channels=3,
+            )
+
+        query_count_with_120 = await self._count_home_page_select_queries(client, "/?page=1")
+
+        assert query_count_with_24 == query_count_with_120
+        assert query_count_with_120 <= self.SELECT_QUERY_BASELINE_BUDGET
 
 
 class TestHomeRouteUiScenarios:

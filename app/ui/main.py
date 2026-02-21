@@ -1,6 +1,7 @@
+import hashlib
 from typing import Annotated
 from fastapi import APIRouter, Request, Depends
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from tortoise.expressions import Q
 
 from app.lib.config import get_app_config
@@ -22,6 +23,23 @@ class HomePaginationParams(PaginationParams):
     sort_by: str = "created_at"
     sort_order: str = "desc"
     page_size: int = 24
+
+
+def get_home_page_etag(*, uploads: list[UploadSerializer], pagination: HomePaginationParams, user_id: int | None) -> str:
+    """Build a weak ETag for the current home-page payload."""
+    signature_parts = [
+        str(user_id or 0),
+        str(pagination.page),
+        str(pagination.page_size),
+        str(pagination.count),
+    ]
+
+    for upload in uploads:
+        updated_at = upload.updated_at.isoformat() if upload.updated_at else ""
+        signature_parts.append(f"{upload.id}:{updated_at}")
+
+    digest = hashlib.sha1("|".join(signature_parts).encode("utf-8")).hexdigest()
+    return f'W/"home-gallery-{digest}"'
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -54,4 +72,25 @@ async def index(
         "pagination": pagination,
     }
 
-    return templates.TemplateResponse(request, "index.html.j2", context=context)
+    etag = get_home_page_etag(
+        uploads=uploads,
+        pagination=pagination,
+        user_id=current_user.id if current_user else None,
+    )
+    headers = {
+        "Cache-Control": "private, max-age=60, must-revalidate",
+        "ETag": etag,
+        "Vary": "Cookie",
+    }
+
+    if_none_match = request.headers.get("if-none-match")
+    if if_none_match:
+        etag_values = [value.strip() for value in if_none_match.split(",")]
+        if etag in etag_values or "*" in etag_values:
+            return Response(status_code=304, headers=headers)
+
+    response = templates.TemplateResponse(request, "index.html.j2", context=context)
+    for key, value in headers.items():
+        response.headers[key] = value
+
+    return response
