@@ -168,8 +168,7 @@ async def refresh_access_token(request: Request, response: Response) -> Token:
     new_refresh_token = create_refresh_token(current_user)
     await update_stored_refresh_token(
         refresh_token=refresh_token,
-        refresh_token_payload=new_refresh_token,
-        user=current_user
+        refresh_token_payload=new_refresh_token
     )
 
     # Update token cookies
