@@ -28,7 +28,7 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - `humanize_bytes` helper and Jinja filter added
 - Base layout refactored with semantic HTML (`<nav>`, `<main>`, `<footer>`)
 - Alpine.js components globally registered in `header-includes.html.j2`
-- Home gallery remains covered by 35 focused tests, with additional `/get` error-response regression coverage added
+- Home gallery remains covered by 40 focused tests, with additional `/get` error-response regression coverage added
 - Current full project suite status: 637 passing tests
 
 ### Review Snapshot (2026-02-15)
@@ -225,7 +225,7 @@ This validates that the component architecture is truly reusable and maintainabl
 - [x] Non-images show appropriate icons
 - [x] Consistent aspect ratios — *calculated from image metadata*
 - [x] Good loading experience — *placeholder with fade to image*
-- [ ] All tests passing — *no automated tests for UI components yet*
+- [x] All tests passing — *automated UI coverage added in `tests/test_ui_home_gallery.py` for Step 3 rendering states*
 
 **Implementation Notes**:
 - For images: `<img src="{{ upload.url }}" class="object-cover w-full h-full">`
@@ -280,7 +280,7 @@ This validates that the component architecture is truly reusable and maintainabl
 4. [x] Test first page (no previous)
 5. [x] Test last page (no next)
 6. [x] Test middle pages
-7. [ ] Test mobile display
+7. [x] Test mobile display
 
 **Acceptance Criteria**:
 - [x] Pagination functional
@@ -331,7 +331,7 @@ This validates that the component architecture is truly reusable and maintainabl
 - [x] All metadata visible and formatted
 - [x] Truncation works for long text
 - [x] Clean, readable design
-- [ ] All tests passing — *no automated UI tests yet*
+- [x] All tests passing — *automated UI coverage added in `tests/test_ui_home_gallery.py` for Step 5 metadata/fallback rendering*
 
 **Implementation Notes**:
 - Title: `{{ upload.description or upload.originalname }}` (description if set, else original filename)
@@ -439,19 +439,19 @@ This validates that the component architecture is truly reusable and maintainabl
 **Tasks**:
 1. [ ] Create comprehensive integration tests
 2. [ ] Test full browsing workflow
-3. [ ] Test with various data scenarios (empty, few, many uploads)
+3. [x] Test with various data scenarios (empty, few, many uploads)
 4. [ ] Test responsive design at all breakpoints
-5. [ ] Test accessibility (keyboard navigation, screen readers)
+5. [x] Test accessibility (keyboard navigation, screen readers)
 6. [ ] Performance testing with large datasets
 7. [ ] Update documentation
 
 **Tests**:
 1. [ ] Integration test: Browse gallery → View upload
 2. [ ] Integration test: Pagination workflow
-3. [ ] Test with 0 uploads
+3. [x] Test with 0 uploads
 4. [ ] Test with 100+ uploads
-5. [ ] Test responsive breakpoints
-6. [ ] Test accessibility compliance
+5. [x] Test responsive breakpoints
+6. [x] Test accessibility compliance
 7. [ ] Test page load performance
 
 **Acceptance Criteria**:

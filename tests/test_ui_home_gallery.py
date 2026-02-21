@@ -172,6 +172,277 @@ class TestHomeRoute:
         assert response.status_code == 200
 
 
+class TestHomeRouteUiScenarios:
+    """UI-focused scenario and accessibility coverage for the home gallery."""
+
+    @pytest.mark.anyio
+    async def test_home_page_data_scenarios_empty_few_many(self, client):
+        """Step 8 item 3: validate empty, few, and many upload scenarios."""
+        owner = await User.create(
+            password="hashed_password",
+            username="ui_scenarios_user",
+            email="ui.scenarios@test.com",
+        )
+
+        empty_response = await client.get("/")
+        assert empty_response.status_code == 200
+        assert "nothing here" in empty_response.text.lower() or "empty" in empty_response.text.lower()
+
+        for index in range(3):
+            await Upload.create(
+                user=owner,
+                description=f"UI FEW {index}",
+                name=f"ui_few_{index}",
+                cleanname=f"ui_few_{index}",
+                originalname=f"ui_few_{index}.jpg",
+                ext="jpg",
+                size=1024,
+                type="image/jpeg",
+                extra="",
+                private=0,
+            )
+
+        few_response = await client.get("/")
+        assert few_response.status_code == 200
+        assert "UI FEW 0" in few_response.text
+        assert "UI FEW 1" in few_response.text
+        assert "UI FEW 2" in few_response.text
+        assert "class=\"pagination\"" not in few_response.text
+
+        for index in range(30):
+            await Upload.create(
+                user=owner,
+                description=f"UI MANY {index:02d}",
+                name=f"ui_many_{index:02d}",
+                cleanname=f"ui_many_{index:02d}",
+                originalname=f"ui_many_{index:02d}.jpg",
+                ext="jpg",
+                size=1024,
+                type="image/jpeg",
+                extra="",
+                private=0,
+            )
+
+        many_response = await client.get("/")
+        assert many_response.status_code == 200
+        assert "class=\"pagination\"" in many_response.text
+        assert "?page=2" in many_response.text
+
+    @pytest.mark.anyio
+    async def test_home_page_responsive_breakpoint_classes_present(self, client):
+        """Step 8 UI test item 5: verify responsive gallery classes are present."""
+        owner = await User.create(
+            password="hashed_password",
+            username="ui_responsive_user",
+            email="ui.responsive@test.com",
+        )
+
+        await Upload.create(
+            user=owner,
+            description="Responsive Gallery Item",
+            name="responsive_gallery_item",
+            cleanname="responsive_gallery_item",
+            originalname="responsive_gallery_item.jpg",
+            ext="jpg",
+            size=1024,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+
+        response = await client.get("/")
+
+        assert response.status_code == 200
+        assert "columns-1" in response.text
+        assert "md:columns-2" in response.text
+        assert "xl:columns-3" in response.text
+        assert "2xl:columns-4" in response.text
+
+    @pytest.mark.anyio
+    async def test_home_page_accessibility_semantics_and_labels(self, client):
+        """Step 8 item 5: validate basic accessibility semantics and labels."""
+        owner = await User.create(
+            password="hashed_password",
+            username="ui_accessibility_user",
+            email="ui.accessibility@test.com",
+        )
+
+        upload = await Upload.create(
+            user=owner,
+            description="Accessible Image Upload",
+            name="ui_accessible_image",
+            cleanname="ui_accessible_image",
+            originalname="ui_accessible_image.jpg",
+            ext="jpg",
+            size=2048,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+        await Image.create(
+            upload=upload,
+            type="image/jpeg",
+            width=1600,
+            height=900,
+            bits=8,
+            channels=3,
+        )
+
+        for index in range(55):
+            paged_upload = await Upload.create(
+                user=owner,
+                description=f"ACCESS PAGINATION {index:02d}",
+                name=f"access_pagination_{index:02d}",
+                cleanname=f"access_pagination_{index:02d}",
+                originalname=f"access_pagination_{index:02d}.jpg",
+                ext="jpg",
+                size=1024,
+                type="image/jpeg",
+                extra="",
+                private=0,
+            )
+            await Image.create(
+                upload=paged_upload,
+                type="image/jpeg",
+                width=1600,
+                height=900,
+                bits=8,
+                channels=3,
+            )
+
+        response = await client.get("/?page=2")
+
+        assert response.status_code == 200
+        assert "<nav" in response.text
+        assert "<main" in response.text
+        assert "alt=\"" in response.text
+        assert "aria-label=\"Previous page\"" in response.text
+        assert "aria-label=\"Next page\"" in response.text
+
+
+class TestGalleryCardUiRendering:
+    """UI rendering tests covering Step 3 and Step 5 gallery-card requirements."""
+
+    @pytest.mark.anyio
+    async def test_step3_gallery_card_renders_image_and_non_image_states(self, client):
+        """Step 3: image thumbnail/loading/aspect-ratio + non-image icon placeholders."""
+        owner = await User.create(
+            password="hashed_password",
+            username="step3_card_user",
+            email="step3.card@test.com",
+        )
+
+        image_upload = await Upload.create(
+            user=owner,
+            description="Step3 Image Upload",
+            name="step3_image_upload",
+            cleanname="step3_image_upload",
+            originalname="step3_image_upload.jpg",
+            ext="jpg",
+            size=2048,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+        await Image.create(
+            upload=image_upload,
+            type="image/jpeg",
+            width=1600,
+            height=900,
+            bits=8,
+            channels=3,
+        )
+
+        await Upload.create(
+            user=owner,
+            description="Step3 Video Upload",
+            name="step3_video_upload",
+            cleanname="step3_video_upload",
+            originalname="step3_video_upload.mp4",
+            ext="mp4",
+            size=4096,
+            type="video/mp4",
+            extra="",
+            private=0,
+        )
+        await Upload.create(
+            user=owner,
+            description="Step3 File Upload",
+            name="step3_file_upload",
+            cleanname="step3_file_upload",
+            originalname="step3_file_upload.pdf",
+            ext="pdf",
+            size=1024,
+            type="application/pdf",
+            extra="",
+            private=0,
+        )
+
+        response = await client.get("/")
+
+        assert response.status_code == 200
+        assert "animate-pulse" in response.text
+        assert "aspect-ratio:" in response.text
+        assert "x-show=\"!loaded\"" in response.text
+        assert "border-dashed" in response.text
+        assert ".mp4" in response.text
+        assert ".pdf" in response.text
+
+    @pytest.mark.anyio
+    async def test_step5_gallery_card_renders_metadata_and_title_fallback(self, client):
+        """Step 5: metadata display, truncation class, tooltip, and title fallback to filename."""
+        owner = await User.create(
+            password="hashed_password",
+            username="step5_card_user",
+            email="step5.card@test.com",
+        )
+
+        await Upload.create(
+            user=owner,
+            description="Visible Description Title",
+            name="step5_described_upload",
+            cleanname="step5_described_upload",
+            originalname="step5_described_upload.jpg",
+            ext="jpg",
+            size=3210,
+            type="image/jpeg",
+            extra="",
+            viewed=17,
+            private=0,
+        )
+        fallback_upload = await Upload.create(
+            user=owner,
+            description="",
+            name="step5_fallback_upload",
+            cleanname="step5_fallback_upload",
+            originalname="fallback_name.png",
+            ext="png",
+            size=789,
+            type="image/png",
+            extra="",
+            viewed=3,
+            private=0,
+        )
+        await Image.create(
+            upload=fallback_upload,
+            type="image/png",
+            width=600,
+            height=600,
+            bits=8,
+            channels=3,
+        )
+
+        response = await client.get("/")
+
+        assert response.status_code == 200
+        assert "Visible Description Title" in response.text
+        assert "fallback_name.png" in response.text
+        assert "title=\"fallback_name.png\"" in response.text
+        assert "overflow-ellipsis whitespace-nowrap" in response.text
+        assert ">17<" in response.text or "17" in response.text
+        assert "step5_card_user" in response.text
+
+
 class TestUploadSerializer:
     """Test UploadSerializer produces expected output."""
 

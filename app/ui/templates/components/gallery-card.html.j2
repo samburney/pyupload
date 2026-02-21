@@ -1,6 +1,7 @@
 <div class="rounded-lg p-3 mb-4 border border-gray-100 shadow-sm shadow-gray-300
             h-min break-inside-avoid-column flex-col justify-center transition-all
             duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101">
+    {%- set display_title = upload.description or upload.originalname %}
     {% if upload.image %}
     {%- set ar_decimal = (upload.image.width / upload.image.height) | round(3) %}
     {%- set thumb_max_width = 640 %}
@@ -20,7 +21,7 @@
             </div>
         </div>
         <img class="h-min w-full rounded-md transition-normal duration-150 hover:brightness-80"
-             alt="{{ upload.description }}"
+             alt="{{ display_title }}"
              {% if upload.image.supports_processing %}
              src="{{ upload.url | split_filename | first }}-{{ thumb_max_width }}x0.jpg"
              {% else %}
@@ -130,7 +131,7 @@
             </div>
             <div class="mt-2">
                 <dd class="text-md overflow-hidden overflow-ellipsis whitespace-nowrap"
-                    title="{{ upload.description }}">{{ upload.description }}</dd>
+                    title="{{ display_title }}">{{ display_title }}</dd>
             </div>
         </dl>
     </div>
