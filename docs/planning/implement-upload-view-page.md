@@ -429,7 +429,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 **Tasks**:
 1. [ ] Create comprehensive integration tests
 2. [ ] Test complete upload → view → edit → delete workflow
-3. [ ] Test permission scenarios (owner, other user, anonymous, admin)
+3. [ ] Test permission scenarios (owner, other user, anonymous)
 4. [ ] Test edge cases (missing files, deleted users, etc.)
 5. [ ] Test all interactive features (edit, toggle, delete)
 6. [ ] Performance testing

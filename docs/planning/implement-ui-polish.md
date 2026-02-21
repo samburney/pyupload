@@ -24,12 +24,13 @@ Polish the user interface with improved navigation, responsive design refinement
 - Footer exists with copyright (needs version info and additional links)
 - No breadcrumbs
 - Forms are functional with HTMX and baseline Tailwind styling, but need consistency and validation polish
-- Navbar links to unimplemented pages (/tags, /collections, /random, /popular, /all)
+- Navbar links include unimplemented routes that need cleanup (/uploads, /search, /tags, /collections, /random, /popular, /all)
 
 ### Review Snapshot (2026-02-15)
 - Core Tailwind + Alpine UI scaffolding is in place and functional.
 - Responsive/navbar polish tasks are still largely open.
 - Discovery routes (`/random`, `/popular`, `/all`) and static routes (`/about`, `/privacy`, `/terms`, `/contact`) are still not implemented.
+- Navbar still includes links to unimplemented pages (`/uploads`, `/search`, `/tags`, `/collections`) that should be fixed or removed until routes exist.
 - Breadcrumbs, footer versioning, and accessibility pass are still pending.
 
 ### Target State
@@ -58,7 +59,7 @@ Polish the user interface with improved navigation, responsive design refinement
 3. [ ] Implement outside-click-to-close (click backdrop closes menu)
 4. [ ] Ensure menu closes on link click
 5. [ ] Improve open/close animations
-6. [ ] Remove links to unimplemented pages (/tags, /collections)
+6. [ ] Remove/fix links to unimplemented pages (/uploads, /search, /tags, /collections)
 7. [ ] Ensure keyboard navigation works (Escape to close)
 8. [ ] Add ARIA labels for accessibility
 
@@ -84,7 +85,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - Backdrop: `<div x-show="mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black bg-opacity-50 z-40"></div>`
 - Menu z-index: 50 (above backdrop's 40)
 - Close on Escape: `@keydown.escape.window="mobileMenuOpen = false"`
-- Remove /tags and /collections links (moved to v0.2)
+- Remove or remap unimplemented route links (`/uploads`, `/search`, `/tags`, `/collections`) until routes are implemented
 - Mobile menu should show same conditional logic as desktop (see Step 2)
 - Ensure smooth slide-in transition from top or side
 
@@ -103,7 +104,7 @@ Polish the user interface with improved navigation, responsive design refinement
 4. [ ] **Registered users** (current_user.is_registered): Show Profile, My Uploads, My Collections, Logout in dropdown
 5. [ ] Remove Login/Register from dropdown for registered users
 6. [ ] Update desktop user dropdown logic
-7. [ ] Remove /tags and /collections links from navbar (moved to v0.2)
+7. [ ] Remove or remap unimplemented links from navbar (`/uploads`, `/search`, `/tags`, `/collections`)
 8. [ ] Style dropdown menu consistently
 
 **Tests**:
@@ -114,7 +115,7 @@ Polish the user interface with improved navigation, responsive design refinement
 5. [ ] Test registered user does NOT see Login/Register in dropdown
 6. [ ] Test dropdown opens/closes correctly
 7. [ ] Test mobile behavior matches desktop logic
-8. [ ] Test /tags and /collections links removed
+8. [ ] Test unimplemented route links are removed or replaced with valid routes
 
 **Acceptance Criteria**:
 - [ ] Three-tier authentication UI working correctly
@@ -133,7 +134,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - Remove "Not Logged In ▾" text (confusing for auto-accounts)
 - Dropdown position: `absolute right-0 top-full`
 - Use Alpine.js `x-data` for toggle state
-- Remove /tags and /collections links from Browse dropdown and mobile menu
+- Remove or remap unimplemented links from desktop and mobile menus (`/uploads`, `/search`, `/tags`, `/collections`)
 
 ---
 

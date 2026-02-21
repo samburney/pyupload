@@ -21,14 +21,11 @@ Tests verify:
 import pytest
 from io import BytesIO
 from unittest.mock import AsyncMock, patch
+from fastapi.responses import HTMLResponse
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadResult, UploadMetadata
 from app.lib.auth import create_access_token
-from app.lib.file_serving import NotAuthorisedError
-from app.lib.error_handling import ImageProcessingError
-
-
 class TestUploadGetEndpoint:
     """Test GET /upload endpoint for upload form page."""
 
@@ -736,7 +733,7 @@ class TestUploadGetErrorHandling:
         )
 
         async def mock_serve_file(*args, **kwargs):
-            raise NotAuthorisedError("Access denied")
+            return HTMLResponse(status_code=403)
 
         monkeypatch.setattr("app.ui.uploads.serve_file", mock_serve_file)
 
@@ -777,7 +774,7 @@ class TestUploadGetErrorHandling:
         )
 
         async def mock_serve_file(*args, **kwargs):
-            raise ImageProcessingError("No image metadata found for this file")
+            return HTMLResponse(status_code=422, headers={"content-type": "image/jpeg"})
 
         monkeypatch.setattr("app.ui.uploads.serve_file", mock_serve_file)
 
@@ -811,7 +808,7 @@ class TestUploadGetErrorHandling:
         )
 
         async def mock_serve_file(*args, **kwargs):
-            raise ImageProcessingError("No image metadata found for this file")
+            return HTMLResponse(status_code=422)
 
         monkeypatch.setattr("app.ui.uploads.serve_file", mock_serve_file)
 

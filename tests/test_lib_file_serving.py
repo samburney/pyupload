@@ -3,14 +3,16 @@
 import pytest
 from pathlib import Path
 from fastapi.responses import FileResponse
+from unittest.mock import AsyncMock, patch
 
 from app.lib.file_serving import (
     is_inline_mimetype,
     serve_file,
-    NotAuthorisedError,
     ALLOWED_INLINE_MIMETYPES,
 )
+from app.lib.error_handling import ImageProcessingError
 from app.lib.config import get_app_config
+from app.models.images import Image
 from app.models.users import User
 from app.models.uploads import Upload
 
@@ -139,8 +141,8 @@ class TestServeFile:
         assert isinstance(response, FileResponse)
 
     @pytest.mark.asyncio
-    async def test_serve_private_file_to_anonymous_raises_error(self, db):
-        """Test that serving a private file to anonymous user raises NotAuthorisedError."""
+    async def test_serve_private_file_to_anonymous_returns_403(self, db):
+        """Test that serving a private file to anonymous user returns 403."""
         user = await User.create(
             username="privateowner2",
             email="private2@example.com",
@@ -162,12 +164,12 @@ class TestServeFile:
         )
 
         # Attempt to serve private file to anonymous user
-        with pytest.raises(NotAuthorisedError):
-            await serve_file(upload, filename=None, user=None, download=False)
+        response = await serve_file(upload, filename=None, user=None, download=False)
+        assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_serve_private_file_to_different_user_raises_error(self, db):
-        """Test that serving a private file to a different user raises NotAuthorisedError."""
+    async def test_serve_private_file_to_different_user_returns_403(self, db):
+        """Test that serving a private file to a different user returns 403."""
         owner = await User.create(
             username="owner",
             email="owner@example.com",
@@ -196,12 +198,12 @@ class TestServeFile:
         )
 
         # Attempt to serve private file to different user
-        with pytest.raises(NotAuthorisedError):
-            await serve_file(upload, filename=None, user=other_user, download=False)
+        response = await serve_file(upload, filename=None, user=other_user, download=False)
+        assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_serve_nonexistent_file_raises_error(self, db):
-        """Test that serving a non-existent file raises FileNotFoundError."""
+    async def test_serve_nonexistent_file_returns_404(self, db):
+        """Test that serving a non-existent file returns 404."""
         user = await User.create(
             username="nofileuser",
             email="nofile@example.com",
@@ -223,8 +225,52 @@ class TestServeFile:
         )
 
         # File doesn't exist on disk
-        with pytest.raises(FileNotFoundError):
-            await serve_file(upload, filename=None, user=None, download=False)
+        response = await serve_file(upload, filename=None, user=None, download=False)
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_serve_file_image_processing_failure_returns_422(self, db, tmp_path, monkeypatch):
+        """Test that image processing failures are mapped to 422 responses."""
+        config = get_app_config()
+        monkeypatch.setattr(config, "storage_path", tmp_path)
+
+        user = await User.create(
+            username="imgprocerror",
+            email="imgprocerror@example.com",
+            password="password",
+            fingerprint_hash="fp-hash-imgproc",
+        )
+
+        test_file = tmp_path / f"user_{user.id}" / "image.jpg"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"fake image bytes")
+
+        upload = await Upload.create(
+            user=user,
+            description="Image processing failure",
+            name="image",
+            cleanname="image",
+            originalname="image.jpg",
+            ext="jpg",
+            size=16,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+
+        await Image.create(
+            upload=upload,
+            type="image/jpeg",
+            width=640,
+            height=480,
+            bits=8,
+            channels=3,
+        )
+
+        with patch("app.lib.file_serving.get_processed_image_path", new=AsyncMock(side_effect=ImageProcessingError("Processing failed"))):
+            response = await serve_file(upload, filename="image-320x0.jpg", user=None, download=False)
+
+        assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_view_counter_increments_for_non_owner(self, db, tmp_path, monkeypatch):
