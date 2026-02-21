@@ -1,7 +1,8 @@
 from math import ceil
 from pydantic import BaseModel 
 from typing import TYPE_CHECKING, Any
-from tortoise.queryset import Q, QuerySet
+from tortoise.queryset import QuerySet
+from tortoise.expressions import Q
 
 from app.models.common.base import _ModelBase
 
