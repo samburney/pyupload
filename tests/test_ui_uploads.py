@@ -26,6 +26,7 @@ from app.models.users import User
 from app.models.uploads import Upload, UploadResult, UploadMetadata
 from app.lib.auth import create_access_token
 from app.lib.file_serving import NotAuthorisedError
+from app.lib.error_handling import ImageProcessingError
 
 
 class TestUploadGetEndpoint:
@@ -751,3 +752,71 @@ class TestUploadGetErrorHandling:
 
         assert response.status_code == 404
         assert response.headers.get("content-type") == "image/jpeg"
+
+    @pytest.mark.asyncio
+    async def test_get_image_processing_error_for_image_request_returns_error_image(self, client, monkeypatch):
+        """ImageProcessingError for image requests should return an image response, not 500."""
+        user = await User.create(
+            username="imageprocessingimageuser",
+            email="imageprocessingimage@example.com",
+            password="password",
+            fingerprint_hash="fp-image-processing-image",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Image processing error image request",
+            name="image_processing_error",
+            cleanname="image-processing-error",
+            originalname="image_processing_error.jpg",
+            ext="jpg",
+            size=10,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+
+        async def mock_serve_file(*args, **kwargs):
+            raise ImageProcessingError("No image metadata found for this file")
+
+        monkeypatch.setattr("app.ui.uploads.serve_file", mock_serve_file)
+
+        response = await client.get(f"/get/{upload.id}/image_processing_error-320x0.jpg")
+
+        assert response.status_code == 422
+        assert response.status_code != 500
+        assert response.headers.get("content-type") == "image/jpeg"
+
+    @pytest.mark.asyncio
+    async def test_get_image_processing_error_for_non_image_request_returns_html_fallback(self, client, monkeypatch):
+        """ImageProcessingError for non-image requests should return HTML fallback, not 500."""
+        user = await User.create(
+            username="imageprocessingtextuser",
+            email="imageprocessingtext@example.com",
+            password="password",
+            fingerprint_hash="fp-image-processing-text",
+        )
+
+        upload = await Upload.create(
+            user=user,
+            description="Image processing error non-image request",
+            name="image_processing_error_text",
+            cleanname="image-processing-error-text",
+            originalname="image_processing_error_text.txt",
+            ext="txt",
+            size=10,
+            type="text/plain",
+            extra="",
+            private=0,
+        )
+
+        async def mock_serve_file(*args, **kwargs):
+            raise ImageProcessingError("No image metadata found for this file")
+
+        monkeypatch.setattr("app.ui.uploads.serve_file", mock_serve_file)
+
+        response = await client.get(f"/get/{upload.id}/image_processing_error_text.txt")
+
+        assert response.status_code == 422
+        assert response.status_code != 500
+        assert "image/" not in response.headers.get("content-type", "")

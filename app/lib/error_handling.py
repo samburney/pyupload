@@ -18,6 +18,10 @@ class UserFileTypeNotAllowed(Exception):
     """Exception raised when a user uploads a disallowed file type."""
     pass
 
+class NotAuthorisedError(Exception):
+    """Raised when a user is not authorised to access a file."""
+    pass
+
 # Image processing exceptions
 class ImageInvalidError(Exception):
     """Exception raised when an uploaded file is not a valid image."""

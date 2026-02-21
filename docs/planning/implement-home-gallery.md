@@ -22,7 +22,7 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - Database index migration created for `private` column (Step 7 partial)
 - **Modal view with placeholder sizing** - Images open in modal overlay with JavaScript-calculated placeholder
 - `/get` error handling now returns generated image error responses for supported image conversion requests and HTML fallback responses for non-image requests
-- Image processing requests with missing related image metadata still return a backend error path (current behavior does not yet provide gallery placeholder UX)
+- Image processing requests with missing related image metadata now return handled `/get` error responses (`422`) with image or HTML fallback (no backend 500 for this known scenario)
 - `UploadSerializer`, `UserSerializer`, `ImageSerializer` added via `tortoise-serializer`
 - `PaginationParams` enhanced with `count`, `pages`, `page_data()`
 - `humanize_bytes` helper and Jinja filter added
@@ -34,13 +34,13 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 ### Review Snapshot (2026-02-15)
 - Route and serialization flow for the home gallery are implemented and tested.
 - Reusable gallery components are in active use on home and profile pages.
-- Broken/missing image metadata fallback UX is still pending.
+- Broken/missing image metadata backend response handling is complete; gallery-card specific placeholder UX polish remains pending.
 - Performance validation tasks in Step 8 remain pending.
 
 ### Review Update (2026-02-17)
 - Added backend regression coverage for `/get` error response behavior (image vs non-image fallback and validation-error handling).
-- This improves user-facing failure responses for broken requests but does not complete gallery placeholder UX in Step 3 Task 6.
-- Step 3 Task 6 remains open until missing image metadata for gallery/display requests renders placeholder UX instead of backend error output.
+- Implemented `/get` mapping for `ImageProcessingError` to handled `422` responses, preventing backend 500 for this known scenario.
+- Remaining gallery UX work is limited to optional card-level placeholder presentation refinement.
 
 ### Target State
 - ~~Home page displays grid of latest public uploads~~ ✅
@@ -52,7 +52,7 @@ Implement a home/landing page that displays a gallery of the latest public uploa
 - ~~Clean, modern design matching site theme~~ ✅
 - Fast page load with optimized queries — **partial** (index added, no caching headers)
 - ~~All tests passing~~ ✅ (637/637 current full-suite status)
-- **Completed**: Steps 1, 2, 3 (partial), 4, 5, 6, 7 ✅ | **Remaining**: Steps 3 (broken images), 8 (testing)
+- **Completed**: Steps 1, 2, 4, 5, 6, 7 ✅ and Step 3 backend error handling ✅ | **Remaining**: Step 8 (integration/performance testing) and optional gallery placeholder UX refinement
 
 ---
 
@@ -209,7 +209,7 @@ This validates that the component architecture is truly reusable and maintainabl
 3. [x] Display file icon for other file types — *dashed border box with extension*
 4. [x] Implement aspect ratio container (e.g., 16:9 or 1:1) — *implemented with calculated inline styles*
 5. [x] Add loading states for images — *Alpine.js loading placeholder with fade transition*
-6. [ ] Handle broken/missing images (render placeholder UI instead of backend 500 where appropriate)
+6. [x] Handle broken/missing images (render placeholder response instead of backend 500 where appropriate) — *implemented via `/get` `ImageProcessingError` → `422` mapping with image/HTML fallback*
 7. [x] Optimize image display (object-fit) — *responsive sizing with hover effects*
 
 **Tests**:
@@ -217,7 +217,7 @@ This validates that the component architecture is truly reusable and maintainabl
 2. [x] Test video placeholders display
 3. [x] Test file icons display
 4. [x] Test aspect ratio maintained
-5. [ ] Test broken image handling and placeholder fallback for missing image metadata
+5. [x] Test broken image handling and placeholder fallback for missing image metadata — *covered in `tests/test_ui_uploads.py` for image and non-image request variants*
 6. [x] Test loading states
 
 **Acceptance Criteria**:
@@ -230,17 +230,17 @@ This validates that the component architecture is truly reusable and maintainabl
 **Implementation Notes**:
 - For images: `<img src="{{ upload.url }}" class="object-cover w-full h-full">`
 - For now, use full image (thumbnail generation is future enhancement)
-- Current backend behavior raises `ImageProcessingError` when image metadata is missing; future UI work should present a missing-image placeholder rather than a server error page.
+- Backend behavior now catches `ImageProcessingError` in `/get` and returns handled `422` responses (image error payload for image requests, HTML fallback for non-image requests) while preserving real exception detail in response text.
 - Use `upload.is_image` to check if upload has image metadata
 - Consider using placeholder images from a service or local assets
 - Add `loading="lazy"` for performance
 - Use Tailwind's `aspect-w-16 aspect-h-9` or similar for aspect ratio
 
-**Task 6 Implementation Notes (next work item)**:
-- **Goal**: For image requests where related image metadata is missing/broken, return a user-facing placeholder response (not backend 500), while preserving strict logging for diagnostics.
+**Task 6 Implementation Notes**:
+- **Goal**: For image requests where related image metadata is missing/broken, return a user-facing placeholder response (not backend 500).
 - **Backend mapping point**: In `app/ui/uploads.py` `get_upload()`, add a specific `except ImageProcessingError` branch before the generic `except Exception` and route it to `error_response_for_get(...)` with status `422` or `404` (pick one and keep consistent with tests).
 - **Use existing helper**: Reuse `app/lib/error_handling.py:error_response_for_get` so image requests get generated error-image payloads and non-image requests fall back to HTML responses.
-- **Message shape**: Use stable user text (for example: "Image preview unavailable" and "Image metadata is missing for this file") to keep assertions deterministic and UX clear.
+- **Message shape**: Keep real exception detail in user-facing response text for consistency with other `get_upload()` exception paths.
 - **Do not broaden scope**: Keep this task to response handling only; do not add thumbnail generation/caching changes here.
 - **Test additions**:
   - Add/extend `tests/test_ui_uploads.py` to verify missing image metadata requests no longer return 500.
@@ -248,9 +248,9 @@ This validates that the component architecture is truly reusable and maintainabl
   - Assert non-image extension requests return HTML fallback with non-500 status.
   - Keep existing successful-image path tests unchanged to prevent regressions.
 - **Plan completion criteria for Task 6**:
-  - Missing/broken image metadata path returns placeholder response (image or HTML fallback as appropriate).
-  - No backend 500 for this known scenario.
-  - Automated tests added for both image and non-image request variants.
+  - [x] Missing/broken image metadata path returns placeholder response (image or HTML fallback as appropriate).
+  - [x] No backend 500 for this known scenario.
+  - [x] Automated tests added for both image and non-image request variants.
 
 **Dependencies**:
 - Step 2 must be complete

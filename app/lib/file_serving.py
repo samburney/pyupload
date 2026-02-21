@@ -2,6 +2,7 @@
 from fastapi.responses import FileResponse
 
 from app.lib.helpers import sanitise_filename
+from app.lib.error_handling import NotAuthorisedError
 from app.lib.image_processing import get_processed_image_path
 
 from app.models.images import IMAGE_FORMATS
@@ -16,11 +17,6 @@ ALLOWED_INLINE_MIMETYPES = [
     "application/pdf",
     "text/plain",
 ]
-
-
-class NotAuthorisedError(Exception):
-    """Raised when a user is not authorised to access a file."""
-    pass
 
 
 def is_inline_mimetype(mimetype: str) -> bool:

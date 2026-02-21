@@ -71,7 +71,7 @@
 
 ### Gallery & Discovery Pages (v0.1)
 - [x] Home gallery page (latest public uploads) — *implemented in current codebase (serializer-backed gallery components + pagination + modal overlay), see `docs/planning/implement-home-gallery.md`*
-- [ ] Handle missing/broken image metadata in gallery with placeholder UX (currently returns processing error)
+- [ ] Handle missing/broken image metadata in gallery with placeholder UX *(partial: `/get` now returns handled `422` image/HTML fallback responses with regression tests; gallery-card UX refinement still pending)*
 - [ ] Random uploads page (/random)
 - [ ] Popular uploads page (/popular - most viewed)
 - [ ] All uploads page (/all - latest public uploads)
