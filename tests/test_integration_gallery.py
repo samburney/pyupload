@@ -11,8 +11,9 @@ class TestGalleryIntegrationWorkflows:
     """Integration coverage for browse/view and pagination workflows."""
 
     @pytest.mark.anyio
-    async def test_browse_gallery_to_view_upload_workflow(self, client):
+    async def test_browse_gallery_to_view_upload_workflow(self, client, monkeypatch):
         """Step 8 workflow: browse gallery then open an upload view page."""
+        monkeypatch.setattr("app.ui.uploads.validate_file_request", lambda upload, user=None: True)
         owner = await User.create(
             password="hashed_password",
             username="integration_gallery_owner",
@@ -137,8 +138,9 @@ class TestGalleryIntegrationWorkflows:
         assert page_5_response.text.count("break-inside-avoid-column") == 24
 
     @pytest.mark.anyio
-    async def test_responsive_breakpoint_class_coverage_for_grid_and_modal(self, client):
+    async def test_responsive_breakpoint_class_coverage_for_grid_and_modal(self, client, monkeypatch):
         """Step 8: verify responsive breakpoint classes exist for gallery and modal views."""
+        monkeypatch.setattr("app.ui.uploads.validate_file_request", lambda upload, user=None: True)
         owner = await User.create(
             password="hashed_password",
             username="integration_responsive_owner",
@@ -184,8 +186,9 @@ class TestGalleryIntegrationWorkflows:
         assert "aria-label=\"Close upload preview\"" in modal_response.text
 
     @pytest.mark.anyio
-    async def test_gallery_links_and_modal_have_accessible_labels(self, client):
+    async def test_gallery_links_and_modal_have_accessible_labels(self, client, monkeypatch):
         """Step 8 accessibility: verify card and modal controls expose readable labels."""
+        monkeypatch.setattr("app.ui.uploads.validate_file_request", lambda upload, user=None: True)
         owner = await User.create(
             password="hashed_password",
             username="integration_accessible_labels_owner",

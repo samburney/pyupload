@@ -1,10 +1,12 @@
 
 from fastapi.responses import Response, FileResponse
 
-from app.lib.helpers import sanitise_filename
-from app.lib.error_handling import error_response_for_get, NotAuthorisedError, ImageProcessingError
-from app.lib.image_processing import get_processed_image_path
 from app.lib.config import logger
+from app.lib.helpers import sanitise_filename
+from app.lib.error_handling import NotAuthorisedError, ImageProcessingError
+from app.lib.image_processing import get_processed_image_path
+
+from app.ui.common.errors import error_response_for_get
 
 from app.models.images import IMAGE_FORMATS
 from app.models.uploads import Upload

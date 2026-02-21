@@ -8,7 +8,7 @@ from app.models.common.pagination import PaginationParams
 from app.models.users import User
 from app.models.uploads import Upload, UploadSerializer
 
-from app.ui.common import templates
+from app.ui.common.templating import templates
 from app.ui.common.security import flash_message
 from app.ui.common.security import get_current_authenticated_user
 

@@ -6,7 +6,8 @@ from tortoise.expressions import Q
 
 from app.lib.config import get_app_config
 from app.lib.auth import get_current_user_from_request
-from app.ui.common import templates
+
+from app.ui.common.templating import templates
 
 from app.models.common.pagination import PaginationParams
 from app.models.uploads import Upload, UploadSerializer

@@ -5,9 +5,9 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from app.lib.error_handling import (
     ImageProcessingError,
     supports_error_image,
-    error_response_for_get,
     get_error_image_response,
 )
+from app.ui.common.errors import error_response_for_get
 
 
 class TestSupportsErrorImage:

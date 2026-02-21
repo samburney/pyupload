@@ -106,7 +106,11 @@
             </div>
             <div class="mt-2">
                 <dd class="text-md overflow-hidden overflow-ellipsis whitespace-nowrap"
-                    title="{{ display_title }}">{{ display_title }}</dd>
+                    title="{{ display_title }}">
+                        <a href="{{ upload.view_url }}" class="text-gray-900 hover:underline">
+                            {{ display_title }}
+                        </a>
+                </dd>
             </div>
         </dl>
     </div>

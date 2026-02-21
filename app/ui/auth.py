@@ -21,7 +21,8 @@ from app.models.users import (
     authenticate_user,
 )
 
-from app.ui.common import templates, error_response
+from app.ui.common.templating import templates
+from app.ui.common.errors import error_template_response
 from app.ui.common.session import flash_message
 
 
@@ -47,7 +48,7 @@ async def login_for_access_token(
     )
     if not user:
         error_messages = ["Invalid username or password"]
-        return error_response(request, error_messages, status_code=401)
+        return error_template_response(request, error_messages, status_code=401)
 
     # Set response status and cookies
     response = Response(status_code=200)

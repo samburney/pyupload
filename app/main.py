@@ -21,7 +21,8 @@ from app.lib.error_handling import get_error_image_response
 from app.middleware.token_refresh import TokenRefreshMiddleware
 from app.middleware.fingerprint_auto_login import FingerprintAutoLoginMiddleware
 
-from app.ui.common import templates
+from app.ui.common.templating import templates
+from app.ui.common.errors import error_template_response
 from app.ui.common.security import LoginRequiredException
 
 from app import api
@@ -138,7 +139,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     for error in exc.errors():
         error_messages.append(f"{error['type'].capitalize()}: {error['msg']} - {error['loc'][-1]}")
 
-    return ui.common.error_response(request, error_messages, status_code=422)
+    return error_template_response(request, error_messages, status_code=422)
 
 
 @app.exception_handler(LoginRequiredException)

@@ -3,9 +3,8 @@ import textwrap
 from typing import IO
 from tempfile import SpooledTemporaryFile
 from PIL import Image as Pillow, ImageDraw, ImageText, ImageFont
-from fastapi.responses import Response, StreamingResponse, HTMLResponse
+from fastapi.responses import Response, StreamingResponse
 
-from app.lib.config import logger
 from app.lib.helpers import IMAGE_CONVERSION_DST_FORMATS, split_filename
 
 
@@ -36,30 +35,6 @@ def supports_error_image(filename: str) -> bool:
     """Return True when error responses can be rendered as an image for this filename."""
     ext = split_filename(filename)[1].lower()
     return bool(ext and f".{ext}" in IMAGE_CONVERSION_DST_FORMATS)
-
-
-def error_response_for_get(
-    *,
-    filename: str,
-    error_title: str,
-    error_message: str,
-    status_code: int,
-) -> Response:
-    """Return image error responses only for supported image conversion formats."""
-    if supports_error_image(filename):
-        try:
-            return get_error_image_response(
-                error_title=error_title,
-                error_message=error_message,
-                filename=filename,
-                status_code=status_code,
-            )
-        except ImageProcessingError:
-            logger.warning(
-                "Falling back to HTML error response for unsupported image format: %s",
-                filename,
-            )
-    return HTMLResponse(status_code=status_code)
 
 
 def generate_error_image(error_title: str, error_message: str, format: str = 'JPEG', width: int = 320, height: int = 320) -> IO[bytes]:

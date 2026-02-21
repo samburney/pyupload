@@ -8,8 +8,8 @@
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Individual upload detail/view page *(partial: `/view/{id}/{filename}` route and basic view template exist; metadata/share/edit/privacy/delete features are not yet implemented)*
-  - [ ] Display file metadata (size, dimensions, type, view count)
+- [ ] Individual upload detail/view page *(partial: full detail template with file preview, metadata panel, download dropdown, privacy enforcement, and SEO redirect implemented; sharing, inline editing, privacy toggle, delete, and view-page tests are not yet implemented)*
+  - [x] Display file metadata (size, dimensions, type, view count)
   - [ ] Social/direct link sharing options
   - [ ] Inline editing for title/description (owner only)
   - [ ] Privacy toggle (private/public) for owners
@@ -106,3 +106,4 @@
 - [ ] Make home gallery page size user-configurable.
 - [ ] Scheduler: delete files owned by abandoned users when marked private.
 - [ ] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`, `/tags`, `/collections`) until their pages are implemented.
+- [ ] Refactor `app/lib/file_serving.py` to raise typed exceptions instead of returning responses directly, eliminating its `app/lib → app/ui` import of `error_response_for_get`.

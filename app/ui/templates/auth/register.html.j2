@@ -5,7 +5,7 @@
 <form hx-post="/register"
       hx-preserve="true",
       hx-target="body"
-      hx-target-400="#messages">
+      hx-target-4*="#messages">
     <div>
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" value="{{ current_user.username if current_user else '' }}" required>

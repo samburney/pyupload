@@ -17,17 +17,17 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Access control: private uploads only viewable by owner
 
 ### Current State
-- Basic individual upload view page exists at `/view/{id}/{filename}`
+- `/view/{id}/{filename}` route renders a full upload detail page with sidebar metadata panel and file preview
+- File preview branches on `upload.is_image`: images display inline in a styled card; non-images show a file-type icon/link
+- Sidebar metadata panel shows: description/title (`display_title`), username (with public/private icon), MIME type, file size, view count, upload date, and image dimensions (image uploads only)
+- Download button for images is a dropdown allowing download of original, JPG, GIF, or PNG conversions; non-images get a plain download button
 - Modal view variant exists via `?modal=true`
-- No `/view/{id}` redirect route exists yet
-- Upload model has all necessary metadata fields
-- Image model has dimension data for images
-- Upload model has `url` property for file serving
-- Image processing now enforces metadata integrity and raises error if related image metadata is missing
-- Current `/view/{id}/{filename}` handler fetches upload + related data but does not enforce owner-only access for private uploads
+- `/view/{id}` redirects to `/view/{id}/{cleanname}` with 301 (404 if upload not found); private files return 403 on this route (no user context, prevents information disclosure)
+- Privacy enforced on `/view/{id}/{filename}`: `validate_file_request` returns 403 for non-owner access to private uploads
 - No UI for editing upload metadata
 - No UI for privacy controls
 - No delete functionality implemented
+- No tests for the view page exist
 - Profile page shows list of user's uploads
 
 ### Review Snapshot (2026-02-15)
@@ -35,6 +35,16 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Private upload access enforcement for view pages is still missing.
 - SEO redirect route (`/view/{id}`) is still missing.
 - Metadata/share/edit/privacy/delete workflows and tests remain pending.
+
+### Review Snapshot (2026-02-21)
+- File preview implemented inline in `view.html.j2` (image vs non-image branching; Steps 2 tasks 2, 5, 7 complete).
+- Full metadata panel implemented inline in `view.html.j2` with all fields and responsive styling (Step 3 tasks 2–9 complete).
+- Download dropdown (with format conversion) implemented for images; plain download button for non-images.
+- No separate preview or metadata component files were created; all implemented inline — this meets the intended function.
+- `display_title` variable (`upload.description or upload.originalname`) correctly set at template top.
+- SEO redirect (`/view/{id}` → 301 → `/view/{id}/{cleanname}`) implemented.
+- Privacy enforcement implemented via `validate_file_request` on both `/view/{id}` and `/view/{id}/{filename}` routes (Step 1 task 6 complete).
+- Sharing, inline editing, privacy toggle, delete, and all view-page tests remain pending.
 
 ### Target State
 - `/view/{id}/{filename}` endpoint renders upload detail page
@@ -57,15 +67,15 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/templates/uploads/view.html.j2` (new)
 
 **Tasks**:
-1. [ ] Create GET `/view/{id}` route (redirects to add filename)
+1. [x] Create GET `/view/{id}` route (redirects to add filename)
 2. [x] Create GET `/view/{id}/{filename}` route (main view page)
 3. [x] Fetch upload from database with related data (images, user)
 4. [x] Validate upload exists (404 if not)
 5. [x] Get current user for permission checks
-6. [ ] Enforce privacy: private uploads only accessible to owner (403 if not)
+6. [x] Enforce privacy: private uploads only accessible to owner (403 if not)
 7. [x] Create base template with layout
 8. [x] Pass upload data and permissions to template
-9. [ ] Redirect `/view/{id}` to `/view/{id}/{cleanname}` with 301
+9. [x] Redirect `/view/{id}` to `/view/{id}/{cleanname}` with 301
 
 **Tests**:
 1. [ ] Test view page renders for existing public upload
@@ -80,9 +90,9 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Acceptance Criteria**:
 - [x] View page route functional
-- [ ] Privacy enforced (private uploads owner-only)
-- [ ] SEO-friendly URLs with filename
-- [ ] Proper error handling (404, 403)
+- [x] Privacy enforced (private uploads owner-only)
+- [x] SEO-friendly URLs with filename
+- [x] Proper error handling (404, 403)
 - [ ] All tests passing
 
 **Implementation Notes**:
@@ -102,12 +112,12 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Tasks**:
 1. [ ] Create file preview component
-2. [ ] Display images inline with `<img>` tag
-3. [ ] Display videos with `<video>` player
-4. [ ] Display audio with `<audio>` player
-5. [ ] Display file icon for other types
+2. [x] Display images inline with `<img>` tag
+~~3. [ ] Display videos with `<video>` player~~: Out of scope for this release.
+~~4. [ ] Display audio with `<audio>` player~~: Out of scope for this release.
+5. [x] Display file icon for other types
 6. [ ] Add loading states and error handling (including missing image metadata placeholder)
-7. [ ] Make preview responsive
+7. [x] Make preview responsive
 
 **Tests**:
 1. [ ] Test image preview renders correctly
@@ -118,12 +128,17 @@ Implement individual upload detail/view pages that display file metadata, provid
 6. [ ] Test broken image handling and missing image metadata placeholder behavior
 
 **Acceptance Criteria**:
-- [ ] Images display inline
-- [ ] Videos playable in browser
-- [ ] Audio playable in browser
-- [ ] Other files show appropriate icon
+- [x] Images display inline
+~~- [ ] Videos playable in browser~~: Out of scope for this release
+~~- [ ] Audio playable in browser~~: Out of scope for this release
+- [x] Other files show appropriate icon
 - [ ] Responsive and accessible
 - [ ] All tests passing
+
+**Implementation Notes (2026-02-21)**:
+- Tasks 2, 5, 7 implemented inline in `view.html.j2` rather than in a separate component file. The `{% if upload.is_image %}` branch renders an `<img>` tag inside a styled card; the `{% else %}` branch renders a file-type icon link using `upload.dot_ext`. The `<article>` uses `w-full md:w-3/4` for responsive sizing.
+- No separate `file-preview.html.j2` component was created; this deviates from the plan but meets the intended function.
+- Video/audio players and loading state placeholders remain to be implemented.
 
 **Implementation Notes**:
 - Use `upload.url` for file source
@@ -147,14 +162,14 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Tasks**:
 1. [ ] Create metadata panel component
-2. [ ] Display file size (formatted, e.g., "2.5 MB")
-3. [ ] Display dimensions for images (width x height)
-4. [ ] Display MIME type
-5. [ ] Display view count
-6. [ ] Display upload date (formatted)
-7. [ ] Display uploader username
-8. [ ] Display title and description
-9. [ ] Style metadata panel
+2. [x] Display file size (formatted, e.g., "2.5 MB")
+3. [x] Display dimensions for images (width x height)
+4. [x] Display MIME type
+5. [x] Display view count
+6. [x] Display upload date (formatted)
+7. [x] Display uploader username
+8. [x] Display title and description
+9. [x] Style metadata panel
 
 **Tests**:
 1. [ ] Test all metadata fields display
@@ -165,10 +180,15 @@ Implement individual upload detail/view pages that display file metadata, provid
 6. [ ] Test missing metadata handled gracefully
 
 **Acceptance Criteria**:
-- [ ] All metadata visible and formatted
-- [ ] Clean, readable layout
-- [ ] Responsive design
+- [x] All metadata visible and formatted
+- [x] Clean, readable layout
+- [x] Responsive design
 - [ ] All tests passing
+
+**Implementation Notes (2026-02-21)**:
+- Tasks 2–9 implemented inline in `view.html.j2` sidebar panel rather than in a separate component file. All fields are present: description/title (`display_title`), username with public/private icons, MIME type, file size (`humanize_bytes` filter), view count, upload date (`ago` filter), and image dimensions guarded by `{% if upload.is_image %}`.
+- No separate `metadata-panel.html.j2` component was created; this deviates from the plan but meets the intended function.
+- Tests remain to be written.
 
 **Implementation Notes**:
 - Use `app/lib/helpers.py` for formatting functions (create if needed)

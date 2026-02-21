@@ -16,6 +16,12 @@
   a {
     @apply text-blue-500 hover:text-blue-300;
   }
+  a.button {
+    @apply text-white;
+  }
+  a.dropdown-button {
+    @apply text-white;
+  }
 }
 
 @layer components {
@@ -45,18 +51,47 @@
         @apply bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-50;
     }
 
+    /* Dropdown buttons */
+    .dropdown {
+        @apply relative inline-flex;
+    }
+
+    .dropdown .button {
+        @apply inline-flex divide-x divide-blue-300 overflow-hidden px-0 py-0 hover:bg-blue-500 hover:border-blue-500;
+    }
+
+    .dropdown .button-ok {
+        @apply divide-green-300 hover:bg-green-500 hover:border-green-500;
+    }
+
+    .dropdown .button .dropdown-button {
+        @apply px-4 py-2 hover:bg-blue-300 hover:border-blue-300;
+    }
+
+    .dropdown .button-ok .dropdown-button {
+        @apply hover:bg-green-300 hover:border-green-300;
+    }
+
+    .dropdown .menu {
+        @apply absolute divide-y divide-gray-200 end-0 top-12 z-50 w-auto overflow-hidden rounded border border-gray-300 bg-white shadow-sm;
+    }
+
+    .dropdown .menu li {
+        @apply block px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900;
+    }
+
     /* Messages */
     .message {
-      @apply my-2 p-2 border border-blue-500 bg-blue-100 rounded items-center;
+        @apply my-2 p-2 border border-blue-500 bg-blue-100 rounded items-center;
     }
     .message-ok {
-      @apply border-green-500 bg-green-100;
+        @apply border-green-500 bg-green-100;
     }
     .message-warning {
-      @apply border-yellow-500 bg-yellow-100;
+        @apply border-yellow-500 bg-yellow-100;
     }
     .message-alert {
-      @apply border-red-500 bg-red-100;
+        @apply border-red-500 bg-red-100;
     }
 
     /* Pagination */
@@ -85,6 +120,6 @@
     }
 
     .pagination .next-previous-page {
-      @apply grid size-8 place-content-center;
+        @apply grid size-8 place-content-center;
     }
 }

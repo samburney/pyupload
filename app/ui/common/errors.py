@@ -1,0 +1,47 @@
+from fastapi import Request, Response
+from fastapi.responses import HTMLResponse
+
+from app.lib.config import logger
+from app.lib.error_handling import supports_error_image, get_error_image_response, ImageProcessingError
+
+from app.ui.common.templating import templates
+
+
+def error_template_response(request, error_messages, status_code=400):
+    """Render an error response with given messages and status code."""
+    return templates.TemplateResponse(
+        request=request,
+        name="layout/error.html.j2",
+        context={"error_messages": error_messages},
+        status_code=status_code,
+    )
+
+
+def error_response_for_get(
+    *,
+    filename: str | None,
+    error_title: str,
+    error_message: str,
+    status_code: int,
+    as_html: bool = False,
+    request: Request | None = None,
+) -> Response:
+    """Return image error responses only for supported image conversion formats."""
+    if not as_html and filename and supports_error_image(filename):
+        try:
+            return get_error_image_response(
+                error_title=error_title,
+                error_message=error_message,
+                filename=filename,
+                status_code=status_code,
+            )
+        except ImageProcessingError:
+            logger.warning(
+                "Falling back to HTML error response for unsupported image format: %s",
+                filename,
+            )
+
+    if request is not None:
+        return error_template_response(request, [error_message], status_code=status_code)
+
+    return HTMLResponse(status_code=status_code)
