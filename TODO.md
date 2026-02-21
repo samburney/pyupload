@@ -65,6 +65,9 @@
 - [ ] Parallel batch processing
 - [ ] Loading states and transitions for all HTMX interactions
 
+### Upload view enhancements
+- [ ] Provide 'preview'-like viewing of text and markdown files from gallery views
+
 ---
 
 ## Future Enhancements
