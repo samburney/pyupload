@@ -1,9 +1,10 @@
 
-from fastapi.responses import FileResponse
+from fastapi.responses import Response, FileResponse
 
 from app.lib.helpers import sanitise_filename
-from app.lib.error_handling import NotAuthorisedError
+from app.lib.error_handling import error_response_for_get, NotAuthorisedError, ImageProcessingError
 from app.lib.image_processing import get_processed_image_path
+from app.lib.config import logger
 
 from app.models.images import IMAGE_FORMATS
 from app.models.uploads import Upload
@@ -51,7 +52,7 @@ def validate_file_request(upload: Upload, user: User | None = None) -> bool:
     return True
 
 
-async def serve_file(upload: Upload, filename: str | None = None, user: User | None = None, download: bool | None = False) -> FileResponse:
+async def serve_file(upload: Upload, filename: str | None = None, user: User | None = None, download: bool | None = False) -> Response:
     """
     Serve a file with proper access control and view counter increment.
     """
@@ -62,11 +63,8 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
     file_path = upload.filepath
     media_type = upload.type
 
+    # Get related database records
     await upload.fetch_related("images")
-
-    # Validate the file request
-    # TODO: Return appropriate HTTP responses instead of raising exceptions
-    validate_file_request(upload, user)
 
     # Get sanitised filename
     santised_filename = sanitise_filename(filename) if filename is not None else None
@@ -75,13 +73,54 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
     else:
         filename = upload.filename
 
-    # Handle image processing if requested based on filename
-    if upload.is_image and media_type in IMAGE_FORMATS.values():
-        processed_file_path = await get_processed_image_path(upload, filename)
+    # Validate the file request
+    try:
+        validate_file_request(upload, user)
+    except NotAuthorisedError as e:
+        return error_response_for_get(
+            error_title="Error 403: Unauthorized",
+            error_message=f"An error occurred processing your request for {filename}: {e}",
+            filename=filename,
+            status_code=403,
+        )
+    except FileNotFoundError as e:
+        return error_response_for_get(
+            error_title="Error 404: File not found",
+            error_message=f"An error occurred processing your request for {filename}: {e}",
+            filename=filename,
+            status_code=404,
+        )
 
-        if processed_file_path is not None:
-            file_path = processed_file_path
-            media_type = IMAGE_FORMATS[file_path.suffix.lower()]
+    # Handle image processing if requested based on filename
+    try:
+        if upload.is_image and media_type in IMAGE_FORMATS.values():
+            processed_file_path = await get_processed_image_path(upload, filename)
+
+            if processed_file_path is not None:
+                file_path = processed_file_path
+                media_type = IMAGE_FORMATS[file_path.suffix.lower()]
+    except KeyError:
+        return error_response_for_get(
+            error_title="Error 422: Unprocessable Content",
+            error_message=f"An error occurred processing your request for {filename}: Unsupported output format.",
+            filename=filename,
+            status_code=422,
+        )
+    except ImageProcessingError as e:
+        return error_response_for_get(
+            error_title="Error 422: Unprocessable Content",
+            error_message=f"An error occurred processing your request for {filename}: {e}",
+            filename=filename,
+            status_code=422,
+        )
+    except Exception as e:
+        logger.error(f"Unexpected image processing error for {upload.id}/{filename}: {e}", exc_info=True)
+        return error_response_for_get(
+            error_title="Error 500: Internal Server Error",
+            error_message=f"An internal server error occurred processing your request for {filename}.",
+            filename=filename,
+            status_code=500,
+        )
 
     # Check if the file should be displayed inline
     if not download and is_inline_mimetype(media_type):
@@ -93,7 +132,24 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
         await upload.save()
 
     # Return file response
-    response = FileResponse(file_path, media_type=media_type)
+    try:
+        response = FileResponse(file_path, media_type=media_type)
+    except FileNotFoundError:
+        return error_response_for_get(
+            error_title="Error 404: File not found",
+            error_message=f"The requested file, {filename} could not be found on this server.",
+            filename=filename,
+            status_code=404,
+        )
+    except Exception as e:
+        logger.error(f"Unexpected file response error for {upload.id}/{filename}: {e}", exc_info=True)
+        return error_response_for_get(
+            error_title="Error 500: Internal Server Error",
+            error_message=f"An internal server error occurred processing your request for {filename}.",
+            filename=filename,
+            status_code=500,
+        )
+
     response.headers["Content-Disposition"] = f"attachment; filename={filename}" if is_download else f"inline; filename={filename}"
     response.headers["Cache-Control"] = f"{'private' if is_private else 'public'}, max-age=3600"
 

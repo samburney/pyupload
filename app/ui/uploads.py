@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, Depends, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.lib.config import get_app_config, logger
-from app.lib.error_handling import error_response_for_get, NotAuthorisedError, ImageProcessingError
+from app.lib.error_handling import error_response_for_get
 from app.lib.upload_handler import handle_uploaded_files
 from app.lib.file_serving import serve_file
 
@@ -109,27 +109,6 @@ async def get_upload(
             filename=filename,
             user=current_user,
             download=download
-        )
-    except NotAuthorisedError as e:
-        return error_response_for_get(
-            error_title="Error 403: Unauthorized",
-            error_message=f"An error occurred processing your request for {filename}: {e}",
-            filename=filename,
-            status_code=403,
-        )
-    except FileNotFoundError as e:
-        return error_response_for_get(
-            error_title="Error 404: File not found",
-            error_message=f"An error occurred processing your request for {filename}: {e}",
-            filename=filename,
-            status_code=404,
-        )
-    except ImageProcessingError as e:
-        return error_response_for_get(
-            error_title=f"Error 422: Unprocessable Content",
-            error_message=f"An error occurred processing your request for {filename}: {e}",
-            filename=filename,
-            status_code=422,
         )
     except Exception as e:
         logger.error(f"Unexpected error serving file {id}/{filename}: {e}", exc_info=True)
