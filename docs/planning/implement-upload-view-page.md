@@ -18,9 +18,11 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 ### Current State
 - `/view/{id}/{filename}` route renders a full upload detail page with sidebar metadata panel and file preview
-- File preview branches on `upload.is_image`: images display inline in a styled card; non-images show a file-type icon/link
-- Sidebar metadata panel shows: description/title (`display_title`), username (with public/private icon), MIME type, file size, view count, upload date, and image dimensions (image uploads only)
-- Download button for images is a dropdown allowing download of original, JPG, GIF, or PNG conversions; non-images get a plain download button
+- View page fully componentised: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-actions.html.j2`
+- File preview in `view-frame.html.j2`: images display inline with loading indicator overlay, server-side cache-busting (`?t={updated_at_timestamp}`), and `id="view-frame-image"` for HTMX targeting; non-images show a file-type icon/link
+- Sidebar metadata panel in `upload-details.html.j2` with all fields and responsive styling
+- Download button in `upload-download-button.html.j2`: dropdown for images (original, JPG, GIF, PNG conversions); plain button for non-images
+- Image rotation UI in `upload-actions.html.j2`: owner-only, HTMX-powered rotate dropdown (90° CW, 180°, 90° CCW) with loading indicator and Rotate button disabled during requests
 - Modal view variant exists via `?modal=true`
 - `/view/{id}` redirects to `/view/{id}/{cleanname}` with 301 (404 if upload not found); private files return 403 on this route (no user context, prevents information disclosure)
 - Privacy enforced on `/view/{id}/{filename}`: `validate_file_request` returns 403 for non-owner access to private uploads
@@ -44,6 +46,14 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `display_title` variable (`upload.description or upload.originalname`) correctly set at template top.
 - SEO redirect (`/view/{id}` → 301 → `/view/{id}/{cleanname}`) implemented.
 - Privacy enforcement implemented via `validate_file_request` on both `/view/{id}` and `/view/{id}/{filename}` routes (Step 1 task 6 complete).
+- Sharing, inline editing, privacy toggle, delete, and all view-page tests remain pending.
+
+### Review Snapshot (2026-02-22)
+- View page fully refactored into reusable components: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-actions.html.j2`. Steps 2 task 1 and Step 3 task 1 now complete.
+- `view-frame.html.j2` adds `id="view-frame-image"` on image for HTMX targeting, server-side cache-busting via `?t={updated_at_timestamp}`, and a loading indicator overlay (Steps 2 task 6 partial — loading state handled, broken image placeholder still pending).
+- `upload-actions.html.j2` implements owner-only image rotation UI: HTMX-powered dropdown with 90° CW, 180°, and 90° CCW options. HTMX swaps `#view-frame-image`, `#upload-details`, and `#messages` in-place after rotation; Rotate button disabled during in-flight requests via `hx-disabled-elt`; loading spinner shown via `hx-indicator`.
+- `app/ui/images.py` provides the `POST /images/{id}/rotate/{angle}` UI endpoint that rotates the image and returns the full rendered view page for HTMX partial extraction.
+- `app/ui/__init__.py` and `app/main.py` updated to register the new UI images router.
 - Sharing, inline editing, privacy toggle, delete, and all view-page tests remain pending.
 
 ### Target State
@@ -111,7 +121,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/templates/uploads/components/file-preview.html.j2` (new)
 
 **Tasks**:
-1. [ ] Create file preview component
+1. [x] Create file preview component
 2. [x] Display images inline with `<img>` tag
 ~~3. [ ] Display videos with `<video>` player~~: Out of scope for this release.
 ~~4. [ ] Display audio with `<audio>` player~~: Out of scope for this release.
@@ -161,7 +171,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/templates/uploads/components/metadata-panel.html.j2` (new)
 
 **Tasks**:
-1. [ ] Create metadata panel component
+1. [x] Create metadata panel component
 2. [x] Display file size (formatted, e.g., "2.5 MB")
 3. [x] Display dimensions for images (width x height)
 4. [x] Display MIME type

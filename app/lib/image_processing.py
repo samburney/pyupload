@@ -303,6 +303,9 @@ def handle_image_resize(image_obj: Pillow.Image, new_width: int, new_height: int
 def handle_image_rotation(upload: "Upload", angle: int) -> Pillow.Image | List[Pillow.Image]:
     """Rotate an image by a specified angle and return the new image object."""
 
+    # Convert from clockwise to counterclockwise rotation since Pillow rotates counterclockwise
+    angle = 360 - angle
+
     # Open the original image
     try:
         image_obj = Pillow.open(upload.filepath)

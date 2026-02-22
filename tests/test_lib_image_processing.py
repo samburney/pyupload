@@ -1042,6 +1042,34 @@ class TestHandleImageRotation:
 
         assert result.size == (100, 60)
 
+    def test_90_degree_rotation_is_clockwise(self, tmp_path):
+        """handle_image_rotation(upload, 90) must rotate the image clockwise.
+
+        A 4×2 image with a unique pixel at the top-left (0, 0) is rotated 90°.
+        For a clockwise rotation the top-left pixel should move to the
+        top-right of the 2×4 result at position (1, 0).
+        For a counter-clockwise rotation it would appear at (0, 3) instead.
+        """
+        img = Pillow.new("RGB", (4, 2), color=(255, 255, 255))
+        img.putpixel((0, 0), (255, 0, 0))  # Unique red pixel at top-left
+        img_path = tmp_path / "test_cw.png"
+        img.save(str(img_path), format="PNG")
+
+        upload = SimpleNamespace(filepath=img_path)
+        result = handle_image_rotation(upload, 90)
+
+        # Dimensions must swap: 4×2 → 2×4
+        assert result.size == (2, 4)
+
+        # Clockwise: (0, 0) → (new_width-1, 0) = (1, 0)
+        assert result.getpixel((1, 0)) == (255, 0, 0), (
+            "Red pixel should be at top-right (1, 0) after 90° CW rotation"
+        )
+        # Counter-clockwise would have put it here instead — must be white
+        assert result.getpixel((0, 3)) != (255, 0, 0), (
+            "Red pixel must NOT be at (0, 3) — that would indicate CCW rotation"
+        )
+
 
 class TestDoImageRotation:
     """Tests for do_image_rotation."""

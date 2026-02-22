@@ -83,6 +83,7 @@ app.include_router(api.uploads.router, prefix='/api/v1')
 # UI routes
 app.include_router(ui.main.router, include_in_schema=False)
 app.include_router(ui.auth.router, include_in_schema=False)
+app.include_router(ui.images.router, include_in_schema=False)
 app.include_router(ui.uploads.router, include_in_schema=False)
 app.include_router(ui.users.router, include_in_schema=False)
 

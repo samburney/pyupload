@@ -29,6 +29,9 @@
     .button {
         @apply bg-blue-500 border box-border border-blue-500 hover:bg-blue-300 hover:border-blue-300 text-white py-2 px-4 rounded cursor-pointer max-h-fit;
     }
+    .button:disabled {
+        @apply bg-gray-400 border-gray-400 hover:bg-gray-400 cursor-not-allowed;
+    }
     .button-sm {
         @apply py-1 px-2 text-sm;
     }
@@ -51,6 +54,16 @@
         @apply bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-50;
     }
 
+
+    /* Menus */
+    .menu {
+        @apply absolute divide-y divide-gray-200 end-0 top-12 z-50 w-auto overflow-hidden whitespace-nowrap rounded border border-gray-300 bg-white shadow-sm;
+    }
+
+    .menu li {
+        @apply block px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900;
+    }
+
     /* Dropdown buttons */
     .dropdown {
         @apply relative inline-flex;
@@ -70,14 +83,6 @@
 
     .dropdown .button-ok .dropdown-button {
         @apply hover:bg-green-300 hover:border-green-300;
-    }
-
-    .dropdown .menu {
-        @apply absolute divide-y divide-gray-200 end-0 top-12 z-50 w-auto overflow-hidden rounded border border-gray-300 bg-white shadow-sm;
-    }
-
-    .dropdown .menu li {
-        @apply block px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900;
     }
 
     /* Messages */
@@ -121,5 +126,10 @@
 
     .pagination .next-previous-page {
         @apply grid size-8 place-content-center;
+    }
+
+    /* HTMX */
+    .htmx-indicator.htmx-request {
+        display: flex !important;
     }
 }

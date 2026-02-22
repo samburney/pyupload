@@ -1,0 +1,43 @@
+{% if current_user and upload.user.id == current_user.id and upload.is_image %}
+        <div class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
+            <p class="text-xs font-semibold mb-2">ACTIONS</p>
+            <div class="items-center justify-left">
+                <div class="relative"
+                     x-data="{ open: false }">
+                    <button type="button"
+                            id="rotate-toggle-{{ upload.id }}"
+                            class="ml-2 mb-1 px-4 py-2 rounded-md hover:bg-gray-200 cursor-pointer disabled:cursor-not-allowed disabled:text-gray-500 hover:disabled:bg-gray-100"
+                            aria-label="Menu"
+                            @click="open = !open">
+                        Rotate ▾
+                    </button>
+
+                    <ul role="menu"
+                        class="menu"
+                        aria-label="Download options"
+                        x-show="open"
+                        x-cloak
+                        x-transition
+                        @click="open = false"
+                        @click.outside="open = false">
+                        {% for rd in (('Rotate 90° Clockwise', 90), ('Rotate 180°', 180), ('Rotate 90° Counter-clockwise', 270),) %}
+                        <li role="menuitem"
+                            class="w-full text-left">
+                            <button hx-post="/images/{{ upload.id }}/rotate/{{ rd[1] }}"
+                                    hx-target="#view-frame-image"
+                                    hx-select="#view-frame-image"
+                                    hx-swap="outerHTML"
+                                    hx-select-oob="#messages,#upload-details"
+                                    hx-target-4*="#messages"
+                                    hx-disabled-elt="#rotate-toggle-{{ upload.id }}"
+                                    hx-indicator="#loading-indicator"
+                                    class="w-full text-left cursor-pointer">
+                                {{ rd[0] }}
+                            </button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+{% endif %}

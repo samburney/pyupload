@@ -123,7 +123,7 @@ async def download_upload(
 
 
 @router.get("/view/{id}", response_class=Response)
-async def view_upload_without_filename(
+async def view_upload_page_without_filename(
     id: int,
 ):
     """Redirect to an SEO friendly GET URL if filename is omitted"""
@@ -146,13 +146,13 @@ async def view_upload_without_filename(
 
 
 @router.get("/view/{id}/{filename}", response_class=HTMLResponse)
-async def view_upload(
+async def view_upload_page(
     request: Request,
     id: int,
     filename: str,
     current_user: Annotated[User, Depends(get_current_user)],
     modal: bool | None = False,
-):
+) -> Response:
     """View an uploaded file."""
 
     # Get upload from database

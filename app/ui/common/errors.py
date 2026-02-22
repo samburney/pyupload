@@ -23,7 +23,7 @@ def error_template_response(request: Request, error_messages: list[str], status_
 
 def error_response_for_get(
     *,
-    filename: str | None,
+    filename: str | None = None,
     error_title: str,
     error_message: str,
     status_code: int,
