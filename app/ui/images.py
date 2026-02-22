@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 
 from app.lib.file_serving import validate_file_update_request
 
-from app.ui.common.security import get_current_user
+from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.session import flash_message
 
 from app.models.uploads import Upload
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/images", tags=["images"])
 async def post_rotate_image(
     request: Request,
     id: int,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
     angle: int,
 ) -> Response:
     """API endpoint to rotate an image by a specified angle."""

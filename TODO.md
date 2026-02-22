@@ -8,13 +8,13 @@
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, and image rotation UI all implemented; sharing, inline editing, privacy toggle, delete, and view-page tests are not yet implemented)*
+- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, and delete functionality (with confirmation modal) all implemented; sharing, inline editing, privacy toggle, and view-page tests are not yet implemented)*
   - [x] Display file metadata (size, dimensions, type, view count)
   - [x] Image rotation UI (owner only)
+  - [x] Delete button for owners
   - [ ] Social/direct link sharing options
   - [ ] Inline editing for title/description (owner only)
   - [ ] Privacy toggle (private/public) for owners
-  - [ ] Delete button for owners/admins
 
 ### Image Processing
 - [x] Image rotation API endpoint (`POST /api/v1/images/{id}/rotate`) with metadata update and cache invalidation
@@ -32,7 +32,7 @@
 - [ ] Contact page
 
 ### Access Control & Privacy
-- [ ] Delete functionality for uploads (owners only; admin override tracked under Future Enhancements)
+- [x] Delete functionality for uploads (owners only; admin override tracked under Future Enhancements)
 
 ---
 
@@ -107,4 +107,4 @@
 - [ ] Scheduler: delete files owned by abandoned users when marked private.
 - [ ] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`, `/tags`, `/collections`) until their pages are implemented.
 - [x] Refactor `app/lib/file_serving.py` to raise typed exceptions instead of returning responses directly, eliminating its `app/lib → app/ui` import of `error_response_for_get`.
-- [ ] Refactor module dependencies for clean layer separation and no circular imports *(see `docs/planning/implement-inheritance-refactor.md`)*.
+- [x] Refactor module dependencies for clean layer separation and no circular imports: `app/lib/file_io.py` created as pure I/O layer; `get_filename`, `get_file_instance`, `get_file_size`, `get_file_mime_type`, `delete_file` moved from `file_storage.py` to `file_io.py`.

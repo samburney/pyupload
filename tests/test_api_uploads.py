@@ -388,6 +388,131 @@ class TestUploadEndpointErrorHandling:
         assert results[0]["status"] == "error"
 
 
+class TestDeleteUploadEndpoint:
+    """Tests for DELETE /api/v1/uploads/{id}."""
+
+    @pytest.mark.asyncio
+    async def test_returns_401_when_unauthenticated(self, client):
+        """Unauthenticated DELETE requests must be rejected with 401."""
+        response = await client.delete("/api/v1/uploads/1")
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_returns_404_for_nonexistent_upload(self, client):
+        """Returns 404 when the upload ID does not exist."""
+        user = await User.create(
+            username="del404user",
+            email="del404@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        token = create_access_token({"sub": user.username})
+        response = await client.delete(
+            "/api/v1/uploads/999999",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_returns_403_for_non_owner(self, client):
+        """Returns 403 when the authenticated user is not the upload owner."""
+        owner = await User.create(
+            username="delowner",
+            email="delowner@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        other = await User.create(
+            username="delother",
+            email="delother@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await Upload.create(
+            user=owner,
+            description="",
+            name="deltest_20250101-000000_a1b2c3d4",
+            cleanname="deltest",
+            originalname="deltest.txt",
+            ext="txt",
+            size=10,
+            type="text/plain",
+            extra="0",
+        )
+        token = create_access_token({"sub": other.username})
+        response = await client.delete(
+            f"/api/v1/uploads/{upload.id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_returns_200_with_success_json_for_owner(self, client, monkeypatch):
+        """Owner delete returns 200 with a success JSON result."""
+        user = await User.create(
+            username="delsucc",
+            email="delsucc@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await Upload.create(
+            user=user,
+            description="",
+            name="succfile_20250101-000000_a1b2c3d4",
+            cleanname="succfile",
+            originalname="succfile.txt",
+            ext="txt",
+            size=10,
+            type="text/plain",
+            extra="0",
+        )
+        token = create_access_token({"sub": user.username})
+
+        async def mock_delete(self):
+            pass
+
+        monkeypatch.setattr(Upload, "delete", mock_delete)
+        response = await client.delete(
+            f"/api/v1/uploads/{upload.id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["result"]["status"] == "success"
+
+    @pytest.mark.asyncio
+    async def test_removes_upload_from_database(self, client):
+        """Successful delete removes the upload record from the database."""
+        user = await User.create(
+            username="deldbcheck",
+            email="deldbcheck@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await Upload.create(
+            user=user,
+            description="",
+            name="dbfile_20250101-000000_b2c3d4e5",
+            cleanname="dbfile",
+            originalname="dbfile.txt",
+            ext="txt",
+            size=10,
+            type="text/plain",
+            extra="0",
+        )
+        upload_id = upload.id
+        token = create_access_token({"sub": user.username})
+
+        with patch("app.lib.file_io.delete_file"):
+            response = await client.delete(
+                f"/api/v1/uploads/{upload_id}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+        assert response.status_code == 200
+        assert await Upload.get_or_none(id=upload_id) is None
+
+
 class TestUploadEndpointResponseTypes:
     """Test response type correctness."""
 

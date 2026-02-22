@@ -47,7 +47,7 @@ This document outlines the features and functionalities of `simplegallery` that 
     - Privacy toggle (Private/Public).
 - **Management**:
     - "Your Uploads" and "Your Collections" for logged-in users.
-    - Delete functionality for owners/admins.
+    - Delete functionality for owners (admin override deferred to future enhancement).
 
 ## 4. Access Control
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+import asyncio
 
 from typing import Annotated, Optional, TYPE_CHECKING
 from pydantic import BaseModel, StringConstraints
@@ -9,6 +9,7 @@ from tortoise_serializer import ModelSerializer, ContextType
 
 from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
+from app.lib.file_io import delete_file
 from app.lib.image_processing import do_image_rotation
 
 from app.models.common.base import TimestampMixin, SerializerTimestampMixin
@@ -162,6 +163,11 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
                 )
 
         return None
+
+    async def delete(self):
+        """Delete the file from disk and its related database record."""
+        await super().delete()
+        await asyncio.to_thread(delete_file, self.filepath)
 
     def is_owner(self, user: User) -> bool:
         """Return whether or not this file is owned by the current user."""

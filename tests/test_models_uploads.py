@@ -13,6 +13,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from pydantic import ValidationError
+from unittest.mock import patch
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadMetadata, UploadResult, make_user_filepath
@@ -1274,6 +1275,94 @@ class TestUploadPagination:
         desc = await Upload.paginate(page=1, page_size=10, sort_by="size", sort_order="desc", user=user)
         assert desc[0].id == u3.id
         assert desc[2].id == u1.id
+
+class TestUploadDelete:
+    """Tests for Upload.delete()."""
+
+    @pytest.mark.asyncio
+    async def test_delete_removes_db_record(self, db, tmp_path):
+        """delete() must remove the database record."""
+        with patch.object(config, "storage_path", tmp_path):
+            user = await User.create(
+                username="deltest",
+                email="deltest@example.com",
+                password="pw",
+                fingerprint_hash="fp-del",
+            )
+            upload = await Upload.create(
+                user=user,
+                description="",
+                name="delfile_20250101-000000_a1b2c3d4",
+                cleanname="delfile",
+                originalname="delfile.txt",
+                ext="txt",
+                size=100,
+                type="text/plain",
+                extra="0",
+            )
+            upload_id = upload.id
+
+            with patch("app.models.uploads.delete_file"):
+                await upload.delete()
+
+        assert await Upload.get_or_none(id=upload_id) is None
+
+    @pytest.mark.asyncio
+    async def test_delete_calls_delete_file_with_filepath(self, db, tmp_path):
+        """delete() must call delete_file with self.filepath."""
+        with patch.object(config, "storage_path", tmp_path):
+            user = await User.create(
+                username="delpathtest",
+                email="delpathtest@example.com",
+                password="pw",
+                fingerprint_hash="fp-delpath",
+            )
+            upload = await Upload.create(
+                user=user,
+                description="",
+                name="pathfile_20250101-000000_b2c3d4e5",
+                cleanname="pathfile",
+                originalname="pathfile.txt",
+                ext="txt",
+                size=100,
+                type="text/plain",
+                extra="0",
+            )
+            expected_path = upload.filepath
+
+            with patch("app.models.uploads.delete_file") as mock_delete:
+                await upload.delete()
+
+        mock_delete.assert_called_once_with(expected_path)
+
+    @pytest.mark.asyncio
+    async def test_delete_removes_db_record_even_when_file_missing(self, db, tmp_path):
+        """delete() removes the DB record even if the file does not exist on disk."""
+        with patch.object(config, "storage_path", tmp_path):
+            user = await User.create(
+                username="delmissing",
+                email="delmissing@example.com",
+                password="pw",
+                fingerprint_hash="fp-delmissing",
+            )
+            upload = await Upload.create(
+                user=user,
+                description="",
+                name="missing_20250101-000000_c3d4e5f6",
+                cleanname="missing",
+                originalname="missing.txt",
+                ext="txt",
+                size=100,
+                type="text/plain",
+                extra="0",
+            )
+            upload_id = upload.id
+
+            # File was never created on disk — delete_file will log a warning but not raise
+            await upload.delete()
+
+        assert await Upload.get_or_none(id=upload_id) is None
+
 
 class TestUploadImageProperty:
     """Test Upload model is_image property."""

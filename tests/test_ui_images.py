@@ -53,6 +53,13 @@ class TestPostRotateImageUI:
     @pytest.mark.asyncio
     async def test_invalid_angle_returns_400(self, client):
         """An angle outside [90, 180, 270] must return HTTP 400."""
+        user = await User.create(
+            username="uirotinv400",
+            email="uirotinv400@example.com",
+            password="pw",
+        )
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
         response = await client.post("/images/999/rotate/45")
         assert response.status_code == 400
 
@@ -63,6 +70,13 @@ class TestPostRotateImageUI:
         This specifically validates the bug fix ensuring request=request is
         passed to error_response_for_get so the Jinja2 template is rendered.
         """
+        user = await User.create(
+            username="uirotinvhtml",
+            email="uirotinvhtml@example.com",
+            password="pw",
+        )
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
         response = await client.post("/images/999/rotate/45")
         assert response.status_code == 400
         assert "text/html" in response.headers.get("content-type", "")
@@ -72,6 +86,13 @@ class TestPostRotateImageUI:
     @pytest.mark.asyncio
     async def test_invalid_angle_response_contains_error_title(self, client):
         """The rendered 400 error page must include the error title."""
+        user = await User.create(
+            username="uirotinvtitle",
+            email="uirotinvtitle@example.com",
+            password="pw",
+        )
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
         response = await client.post("/images/999/rotate/45")
         assert "Invalid Rotation Angle" in response.text
 
@@ -79,6 +100,13 @@ class TestPostRotateImageUI:
     @pytest.mark.parametrize("angle", [0, 45, 91, 180000, -90, 360])
     async def test_various_invalid_angles_return_400(self, client, angle):
         """All angles outside [90, 180, 270] must be rejected with 400."""
+        user = await User.create(
+            username=f"uirotinv{abs(angle)}",
+            email=f"uirotinv{abs(angle)}@example.com",
+            password="pw",
+        )
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
         response = await client.post(f"/images/999/rotate/{angle}")
         assert response.status_code == 400
 
@@ -121,8 +149,8 @@ class TestPostRotateImageUI:
     # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_unauthenticated_returns_403(self, client):
-        """A request without an auth cookie must be rejected with 403."""
+    async def test_unauthenticated_redirects_to_login(self, client):
+        """A request without an auth cookie must redirect to the login page (303)."""
         user = await User.create(
             username="uirotunauthowner",
             email="uirotunauthowner@example.com",
@@ -130,9 +158,9 @@ class TestPostRotateImageUI:
         )
         upload = await _create_image_upload(user)
 
-        # No auth cookie set — current_user will be None
+        # No auth cookie set — LoginRequiredException → redirect to /login
         response = await client.post(f"/images/{upload.id}/rotate/90")
-        assert response.status_code == 403
+        assert response.status_code == 303
 
     @pytest.mark.asyncio
     async def test_non_owner_returns_403(self, client):

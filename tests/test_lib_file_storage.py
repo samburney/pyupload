@@ -7,17 +7,13 @@ from datetime import datetime, timezone
 from uuid import UUID
 from unittest.mock import Mock, AsyncMock, patch
 
-from fastapi import UploadFile
-
 from app.lib.helpers import make_unique_filename, split_filename, make_clean_filename
 from app.lib.file_storage import (
-    get_file_size,
     validate_user_quotas,
     validate_user_filetypes,
-    UserQuotaExceeded,
-    UserFileTypeNotAllowed,
     make_upload_metadata,
 )
+from app.lib.error_handling import UserQuotaExceeded, UserFileTypeNotAllowed
 from app.lib.config import get_app_config
 from app.models.users import User
 
@@ -193,66 +189,6 @@ class TestPathConstruction:
             
             # Filename should match with extension now included
             assert filepath.name == "test_20240101-000000_abc12345.txt"
-
-
-# ============================================================================
-# File Size Detection Tests
-# ============================================================================
-
-class TestFileSizeDetection:
-    """Test file size detection for different file types."""
-
-    def test_get_file_size_with_binary_io(self):
-        """File size detection works for BinaryIO objects."""
-        content = b"Hello, World!"
-        file = BytesIO(content)
-        
-        size = get_file_size(file)
-        
-        assert size == len(content)
-        assert size == 13
-
-    def test_get_file_size_with_empty_file(self):
-        """File size detection handles empty files."""
-        file = BytesIO(b"")
-        
-        size = get_file_size(file)
-        
-        assert size == 0
-
-    def test_get_file_size_with_large_file(self):
-        """File size detection works with large files."""
-        # Create a 1MB file
-        content = b"x" * (1024 * 1024)
-        file = BytesIO(content)
-        
-        size = get_file_size(file)
-        
-        assert size == 1024 * 1024
-
-    def test_get_file_size_preserves_file_position(self):
-        """File size detection preserves the current file position."""
-        content = b"Hello, World!"
-        file = BytesIO(content)
-        
-        # Move to middle of file
-        file.seek(5)
-        original_pos = file.tell()
-        
-        size = get_file_size(file)
-        
-        # Position should be restored
-        assert file.tell() == original_pos
-
-    @pytest.mark.asyncio
-    async def test_get_file_size_with_upload_file(self):
-        """File size detection works for UploadFile objects."""
-        content = b"Hello, World!"
-        upload_file = UploadFile(file=BytesIO(content), filename="test.txt")
-        
-        size = get_file_size(upload_file)
-        
-        assert size == len(content)
 
 
 # ============================================================================

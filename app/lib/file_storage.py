@@ -1,5 +1,3 @@
-import magic
-
 from datetime import datetime, timedelta
 from typing import BinaryIO
 from tempfile import SpooledTemporaryFile
@@ -13,6 +11,12 @@ from app.lib.helpers import (
 from app.lib.config import get_app_config, logger
 from app.lib.error_handling import UserQuotaExceeded, UserFileTypeNotAllowed, ImageInvalidError, ImageProcessingError
 from app.lib.image_processing import process_uploaded_image
+from app.lib.file_io import (
+    delete_file,
+    get_file_mime_type,
+    get_file_size,
+    get_filename,
+)
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadMetadata, UploadResult
@@ -45,80 +49,6 @@ async def make_upload_metadata(user: User, file: UploadFile | BinaryIO | Spooled
 
     return metadata
 
-
-def get_filename(file: UploadFile | BinaryIO | SpooledTemporaryFile, filename: str | None = None) -> str:
-    """Get the filename from UploadFile or BinaryIO or SpooledTemporaryFile."""
-    # If provided, use the `filename` parameter
-    if filename is None and hasattr(file, 'filename') and getattr(file, 'filename') is not None:
-        filename = getattr(file, 'filename')
-    elif filename is None:
-        raise ValueError("Uploaded file must have a filename.")
-
-    if filename is None:
-        raise RuntimeError("Filename cannot be None.")
-
-    return filename
-
-
-def get_file_instance(file: UploadFile | BinaryIO | SpooledTemporaryFile) -> BinaryIO | SpooledTemporaryFile:
-    """Get a file-like object from UploadFile or BinaryIO.
-    
-    Returns the underlying binary file object, handling import path variations
-    and different file-like object types.
-    """
-
-    # Handle FastAPI UploadFile by checking class name (handles import path variations)
-    if type(file).__name__ == 'UploadFile' and hasattr(file, 'file'):
-        return getattr(file, 'file')
-    elif isinstance(file, SpooledTemporaryFile):
-        return file
-    elif hasattr(file, 'read') and hasattr(file, 'seek'):
-        # Any file-like object with read and seek methods
-        return file # type: ignore
-    else:
-        raise TypeError("Supplied value must be a BinaryIO, UploadFile, or SpooledTemporaryFile")
-
-
-def get_file_size(file: BinaryIO | UploadFile | SpooledTemporaryFile) -> int:
-    """Get the size of the uploaded file in bytes."""
-
-    size: int = 0
-    file_inst: BinaryIO | SpooledTemporaryFile = get_file_instance(file)
-        
-    # Save current position
-    current_pos = file_inst.tell()
-    file_inst.seek(0, 2)  # Move to end of file
-    size = file_inst.tell()
-    file_inst.seek(current_pos)  # Restore position
-
-    return size
-
-
-async def get_file_mime_type(file: UploadFile | BinaryIO | SpooledTemporaryFile) -> str:
-    """Get the MIME type of the uploaded file."""
-    # Get file size
-    file_size = get_file_size(file)
-    if file_size == 0:
-        raise ValueError("Cannot determine MIME type of empty file.")
-
-    # Get MIME type
-    read_len = min(1024, file_size)
-
-    if type(file).__name__ == 'UploadFile' and hasattr(file, 'file'):
-        # UploadFile is async
-        await file.seek(0)  # type: ignore
-        data = await file.read(read_len)  # type: ignore
-        mime_type = magic.from_buffer(data, mime=True)
-        await file.seek(0)  # type: ignore
-    else:
-        # BinaryIO and SpooledTemporaryFile are sync
-        current_pos = file.tell()  # type: ignore
-        file.seek(0)  # type: ignore
-        data = file.read(read_len)  # type: ignore
-        mime_type = magic.from_buffer(data, mime=True)  # type: ignore
-        file.seek(current_pos)  # type: ignore
-
-    return mime_type
 
 
 async def validate_user_filetypes(user: User, file: BinaryIO | UploadFile | SpooledTemporaryFile) -> bool:
@@ -274,15 +204,6 @@ async def cleanup_orphaned_files():
     """Clean up orphaned files (files on disk with no DB record)."""
     
     orphans_found = 0
-    
-    # Function to delete a file
-    def delete_orphaned_file(file):
-        try:
-            logger.info(f"Orphaned file found: {file.relative_to(config.storage_path)}")
-            file.unlink()
-        except Exception as e:
-            logger.error(f"Failed to delete orphaned file {file}: {e}")
-
 
     # Iterate through user directories
     user_directories = config.storage_path.glob("user_*")
@@ -315,6 +236,7 @@ async def cleanup_orphaned_files():
             upload = await Upload.get_or_none(user_id=user_id, name=file_name, ext=file_ext)
             if upload is None:
                 orphans_found += 1
-                delete_orphaned_file(file)
+                logger.info(f"Orphaned file found: {file.relative_to(config.storage_path)}")
+                delete_file(file)
                 
     return orphans_found

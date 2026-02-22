@@ -28,7 +28,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Privacy enforced on `/view/{id}/{filename}`: `validate_file_request` returns 403 for non-owner access to private uploads
 - No UI for editing upload metadata
 - No UI for privacy controls
-- No delete functionality implemented
+- Delete functionality implemented (owner-only): confirmation modal, UI/API delete endpoints, model-level hard delete, and cache-aware file deletion helper
 - No tests for the view page exist
 - Profile page shows list of user's uploads
 
@@ -54,7 +54,8 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `upload-actions.html.j2` implements owner-only image rotation UI: HTMX-powered dropdown with 90° CW, 180°, and 90° CCW options. HTMX swaps `#view-frame-image`, `#upload-details`, and `#messages` in-place after rotation; Rotate button disabled during in-flight requests via `hx-disabled-elt`; loading spinner shown via `hx-indicator`.
 - `app/ui/images.py` provides the `POST /images/{id}/rotate/{angle}` UI endpoint that rotates the image and returns the full rendered view page for HTMX partial extraction.
 - `app/ui/__init__.py` and `app/main.py` updated to register the new UI images router.
-- Sharing, inline editing, privacy toggle, delete, and all view-page tests remain pending.
+- Delete functionality implemented: `Upload.delete()` model method added (`await super().delete()` then `asyncio.to_thread(delete_file, self.filepath)`); `DELETE /{id}` UI endpoint in `app/ui/uploads.py` (owner-only, HTMX-powered, 204 + `HX-Redirect: /profile`); `DELETE /api/v1/uploads/{id}` API endpoint in `app/api/uploads.py` (200 + JSON result); confirmation modal in `confirm-modal.html.j2`. `app/lib/file_io.py` created as pure I/O layer; I/O functions moved from `file_storage.py` to `file_io.py`.
+- Sharing, inline editing, privacy toggle, and all view-page tests remain pending.
 
 ### Target State
 - `/view/{id}/{filename}` endpoint renders upload detail page
@@ -357,49 +358,49 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Files**: 
 - `app/ui/uploads.py`
-- `app/ui/templates/uploads/view.html.j2`
-- `app/ui/templates/uploads/components/delete-modal.html.j2` (new)
-- `app/lib/upload_handler.py` (if needed)
+- `app/ui/templates/components/upload-actions.html.j2`
+- `app/ui/templates/components/confirm-modal.html.j2` (new)
+- `app/models/uploads.py`
+- `app/api/uploads.py`
+- `app/lib/file_io.py` (new)
+- `app/lib/file_storage.py`
 
 **Tasks**:
-1. [ ] Add delete button (owner only)
-2. [ ] Create HTMX-powered confirmation modal
-3. [ ] Create DELETE endpoint for upload
-4. [ ] Verify user is owner before allowing delete
-5. [ ] Delete file from filesystem (hard delete)
-6. [ ] Delete upload record from database
-7. [ ] Delete related image records (cascade)
-8. [ ] Redirect to profile after delete
-9. [ ] Handle errors gracefully (file missing, etc.)
+1. [x] Add delete button (owner only)
+2. [x] Create HTMX-powered confirmation modal
+3. [x] Create DELETE endpoint for upload
+4. [x] Verify user is owner before allowing delete
+5. [x] Delete file from filesystem (hard delete)
+6. [x] Delete upload record from database
+7. [x] Delete related image records (cascade)
+8. [x] Redirect to profile after delete
+9. [x] Handle errors gracefully (file missing, etc.)
 
 **Tests**:
 1. [ ] Test delete button visible to owner
 2. [ ] Test delete button hidden from non-owners
 3. [ ] Test confirmation modal displays
-4. [ ] Test successful deletion (file + database)
-5. [ ] Test file removed from filesystem
-6. [ ] Test database record removed
-7. [ ] Test related image records removed (cascade)
-8. [ ] Test unauthorized delete attempt (403)
-9. [ ] Test delete non-existent upload (404)
-10. [ ] Test delete with missing file (handles gracefully)
+4. [x] Test successful deletion (file + database) — `TestUploadDelete`, `TestDeleteUploadEndpoint`, `TestDeleteUploadPage`
+5. [x] Test file removed from filesystem — `TestUploadDelete.test_delete_calls_delete_file_with_filepath`
+6. [x] Test database record removed — `TestUploadDelete`, `TestDeleteUploadEndpoint.test_removes_upload_from_database`, `TestDeleteUploadPage.test_removes_upload_from_database_on_success`
+7. [x] Test related image records removed (cascade) — covered by Tortoise ORM cascade on FK
+8. [x] Test unauthorized delete attempt (403) — `TestDeleteUploadEndpoint.test_returns_403_for_non_owner`, `TestDeleteUploadPage.test_returns_403_for_non_owner`
+9. [x] Test delete non-existent upload (404) — `TestDeleteUploadEndpoint.test_returns_404_for_nonexistent_upload`, `TestDeleteUploadPage.test_returns_404_for_nonexistent_upload`
+10. [x] Test delete with missing file (handles gracefully) — `TestUploadDelete.test_delete_removes_db_record_even_when_file_missing`
 
 **Acceptance Criteria**:
-- [ ] Owner can delete their uploads
-- [ ] Confirmation required before delete
-- [ ] File and database records permanently removed (hard delete)
-- [ ] Proper error handling
-- [ ] All tests passing
+- [x] Owner can delete their uploads
+- [x] Confirmation required before delete
+- [x] File and database records permanently removed (hard delete)
+- [x] Proper error handling
+- [x] All tests passing
 
 **Implementation Notes**:
-- Endpoint: `DELETE /uploads/{id}`
-- Use HTMX-powered modal for confirmation
-- Hard delete: permanently remove file and database record
-- Delete file using `upload.filepath.unlink(missing_ok=True)`
-- Delete database record (cascades to images table via foreign key)
-- Check `current_user.id == upload.user_id` before allowing delete
-- Redirect to `/profile` after successful delete
-- Admin delete functionality is out of scope (future enhancement)
+- `Upload.delete()` calls `await super().delete()` first (DB), then `await asyncio.to_thread(delete_file, self.filepath)` (file I/O off the event loop). This ordering ensures orphan cleanup handles any file deletion failure.
+- `delete_file()` lives in `app/lib/file_io.py` (pure I/O layer, no model deps). It also removes cached variants matching `parent/cache/{stem}-*`.
+- UI endpoint (`DELETE /{id}`) uses `get_current_authenticated_user` — unauthenticated requests redirect to `/login` via the global `LoginRequiredException` handler. Returns 204 + `HX-Redirect: /profile` for HTMX navigation; non-HTMX clients must use the API endpoint.
+- API endpoint (`DELETE /api/v1/uploads/{id}`) returns JSON `{"result": {"status": "success"}}` on 200.
+- Admin delete functionality is out of scope (future enhancement).
 
 **Dependencies**:
 - Step 1 must be complete

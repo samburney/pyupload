@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import UploadFile
 from app.lib.upload_handler import handle_uploaded_file, handle_uploaded_files
+from app.lib.error_handling import UserQuotaExceeded, UserFileTypeNotAllowed
 from app.models.users import User
 from app.models.uploads import UploadResult, Upload
-from app.lib.file_storage import UserQuotaExceeded, UserFileTypeNotAllowed
 from app.lib.config import get_app_config
 
 config = get_app_config()

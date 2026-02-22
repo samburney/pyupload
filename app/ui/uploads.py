@@ -3,15 +3,17 @@ from fastapi import APIRouter, Request, Depends, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.lib.config import get_app_config
-from app.ui.common.errors import error_response_for_get
+from app.lib.error_handling import NotAuthorisedError
 from app.lib.upload_handler import handle_uploaded_files
 from app.lib.file_serving import serve_file, validate_file_request
 
 from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 
+from app.ui.common.errors import error_response_for_get
 from app.ui.common.templating import templates
-from app.ui.common.security import get_current_user, get_or_create_authenticated_user
+from app.ui.common.security import get_current_user, get_current_authenticated_user, get_or_create_authenticated_user
+from app.ui.common.session import flash_message
 
 
 config = get_app_config()
@@ -186,3 +188,33 @@ async def view_upload_page(
         return templates.TemplateResponse(request, "uploads/view-modal.html.j2", context=context)
     else:
         return templates.TemplateResponse(request, "uploads/view.html.j2", context=context)
+
+
+@router.delete("/{id}", response_class=Response)
+async def delete_upload(
+    id: int,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    request: Request,
+) -> Response:
+    """Delete an uploaded file."""
+
+    upload = await Upload.get_or_none(id=id).prefetch_related("user")
+    if upload is None:
+        return error_response_for_get(
+            error_title="Error 404: File not found",
+            error_message="The file you are trying to delete does not exist.",
+            filename="",
+            status_code=404,
+            request=request,
+        )
+
+    # Validate user access to this file
+    if not upload.is_owner(current_user):
+        raise NotAuthorisedError("You do not have permission to delete this file.")
+
+    # Delete the file
+    await upload.delete()
+
+    # Redirect to homepage with success message
+    flash_message(request, "File deleted successfully.")
+    return Response(status_code=204, headers={"HX-Redirect": "/profile"})

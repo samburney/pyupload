@@ -246,6 +246,44 @@ class TestCleanupOrphanedFiles:
         # Counter should still increment even if deletion fails
         assert orphans_found == 1
 
+    async def test_cleanup_deletes_cached_variants_of_orphans(self, tmp_path):
+        """Cached variants of an orphaned file are also deleted."""
+        user_dir = tmp_path / "data" / "files" / "user_1"
+        user_dir.mkdir(parents=True)
+
+        # Orphaned source file
+        old_file = user_dir / "test_20240101-120000_abc12345.txt"
+        old_file.write_text("orphan content")
+
+        # Cached variants in a 'cache' subdirectory
+        cache_dir = user_dir / "cache"
+        cache_dir.mkdir()
+        cached1 = cache_dir / "test_20240101-120000_abc12345-100x100.jpg"
+        cached2 = cache_dir / "test_20240101-120000_abc12345-thumb.webp"
+        unrelated = cache_dir / "other_file-100x100.jpg"
+        cached1.write_text("thumb1")
+        cached2.write_text("thumb2")
+        unrelated.write_text("keep me")
+
+        # Make source file old
+        import os
+        old_time = time.time() - (25 * 3600)
+        os.utime(old_file, (old_time, old_time))
+
+        async def mock_get_or_none(**kwargs):
+            return None
+
+        with patch.object(Upload, "get_or_none", side_effect=mock_get_or_none):
+            with patch.object(config, "storage_path", tmp_path / "data" / "files"):
+                with patch.object(config, "storage_orphaned_max_age_hours", 24):
+                    orphans_found = await cleanup_orphaned_files()
+
+        assert not old_file.exists()
+        assert not cached1.exists()
+        assert not cached2.exists()
+        assert unrelated.exists()  # Unrelated cached file must be preserved
+        assert orphans_found == 1
+
     async def test_cleanup_returns_correct_count(self, tmp_path):
         """Test that cleanup returns the correct count of orphaned files."""
         # Create user directory
