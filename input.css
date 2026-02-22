@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+@theme {
+  /* Overriding default Tailwind breakpoints with Bootstrap 4 values */
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+  
+  /* Optional: Unset the default 2xl breakpoint if you want strict Bootstrap 4 limits */
+  --breakpoint-2xl: initial; 
+}
+
 @layer base {
   h1 {
     font-size: var(--text-2xl);
