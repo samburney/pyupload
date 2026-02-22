@@ -265,19 +265,29 @@ def get_resized_image_obj(
         return image_obj
 
 
-def handle_image_resize(image_obj: Pillow.Image, new_width: int, new_height: int) -> Pillow.Image | List[Pillow.Image]:
-    """Resize an image object to the specified dimensions."""
+def handle_multiframe_image_obj(image_obj: Pillow.Image) -> List[Pillow.Image] | None:
+    """Handle multiframe image objects by returning a list of frames if multiple frames exist."""
 
     # Handle animated images by saving all frames as GIF
     # When source image is an animated GIF, save including all frames
     if is_gif(image_obj) and count_gif_frames(image_obj) > 1:
         image_objs = []
         for frame in ImageSequence.Iterator(image_obj):
-            resized_frame = frame.resize((new_width, new_height))
-            image_objs.append(resized_frame)
+            image_objs.append(frame.copy())
         return image_objs            
 
+    return None
+
+
+def handle_image_resize(image_obj: Pillow.Image, new_width: int, new_height: int) -> Pillow.Image | List[Pillow.Image]:
+    """Resize an image object to the specified dimensions."""
+
+    frames = handle_multiframe_image_obj(image_obj)
+    if frames is not None:
+        return [frame.resize((new_width, new_height)) for frame in frames]
+
     return image_obj.resize((new_width, new_height))
+
 
 
 def is_gif(image_obj: Pillow.Image) -> bool:

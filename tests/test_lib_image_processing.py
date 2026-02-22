@@ -15,6 +15,8 @@ from app.lib.image_processing import (
     get_image_as_jpeg,
     get_image_bytes,
     get_processed_image_path,
+    handle_image_resize,
+    handle_multiframe_image_obj,
     make_image_metadata,
     make_image_filename_metadata,
     process_uploaded_image,
@@ -821,6 +823,77 @@ class TestGifFrameHandling:
 
         gif_obj = Pillow.open(image_bytes)
         assert count_gif_frames(gif_obj) == 2
+
+
+def _make_animated_gif_bytes(size=(40, 40)) -> BytesIO:
+    """Create an in-memory animated GIF (2 frames) and return the buffer."""
+    frame1 = Pillow.new("RGBA", size, color=(255, 0, 0, 255))
+    frame2 = Pillow.new("RGBA", size, color=(0, 255, 0, 255))
+    buf = BytesIO()
+    frame1.save(
+        buf,
+        format="GIF",
+        save_all=True,
+        append_images=[frame2],
+        duration=100,
+        loop=0,
+    )
+    buf.seek(0)
+    return buf
+
+
+class TestHandleMultiframeImageObj:
+    """Tests for handle_multiframe_image_obj return value contract."""
+
+    def test_returns_none_for_non_gif(self):
+        """Non-GIF images should return None."""
+        img = Pillow.new("RGB", (20, 20), color="red")
+        result = handle_multiframe_image_obj(img)
+        assert result is None
+
+    def test_returns_none_for_single_frame_gif(self):
+        """Single-frame GIFs should return None."""
+        frame = Pillow.new("RGBA", (10, 10), color=(255, 0, 0, 255))
+        buf = BytesIO()
+        frame.save(buf, format="GIF")
+        buf.seek(0)
+        gif_obj = Pillow.open(buf)
+        result = handle_multiframe_image_obj(gif_obj)
+        assert result is None
+
+    def test_returns_list_of_frames_for_animated_gif(self):
+        """Animated GIFs should return a list with one entry per frame."""
+        gif_obj = Pillow.open(_make_animated_gif_bytes())
+        result = handle_multiframe_image_obj(gif_obj)
+        assert isinstance(result, list)
+        assert len(result) == 2
+
+    def test_returned_frames_are_independent_copies(self):
+        """Each frame in the returned list must be an independent copy."""
+        gif_obj = Pillow.open(_make_animated_gif_bytes())
+        result = handle_multiframe_image_obj(gif_obj)
+        assert result is not None
+        assert result[0] is not result[1]
+
+
+class TestHandleImageResize:
+    """Tests for handle_image_resize."""
+
+    def test_resizes_single_frame_image(self):
+        """Single-frame images should be returned as a single resized Image."""
+        img = Pillow.new("RGB", (100, 80), color="blue")
+        result = handle_image_resize(img, 50, 40)
+        assert not isinstance(result, list)
+        assert result.size == (50, 40)
+
+    def test_resizes_all_frames_of_animated_gif(self):
+        """Each frame of an animated GIF should be resized to the target dimensions."""
+        gif_obj = Pillow.open(_make_animated_gif_bytes(size=(40, 40)))
+        result = handle_image_resize(gif_obj, 20, 20)
+        assert isinstance(result, list)
+        assert len(result) == 2
+        for frame in result:
+            assert frame.size == (20, 20)
 
 
 class TestProcessedImageCacheBehavior:
