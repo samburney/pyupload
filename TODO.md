@@ -107,3 +107,4 @@
 - [ ] Scheduler: delete files owned by abandoned users when marked private.
 - [ ] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`, `/tags`, `/collections`) until their pages are implemented.
 - [ ] Refactor `app/lib/file_serving.py` to raise typed exceptions instead of returning responses directly, eliminating its `app/lib → app/ui` import of `error_response_for_get`.
+- [ ] Refactor module dependencies for clean layer separation and no circular imports *(see `docs/planning/implement-inheritance-refactor.md`)*.
