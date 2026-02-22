@@ -10,7 +10,7 @@ from app.lib.file_serving import (
     serve_file,
     ALLOWED_INLINE_MIMETYPES,
 )
-from app.lib.error_handling import ImageProcessingError
+from app.lib.error_handling import ImageProcessingError, NotAuthorisedError
 from app.lib.config import get_app_config
 from app.models.images import Image
 from app.models.users import User
@@ -163,9 +163,9 @@ class TestServeFile:
             private=1,
         )
 
-        # Attempt to serve private file to anonymous user
-        response = await serve_file(upload, filename=None, user=None, download=False)
-        assert response.status_code == 403
+        # Attempt to serve private file to anonymous user - now raises NotAuthorisedError
+        with pytest.raises(NotAuthorisedError):
+            await serve_file(upload, filename=None, user=None, download=False)
 
     @pytest.mark.asyncio
     async def test_serve_private_file_to_different_user_returns_403(self, db):
@@ -197,9 +197,9 @@ class TestServeFile:
             private=1,
         )
 
-        # Attempt to serve private file to different user
-        response = await serve_file(upload, filename=None, user=other_user, download=False)
-        assert response.status_code == 403
+        # Attempt to serve private file to different user - now raises NotAuthorisedError
+        with pytest.raises(NotAuthorisedError):
+            await serve_file(upload, filename=None, user=other_user, download=False)
 
     @pytest.mark.asyncio
     async def test_serve_nonexistent_file_returns_404(self, db):
@@ -224,9 +224,9 @@ class TestServeFile:
             private=0,
         )
 
-        # File doesn't exist on disk
-        response = await serve_file(upload, filename=None, user=None, download=False)
-        assert response.status_code == 404
+        # File doesn't exist on disk - now raises FileNotFoundError
+        with pytest.raises(FileNotFoundError):
+            await serve_file(upload, filename=None, user=None, download=False)
 
     @pytest.mark.asyncio
     async def test_serve_file_image_processing_failure_returns_422(self, db, tmp_path, monkeypatch):
@@ -267,10 +267,10 @@ class TestServeFile:
             channels=3,
         )
 
+        # ImageProcessingError is now raised and handled by the global exception handler
         with patch("app.lib.file_serving.get_processed_image_path", new=AsyncMock(side_effect=ImageProcessingError("Processing failed"))):
-            response = await serve_file(upload, filename="image-320x0.jpg", user=None, download=False)
-
-        assert response.status_code == 422
+            with pytest.raises(ImageProcessingError):
+                await serve_file(upload, filename="image-320x0.jpg", user=None, download=False)
 
     @pytest.mark.asyncio
     async def test_view_counter_increments_for_non_owner(self, db, tmp_path, monkeypatch):

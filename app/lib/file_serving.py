@@ -6,8 +6,6 @@ from app.lib.helpers import sanitise_filename
 from app.lib.error_handling import NotAuthorisedError, ImageProcessingError
 from app.lib.image_processing import get_processed_image_path
 
-from app.ui.common.errors import error_response_for_get
-
 from app.models.images import IMAGE_FORMATS
 from app.models.uploads import Upload
 from app.models.users import User
@@ -75,23 +73,8 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
     else:
         filename = upload.filename
 
-    # Validate the file request
-    try:
-        validate_file_request(upload, user)
-    except NotAuthorisedError as e:
-        return error_response_for_get(
-            error_title="Error 403: Unauthorized",
-            error_message=f"An error occurred processing your request for {filename}: {e}",
-            filename=filename,
-            status_code=403,
-        )
-    except FileNotFoundError as e:
-        return error_response_for_get(
-            error_title="Error 404: File not found",
-            error_message=f"An error occurred processing your request for {filename}: {e}",
-            filename=filename,
-            status_code=404,
-        )
+    # Validate the file request - raises NotAuthorisedError or FileNotFoundError
+    validate_file_request(upload, user)
 
     # Handle image processing if requested based on filename
     try:
@@ -102,27 +85,13 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
                 file_path = processed_file_path
                 media_type = IMAGE_FORMATS[file_path.suffix.lower()]
     except KeyError:
-        return error_response_for_get(
-            error_title="Error 422: Unprocessable Content",
-            error_message=f"An error occurred processing your request for {filename}: Unsupported output format.",
-            filename=filename,
-            status_code=422,
-        )
-    except ImageProcessingError as e:
-        return error_response_for_get(
-            error_title="Error 422: Unprocessable Content",
-            error_message=f"An error occurred processing your request for {filename}: {e}",
-            filename=filename,
-            status_code=422,
-        )
+        raise ImageProcessingError(f"Unsupported output format requested for {filename}.")
+    except ImageProcessingError:
+        logger.warning(f"Image processing error for {upload.id}/{filename}.", exc_info=True)
+        raise
     except Exception as e:
         logger.error(f"Unexpected image processing error for {upload.id}/{filename}: {e}", exc_info=True)
-        return error_response_for_get(
-            error_title="Error 500: Internal Server Error",
-            error_message=f"An internal server error occurred processing your request for {filename}.",
-            filename=filename,
-            status_code=500,
-        )
+        raise
 
     # Check if the file should be displayed inline
     if not download and is_inline_mimetype(media_type):
@@ -134,23 +103,7 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
         await upload.save()
 
     # Return file response
-    try:
-        response = FileResponse(file_path, media_type=media_type)
-    except FileNotFoundError:
-        return error_response_for_get(
-            error_title="Error 404: File not found",
-            error_message=f"The requested file, {filename} could not be found on this server.",
-            filename=filename,
-            status_code=404,
-        )
-    except Exception as e:
-        logger.error(f"Unexpected file response error for {upload.id}/{filename}: {e}", exc_info=True)
-        return error_response_for_get(
-            error_title="Error 500: Internal Server Error",
-            error_message=f"An internal server error occurred processing your request for {filename}.",
-            filename=filename,
-            status_code=500,
-        )
+    response = FileResponse(file_path, media_type=media_type)
 
     response.headers["Content-Disposition"] = f"attachment; filename={filename}" if is_download else f"inline; filename={filename}"
     response.headers["Cache-Control"] = f"{'private' if is_private else 'public'}, max-age=3600"

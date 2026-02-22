@@ -7,12 +7,16 @@ from app.lib.error_handling import supports_error_image, get_error_image_respons
 from app.ui.common.templating import templates
 
 
-def error_template_response(request, error_messages, status_code=400):
+def error_template_response(request: Request, error_messages: list[str], status_code: int = 400, title: str | None = None):
     """Render an error response with given messages and status code."""
     return templates.TemplateResponse(
         request=request,
         name="layout/error.html.j2",
-        context={"error_messages": error_messages},
+        context={
+            "error_messages": error_messages,
+            "empty_content_title": title,
+            "empty_content_message": error_messages[0] if error_messages else "",
+        },
         status_code=status_code,
     )
 
@@ -42,6 +46,11 @@ def error_response_for_get(
             )
 
     if request is not None:
-        return error_template_response(request, [error_message], status_code=status_code)
+        return error_template_response(
+            request,
+            [error_message],
+            status_code=status_code,
+            title=error_title,
+        )
 
     return HTMLResponse(status_code=status_code)

@@ -2,8 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Request, Depends, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from app.lib.config import get_app_config, logger
-from app.lib.error_handling import NotAuthorisedError
+from app.lib.config import get_app_config
 from app.ui.common.errors import error_response_for_get
 from app.lib.upload_handler import handle_uploaded_files
 from app.lib.file_serving import serve_file, validate_file_request
@@ -104,16 +103,12 @@ async def get_upload(
             status_code=404,
         )
 
-    try:
-        return await serve_file(
-            upload=upload,
-            filename=filename,
-            user=current_user,
-            download=download
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error serving file {id}/{filename}: {e}", exc_info=True)
-        return HTMLResponse(status_code=500)
+    return await serve_file(
+        upload=upload,
+        filename=filename,
+        user=current_user,
+        download=download
+    )
 
 
 @router.get("/download/{id}/{filename}", response_class=Response)
@@ -143,24 +138,7 @@ async def view_upload_without_filename(
     # This will break private files for users who are logged in and are trying
     # to access their own private files without the filename in the URL, but
     # given this is a helper mostly for SEO anyway, it's a reasonable tradeoff.
-    try:
-        validate_file_request(upload)
-    except NotAuthorisedError as e:
-        return error_response_for_get(
-            error_title="Error 403: Unauthorized",
-            error_message=f"An error occurred processing your request: {e}",
-            filename=None,
-            status_code=403,
-            as_html=True,
-        )
-    except FileNotFoundError as e:
-        return error_response_for_get(
-            error_title="Error 404: File not found",
-            error_message=f"An error occurred processing your request: {e}",
-            filename=None,
-            status_code=404,
-            as_html=True,
-        )
+    validate_file_request(upload)
 
     response = RedirectResponse(url=upload.view_url, status_code=301)
 
@@ -193,26 +171,7 @@ async def view_upload(
                 context={"error_messages": ["Upload not found"]},
             )
     else:
-        try:
-            validate_file_request(upload_model, current_user)
-        except NotAuthorisedError as e:
-            return error_response_for_get(
-                error_title="Error 403: Unauthorized",
-                error_message=f"An error occurred processing your request for {filename}: {e}",
-                filename=filename,
-                status_code=403,
-                as_html=True,
-                request=request,
-            )
-        except FileNotFoundError as e:
-            return error_response_for_get(
-                error_title="Error 404: File not found",
-                error_message=f"An error occurred processing your request for {filename}: {e}",
-                filename=filename,
-                status_code=404,
-                as_html=True,
-                request=request,
-            )
+        validate_file_request(upload_model, current_user)
 
     # Serialize upload for template
     upload = await UploadSerializer.from_tortoise_orm(upload_model)
