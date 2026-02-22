@@ -76,8 +76,9 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # API routes
 app.include_router(api.auth.router, prefix='/api/v1')
-app.include_router(api.uploads.router, prefix='/api/v1')
 app.include_router(api.files.router, prefix='/api/v1')
+app.include_router(api.images.router, prefix='/api/v1')
+app.include_router(api.uploads.router, prefix='/api/v1')
 
 # UI routes
 app.include_router(ui.main.router, include_in_schema=False)
@@ -160,6 +161,11 @@ async def image_invalid_exception_handler(request: Request, exc: ImageInvalidErr
 @app.exception_handler(ImageProcessingError)
 async def image_processing_exception_handler(request: Request, exc: ImageProcessingError):
     return _route_error_response(request, "Error 422: Unprocessable Content", str(exc), 422)
+
+
+@app.exception_handler(ValueError)
+async def value_error_exception_handler(request: Request, exc: ValueError):
+    return _route_error_response(request, "Error 400: Bad Request", str(exc), 400)
 
 
 # Run the application server

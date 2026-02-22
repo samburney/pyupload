@@ -15,6 +15,9 @@
   - [ ] Privacy toggle (private/public) for owners
   - [ ] Delete button for owners/admins
 
+### Image Processing
+- [x] Image rotation API endpoint (`POST /api/v1/images/{id}/rotate`) with metadata update and cache invalidation
+
 ### Gallery & Discovery Pages (v0.1)
 - [ ] Handle missing/broken image metadata in gallery with placeholder UX *(partial: `/get` now returns handled `422` image/HTML fallback responses with regression tests; gallery-card UX refinement still pending)*
 - [ ] Random uploads page (/random)
@@ -54,9 +57,6 @@
 
 ### Image Processing & Transformations
 - [ ] Expand processing support to all Pillow-compatible image formats
-- [ ] Image rotation endpoints
-  - [ ] Update metadata (width/height swap)
-  - [ ] Cache invalidation after rotation
 - [ ] On-demand thumbnail generation
 - [ ] Cache cleanup scheduler
 
@@ -81,7 +81,6 @@
 - [ ] Archive extraction on upload (ZIP, TAR, TAR.GZ)
 - [ ] Image watermarking
 - [ ] EXIF data extraction and storage
-- [ ] Image rotation/transformation endpoints
 
 ### Permissions & Sharing
 - [ ] Admin access to all files (override privacy settings)

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from typing import Annotated, Optional, TYPE_CHECKING
 from pydantic import BaseModel, StringConstraints
 from pathlib import Path
@@ -7,11 +9,12 @@ from tortoise_serializer import ModelSerializer, ContextType
 
 from app.lib.config import get_app_config
 from app.lib.helpers import MIME_TYPE_PATTERN
+from app.lib.image_processing import do_image_rotation
 
 from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 from app.models.common.pagination import PaginationMixin
 from app.models.users import User, UserSerializer
-from app.models.images import ImageSerializer
+from app.models.images import ImageSerializer, ImageMetadata
 
 if TYPE_CHECKING:
     from app.models.images import Image
@@ -142,9 +145,50 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
 
         return type_split[0]
 
+    @property
+    async def image_metadata(self) -> Optional[ImageMetadata]:
+        """Return the image metadata for this upload, if it exists."""
+        if self.is_image:
+            image = await self.images.all().first()
+
+            if image:
+                return ImageMetadata(
+                    upload_id=self.id,
+                    type=getattr(image, "type"),
+                    width=getattr(image, "width"),
+                    height=getattr(image, "height"),
+                    bits=getattr(image, "bits"),
+                    channels=getattr(image, "channels"),
+                )
+
+        return None
+
     def is_owner(self, user: User) -> bool:
         """Return whether or not this file is owned by the current user."""
         return getattr(self, "user_id") == user.id
+    
+    async def rotate_image(self, angle: int) -> bool:
+        """Rotate the image by a specified angle. Returns True if successful."""
+        if not self.is_image:
+            raise ValueError("Cannot rotate a non-image file.")
+        
+        # Call the image processing function to handle rotation
+        new_image_metadata: ImageMetadata = await do_image_rotation(self, angle)
+
+        # Update the related Image record with the new metadata
+        image = await self.images.all().first()
+        if image is None:
+            raise ValueError("No related image record found for this upload.")
+        
+        image.width = new_image_metadata.width
+        image.height = new_image_metadata.height
+        await image.save()
+
+        # Update upload metadata to reflect the new image properties
+        self.size = self.filepath.stat().st_size
+        await self.save()
+
+        return True
 
 
 class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):

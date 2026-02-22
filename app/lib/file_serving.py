@@ -52,6 +52,20 @@ def validate_file_request(upload: Upload, user: User | None = None) -> bool:
     return True
 
 
+def validate_file_update_request(upload: Upload, user: User | None = None) -> bool:
+    """
+    Validate a file request based on access control and filename.
+    """
+
+    # Check that the user is the owner of the file for update requests
+    is_owner = user is not None and upload.is_owner(user)
+    if not is_owner:
+        raise NotAuthorisedError("You do not have permission to modify this file.")
+    
+    # Return read-only validation
+    return validate_file_request(upload, user)
+
+
 async def serve_file(upload: Upload, filename: str | None = None, user: User | None = None, download: bool | None = False) -> Response:
     """
     Serve a file with proper access control and view counter increment.

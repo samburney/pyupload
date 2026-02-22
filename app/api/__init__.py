@@ -1,3 +1,3 @@
-from app.api import auth, uploads, files
+from app.api import auth, files, images, uploads
 
-__all__ = ["auth", "uploads", "files"]
+__all__ = ["auth", "files", "images", "uploads"]

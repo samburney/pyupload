@@ -12,13 +12,16 @@ from PIL import Image as Pillow
 
 from app.lib.image_processing import (
     count_gif_frames,
+    do_image_rotation,
     get_image_as_jpeg,
     get_image_bytes,
     get_processed_image_path,
     handle_image_resize,
+    handle_image_rotation,
     handle_multiframe_image_obj,
     make_image_metadata,
     make_image_filename_metadata,
+    mime_type_to_image_format,
     process_uploaded_image,
     ImageProcessingError,
     ImageInvalidError,
@@ -971,3 +974,189 @@ class TestProcessedImageCacheBehavior:
         get_image_bytes_mock.assert_awaited_once()
         assert cache_path.exists()
         assert cache_path.read_bytes() == b"new-data"
+
+
+class TestMimeTypeToImageFormat:
+    """Tests for mime_type_to_image_format."""
+
+    @pytest.mark.asyncio
+    async def test_jpeg_returns_jpeg(self):
+        """image/jpeg must map to PIL format string 'JPEG'."""
+        result = await mime_type_to_image_format("image/jpeg")
+        assert result == "JPEG"
+
+    @pytest.mark.asyncio
+    async def test_png_returns_png(self):
+        result = await mime_type_to_image_format("image/png")
+        assert result == "PNG"
+
+    @pytest.mark.asyncio
+    async def test_gif_returns_gif(self):
+        result = await mime_type_to_image_format("image/gif")
+        assert result == "GIF"
+
+    @pytest.mark.asyncio
+    async def test_unsupported_type_raises_image_processing_error(self):
+        """Unsupported MIME types must raise ImageProcessingError, not KeyError."""
+        with pytest.raises(ImageProcessingError):
+            await mime_type_to_image_format("image/tiff")
+
+
+class TestHandleImageRotation:
+    """Tests for handle_image_rotation."""
+
+    def test_rotates_single_frame_image(self, tmp_path):
+        """A landscape image rotated 90° with expand=True should have swapped dimensions."""
+        img = Pillow.new("RGB", (100, 60), color="red")
+        img_path = tmp_path / "test.jpg"
+        img.save(str(img_path), format="JPEG")
+
+        upload = SimpleNamespace(filepath=img_path)
+        result = handle_image_rotation(upload, 90)
+
+        assert not isinstance(result, list)
+        assert result.size == (60, 100)
+
+    def test_rotates_all_frames_of_animated_gif(self, tmp_path):
+        """Each frame of an animated GIF should be rotated and returned as a list."""
+        gif_bytes = _make_animated_gif_bytes(size=(40, 20))
+        img_path = tmp_path / "test.gif"
+        img_path.write_bytes(gif_bytes.read())
+
+        upload = SimpleNamespace(filepath=img_path)
+        result = handle_image_rotation(upload, 90)
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+        for frame in result:
+            assert frame.size == (20, 40)
+
+    def test_180_rotation_preserves_dimensions(self, tmp_path):
+        """A 180° rotation should preserve the original dimensions."""
+        img = Pillow.new("RGB", (100, 60), color="blue")
+        img_path = tmp_path / "test.jpg"
+        img.save(str(img_path), format="JPEG")
+
+        upload = SimpleNamespace(filepath=img_path)
+        result = handle_image_rotation(upload, 180)
+
+        assert result.size == (100, 60)
+
+
+class TestDoImageRotation:
+    """Tests for do_image_rotation."""
+
+    async def _create_upload_with_image(self, username, email, width=100, height=60):
+        """Helper: create a DB-backed upload + Image record and return the prefetched upload."""
+        user = await User.create(username=username, email=email, password="pw")
+        upload = await Upload.create(
+            user=user,
+            description="",
+            name="testrot",
+            cleanname="testrot",
+            originalname="testrot.jpg",
+            ext="jpg",
+            size=1000,
+            type="image/jpeg",
+            extra="0",
+        )
+        await Image.create(upload=upload, type="jpeg", width=width, height=height, bits=24, channels=3)
+        return await Upload.get(id=upload.id).prefetch_related("images")
+
+    @pytest.mark.asyncio
+    async def test_raises_value_error_on_invalid_angle(self, db, tmp_path):
+        """Angles outside [90, 180, 270] must raise ValueError."""
+        upload = await self._create_upload_with_image("rotinvalid", "rotinvalid@example.com")
+        img_path = tmp_path / "test.jpg"
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            with pytest.raises(ValueError, match="Invalid rotation angle"):
+                await do_image_rotation(upload, 45)
+
+    @pytest.mark.asyncio
+    async def test_raises_when_no_image_metadata(self, db, tmp_path):
+        """Uploads with no Image record must raise ImageProcessingError."""
+        user = await User.create(username="rotnoimg", email="rotnoimg@example.com", password="pw")
+        upload = await Upload.create(
+            user=user, description="", name="noimg", cleanname="noimg",
+            originalname="noimg.jpg", ext="jpg", size=100, type="image/jpeg", extra="0",
+        )
+        upload = await Upload.get(id=upload.id).prefetch_related("images")
+
+        img_path = tmp_path / "test.jpg"
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            with pytest.raises(ImageProcessingError, match="No image metadata"):
+                await do_image_rotation(upload, 90)
+
+    @pytest.mark.asyncio
+    async def test_90_degree_rotation_swaps_dimensions(self, db, tmp_path):
+        """Metadata returned after a 90° rotation must have width and height swapped."""
+        upload = await self._create_upload_with_image("rot90", "rot90@example.com", width=100, height=60)
+        img_path = tmp_path / "test.jpg"
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            result = await do_image_rotation(upload, 90)
+
+        assert result.width == 60
+        assert result.height == 100
+
+    @pytest.mark.asyncio
+    async def test_270_degree_rotation_swaps_dimensions(self, db, tmp_path):
+        upload = await self._create_upload_with_image("rot270", "rot270@example.com", width=100, height=60)
+        img_path = tmp_path / "test.jpg"
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            result = await do_image_rotation(upload, 270)
+
+        assert result.width == 60
+        assert result.height == 100
+
+    @pytest.mark.asyncio
+    async def test_180_degree_rotation_preserves_dimensions(self, db, tmp_path):
+        upload = await self._create_upload_with_image("rot180", "rot180@example.com", width=100, height=60)
+        img_path = tmp_path / "test.jpg"
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            result = await do_image_rotation(upload, 180)
+
+        assert result.width == 100
+        assert result.height == 60
+
+    @pytest.mark.asyncio
+    async def test_overwrites_source_file(self, db, tmp_path):
+        """The source image file must be replaced with the rotated version."""
+        upload = await self._create_upload_with_image("rotfile", "rotfile@example.com")
+        img_path = tmp_path / "test.jpg"
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+        original_bytes = img_path.read_bytes()
+
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            await do_image_rotation(upload, 90)
+
+        assert img_path.read_bytes() != original_bytes
+
+    @pytest.mark.asyncio
+    async def test_clears_matching_cache_files(self, db, tmp_path):
+        """Cached processed images matching the upload name must be deleted after rotation."""
+        upload = await self._create_upload_with_image("rotcache", "rotcache@example.com")
+        img_path = tmp_path / "testrot.jpg"
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+        cache_file = cache_dir / "testrot-100_60.jpg"
+        cache_file.write_bytes(b"cached-data")
+        unrelated_file = cache_dir / "other-100_60.jpg"
+        unrelated_file.write_bytes(b"other-cached")
+
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            await do_image_rotation(upload, 90)
+
+        assert not cache_file.exists()
+        assert unrelated_file.exists()  # Unrelated cache files must not be deleted

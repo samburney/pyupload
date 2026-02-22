@@ -1339,3 +1339,98 @@ class TestUploadImageProperty:
         # Manually fetch with prefetch_related
         upload_fetched = await Upload.get(id=upload.id).prefetch_related("images")
         assert upload_fetched.is_image is True
+
+
+class TestUploadRotateImage:
+    """Tests for Upload.rotate_image()."""
+
+    async def _create_image_upload(self, username: str, email: str, width: int = 100, height: int = 60) -> Upload:
+        """Create a DB-backed upload with an Image record, prefetched and ready."""
+        from app.models.images import Image
+
+        user = await User.create(username=username, email=email, password="pw")
+        upload = await Upload.create(
+            user=user,
+            description="",
+            name="rottest",
+            cleanname="rottest",
+            originalname="rottest.jpg",
+            ext="jpg",
+            size=1000,
+            type="image/jpeg",
+            extra="0",
+        )
+        await Image.create(upload=upload, type="jpeg", width=width, height=height, bits=24, channels=3)
+        return await Upload.get(id=upload.id).prefetch_related("images")
+
+    @pytest.mark.asyncio
+    async def test_raises_value_error_for_non_image_upload(self, db):
+        """rotate_image must raise ValueError when the upload has no linked image."""
+        user = await User.create(username="rotnoimage", email="rotnoimage@example.com", password="pw")
+        upload = await Upload.create(
+            user=user, description="", name="noimg", cleanname="noimg",
+            originalname="noimg.txt", ext="txt", size=100, type="text/plain", extra="0",
+        )
+        upload = await Upload.get(id=upload.id).prefetch_related("images")
+
+        with pytest.raises(ValueError, match="Cannot rotate a non-image"):
+            await upload.rotate_image(90)
+
+    @pytest.mark.asyncio
+    async def test_returns_true_on_success(self, db, tmp_path):
+        """rotate_image must return True after a successful rotation."""
+        from unittest.mock import AsyncMock, patch
+        from app.models.images import ImageMetadata
+
+        upload = await self._create_image_upload("rotsucc", "rotsucc@example.com")
+        img_path = tmp_path / "rottest.jpg"
+        from PIL import Image as Pillow
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+
+        mock_metadata = ImageMetadata(upload_id=upload.id, type="jpeg", width=60, height=100, bits=24, channels=3)
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            with patch("app.models.uploads.do_image_rotation", new=AsyncMock(return_value=mock_metadata)):
+                result = await upload.rotate_image(90)
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_updates_image_dimensions_in_db(self, db, tmp_path):
+        """After rotation, the Image record in the DB must reflect the new dimensions."""
+        from unittest.mock import AsyncMock, patch
+        from app.models.images import Image, ImageMetadata
+
+        upload = await self._create_image_upload("rotdims", "rotdims@example.com", width=100, height=60)
+        img_path = tmp_path / "rottest.jpg"
+        from PIL import Image as Pillow
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+
+        mock_metadata = ImageMetadata(upload_id=upload.id, type="jpeg", width=60, height=100, bits=24, channels=3)
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            with patch("app.models.uploads.do_image_rotation", new=AsyncMock(return_value=mock_metadata)):
+                await upload.rotate_image(90)
+
+        refreshed_image = await Image.filter(upload=upload).first()
+        assert refreshed_image is not None
+        assert refreshed_image.width == 60
+        assert refreshed_image.height == 100
+
+    @pytest.mark.asyncio
+    async def test_updates_upload_size_in_db(self, db, tmp_path):
+        """After rotation, the Upload.size field must be updated to the new file size."""
+        from unittest.mock import AsyncMock, patch
+        from app.models.images import ImageMetadata
+
+        upload = await self._create_image_upload("rotsize", "rotsize@example.com")
+        img_path = tmp_path / "rottest.jpg"
+        from PIL import Image as Pillow
+        Pillow.new("RGB", (100, 60), color="red").save(str(img_path), format="JPEG")
+        file_size_on_disk = img_path.stat().st_size
+
+        mock_metadata = ImageMetadata(upload_id=upload.id, type="jpeg", width=60, height=100, bits=24, channels=3)
+        with patch.object(Upload, "filepath", new_callable=lambda: property(lambda self: img_path)):
+            with patch("app.models.uploads.do_image_rotation", new=AsyncMock(return_value=mock_metadata)):
+                await upload.rotate_image(90)
+
+        refreshed_upload = await Upload.get(id=upload.id)
+        assert refreshed_upload.size == file_size_on_disk

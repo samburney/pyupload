@@ -18,6 +18,17 @@ if TYPE_CHECKING:
     from app.models.uploads import Upload
 
 
+async def mime_type_to_image_format(mime_type: str) -> str:
+    """Convert a MIME type to a Pillow image format string."""
+    if mime_type in IMAGE_PROCESSING_FORMATS.values():
+        if mime_type == "image/jpeg":
+            return "JPEG"
+
+        return mime_type.split('/')[-1].upper()
+    else:
+        raise ImageProcessingError(f"Unsupported MIME type for image processing: {mime_type}")
+
+
 async def make_image_metadata(upload: "Upload") -> ImageMetadata:
     """Build metadata for an uploaded file."""
     
@@ -289,6 +300,71 @@ def handle_image_resize(image_obj: Pillow.Image, new_width: int, new_height: int
     return image_obj.resize((new_width, new_height))
 
 
+def handle_image_rotation(upload: "Upload", angle: int) -> Pillow.Image | List[Pillow.Image]:
+    """Rotate an image by a specified angle and return the new image object."""
+
+    # Open the original image
+    try:
+        image_obj = Pillow.open(upload.filepath)
+    except (UnidentifiedImageError, OSError):
+        raise ImageInvalidError("Uploaded file is not a valid image.")
+
+    # Handle multi-frame images
+    frames = handle_multiframe_image_obj(image_obj)
+    if frames is not None:
+        return [frame.rotate(angle, expand=True) for frame in frames]
+
+    return image_obj.rotate(angle, expand=True)
+
+
+async def do_image_rotation(upload: "Upload", angle: int) -> ImageMetadata:
+    """Rotate an image by a specified angle and return new image metadata."""
+
+    # Get image metadata
+    image_metadata = await upload.image_metadata
+    if image_metadata is None:
+        raise ImageProcessingError("No image metadata found for upload.")
+
+    # Determine image format for saving the rotated image based on original image MIME type
+    image_format = await mime_type_to_image_format(upload.type)
+
+    # Validate rotation angle
+    if angle not in [90, 180, 270]:
+        raise ValueError("Invalid rotation angle. Only 90, 180, and 270 degrees are supported.")
+    
+    # Rotate the image and get the new image object
+    rotated_image_obj = handle_image_rotation(upload, angle)
+
+    # Save rotated image and clear associated cached images
+    rotated_image_bytes = SpooledTemporaryFile()
+    if isinstance(rotated_image_obj, list):
+        rotated_image_obj[0].save(rotated_image_bytes, format=image_format, save_all=True, append_images=rotated_image_obj[1:])
+    else:
+        rotated_image_obj.save(rotated_image_bytes, format=image_format)
+    rotated_image_bytes.seek(0)
+
+    # Overrite the original image file with the rotated image
+    with open(upload.filepath, 'wb') as f:
+        f.write(rotated_image_bytes.read())
+    rotated_image_bytes.seek(0)
+
+    # Clear cached processed images since the original image has changed
+    cache_dir = upload.filepath.parent / "cache"
+    if cache_dir.exists() and cache_dir.is_dir():
+        for cached_file in cache_dir.iterdir():
+            if cached_file.is_file() and cached_file.name.startswith(upload.name):
+                try:
+                    cached_file.unlink()
+                except Exception as e:
+                    logger.warning(f"Failed to delete cached file {cached_file} after image rotation: {e}")
+
+    # Process image rotation
+    processed_image_metadata = image_metadata.model_copy()
+    if angle in [90, 270]:
+        processed_image_metadata.width, processed_image_metadata.height = image_metadata.height, image_metadata.width
+
+    return processed_image_metadata
+
 
 def is_gif(image_obj: Pillow.Image) -> bool:
     """Check if an image object is a GIF."""
@@ -526,5 +602,3 @@ def get_image_as_png(image_obj: Pillow.Image | List[Pillow.Image], image_bytes: 
     image_bytes.seek(0)
 
     return image_bytes
-
-
