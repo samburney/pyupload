@@ -13,7 +13,7 @@ Refactor `app` module dependencies to enforce clean layer boundaries, remove cir
 ### Current State
 - Internal module graph contains 47 Python modules and 120 internal dependency edges.
 - One circular dependency exists between model modules.
-- One explicit cross-layer dependency exists from lib layer to UI layer.
+- ~~One explicit cross-layer dependency exists from lib layer to UI layer.~~ *(resolved — Step 1 complete)*
 - `app.main` currently orchestrates many modules directly, increasing coupling.
 
 ### Target State
@@ -176,19 +176,24 @@ graph LR
 - `app/api/images.py`
 
 **Tasks**:
-1. [ ] Remove `app.ui.common.errors` import from `app.lib.file_serving`.
-2. [ ] Make `app.lib.file_serving` raise typed exceptions only.
-3. [ ] Convert exceptions to UI/API responses at route/controller boundaries.
+1. [x] Remove `app.ui.common.errors` import from `app.lib.file_serving`.
+2. [x] Make `app.lib.file_serving` raise typed exceptions only.
+3. [x] Convert exceptions to UI/API responses at route/controller boundaries.
 
 **Tests**
-1. [ ] Run `tests/test_integration_file_serving.py`.
-2. [ ] Run `tests/test_api_files.py`.
-3. [ ] Run `/get` fallback tests for error-image behavior.
+1. [x] Run `tests/test_integration_file_serving.py`.
+2. [x] Run `tests/test_api_files.py`.
+3. [x] Run `/get` fallback tests for error-image behavior.
 
 **Acceptance Criteria**:
-- [ ] No `lib -> ui` imports remain.
-- [ ] File serving behavior and status codes remain unchanged.
-- [ ] Targeted tests pass.
+- [x] No `lib -> ui` imports remain.
+- [x] File serving behavior and status codes remain unchanged.
+- [x] Targeted tests pass.
+
+**Implementation Notes**:
+- Exceptions are now handled by global `@app.exception_handler` registrations in `app/main.py`, routing to JSON, image-error, or HTML responses based on request path.
+- `error_template_response()` updated to accept an optional `title` parameter and pass both `empty_content_*` and `error_messages` context shapes simultaneously.
+- `ui/uploads.py` local `try/except` blocks removed; `api/images.py` local `try/except` blocks removed.
 
 ---
 
