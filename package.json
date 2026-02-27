@@ -7,7 +7,10 @@
     "build:css": "npx @tailwindcss/cli -i ./input.css -o ./app/static/css/tailwind.css --minify --content './app/ui/templates/**/*.{html,j2}'"
   },
   "dependencies": {
-    "tailwindcss": "^4.1",
-    "@tailwindcss/cli": "^4.1"
+    "@tailwindcss/cli": "^4.1",
+    "tailwindcss": "^4.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.11"
   }
 }
