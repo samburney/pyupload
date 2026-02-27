@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.lib.config import get_app_config
 from app.lib.scheduler import scheduler
@@ -105,6 +106,24 @@ def _route_error_response(request: Request, error_title: str, error_message: str
         )
 
     return error_template_response(request, [error_message], status_code=status_code)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Handle generic HTTP exceptions with custom error pages for UI routes."""
+
+    # Skip for API endpoints
+    if not request.url.path.startswith("/api/"):
+
+        # Error 405: Method Not Allowed
+        if exc.status_code == 405:
+            return error_template_response(request=request, status_code=exc.status_code, title=f"Error: {exc.status_code}", error_messages=[str(exc.detail)])
+
+    # Return default response for everything else
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=jsonable_encoder({"detail": exc.detail}),
+    )
 
 
 @app.exception_handler(RequestValidationError)
