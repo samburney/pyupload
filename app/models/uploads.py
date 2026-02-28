@@ -16,6 +16,8 @@ from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 from app.models.common.pagination import PaginationMixin
 from app.models.users import User, UserSerializer
 from app.models.images import ImageSerializer, ImageMetadata
+from app.models.tags import TagSerializer
+
 
 if TYPE_CHECKING:
     from app.models.images import Image
@@ -48,6 +50,9 @@ def make_user_filepath(user_id: int, filename: str) -> Path:
 class Upload(models.Model, TimestampMixin, PaginationMixin):
     id = fields.IntField(primary_key=True)
     user = fields.ForeignKeyField("models.User", related_name="uploads", on_delete=fields.RESTRICT)
+    tags = fields.ManyToManyField(
+        "models.Tag", related_name="uploads", through="tag_upload", forward_key="upload_id", backward_key="tag_id"
+    )
     description = fields.CharField(max_length=255)
     name = fields.CharField(max_length=255)
     cleanname = fields.CharField(max_length=255)
@@ -58,6 +63,7 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     extra = fields.CharField(max_length=32)
     viewed = fields.IntField(default=0)
     private = fields.IntField(default=0) # tinyint(1) in MySQL
+
 
     # Type hints for reverse relationships
     if TYPE_CHECKING:
@@ -203,6 +209,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     # Model fields
     id: int
     user: UserSerializer
+    tags: list[TagSerializer]
     description: str
     name: str
     cleanname: str

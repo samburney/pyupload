@@ -1,4 +1,5 @@
 from tortoise import fields, models
+from tortoise_serializer import ModelSerializer
 
 from app.models.common.base import TimestampMixin
 
@@ -17,3 +18,11 @@ class TagUpload(models.Model):
 
     class Meta:  # type: ignore[override]
         table = "tag_upload"
+
+
+class TagSerializer(ModelSerializer[Tag]):
+    """Serializer for the Tag model."""
+
+    # Model fields
+    id: int
+    name: str

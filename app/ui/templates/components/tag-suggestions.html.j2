@@ -5,7 +5,13 @@
     x-transition>
     {% if existing_tags is defined %}
     {% if new_tag %}
-    <li class="w-full p-2 m-0 text-xs">
+    <li class="w-full p-2 m-0 text-xs"
+        hx-trigger="click"
+        hx-post="/edit/{{ upload.id }}/tag"
+        hx-include="#tag_name"
+        hx-select="#tag-input"
+        hx-target="#tag-input"
+        hx-swap="outerHTML">
         <button class="w-full m-0 text-right" type="button">
             <span class="px-1 py-0.5 border border-green-500 shadow shadow-green-300 rounded-sm uppercase hover:bg-green-100 hover:border-green-500">
                 <span class="pl-1 pr-0.5 mr-1 text-gray-500 hover:text-black hover:rounded-3xl hover:bg-green-300">
@@ -18,7 +24,13 @@
     </li>
     {% endif %}
     {% for tag in existing_tags %}
-    <li class="w-full p-2 m-0 text-xs">
+    <li class="w-full p-2 m-0 text-xs"
+        hx-trigger="click"
+        hx-post="/edit/{{ upload.id }}/tag"
+        hx-vals='{"tag_name": "{{ tag }}"}'
+        hx-select="#tag-input"
+        hx-target="#tag-input"
+        hx-swap="outerHTML">
         <button class="w-full m-0 text-right" type="button">
             <span class="px-1 py-0.5 border border-gray-500 shadow shadow-gray-300 rounded-sm uppercase hover:bg-gray-100 hover:border-green-500">
                 <span class="pl-1 pr-0.5 mr-1 text-gray-500 hover:text-black hover:rounded-3xl hover:bg-green-300">
