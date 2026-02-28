@@ -18,16 +18,16 @@
     })
 </script>
 
+{% macro render_tags_input() %}
 <label class="input tag-input" for="Tag input"
        x-data="tagInput"
        x-init>
-    <span class="label">Tag input</span>
-    <div>
-        <ul class="flex flex-wrap gap-1 items-center">
+    <div class="relative hover:bg-gray-200">
+        <ul class="peer flex flex-wrap gap-1 items-center">
             {% for tag in tags %}
             <li class="text-xs">
                 <div class="px-1 py-0.5 border border-blue-500 shadow shadow-blue-300 rounded-sm uppercase hover:bg-blue-100 hover:border-blue-500">
-                    <button class="px-1 text-gray-500 hover:text-black hover:rounded-3xl hover:bg-red-300" type="button">
+                    <button class="px-1 text-gray-300 hover:text-black hover:rounded-3xl hover:bg-red-300" type="button">
                         <span class="sr-only">Remove tag</span>
                         &times;
                     </button>
@@ -37,8 +37,8 @@
             {% endfor %}
             <li class="text-xs">
                 <div class="relative">
-                    <input type="text" id="Tag input" name="Tag input"
-                           class="text-xs ring-0 px-1 py-0.5 min-w-16 field-sizing-content shadow-none border-0 rounded-none focus:border-b focus:border-b-blue-500 focus:-mb-px focus:shadow focus:shadow-blue-300"
+                    <input type="text" id="Tag input" name="Tag input" placeholder=""
+                           class="text-xs ring-0 px-1 py-0.5 min-w-16 field-sizing-content bg-transparent shadow-none border-0 rounded-none focus:border-b focus:border-b-blue-500 focus:-mb-px peer"
                            x-model="newTag"
                            @keyup="update()"
                            @focus="update()"
@@ -51,5 +51,7 @@
                 </div>
             </li>
         </ul>
+        <span class="absolute inset-y-2 start-1 -translate-y-4.5 bg-gray-100 hover:bg-gray-200 peer-hover:bg-gray-200 px-0.5 text-xs font-medium text-gray-700 transition-transform peer-has-placeholder-shown:translate-y-0 peer-has-placeholder-shown:text-gray-500 peer-has-focus:-translate-y-4.5 peer-has-focus:text-gray-700 peer-has-focus:peer-hover:bg-gray-100">Tags</span>
     </div>
 </label>
+{% endmacro %}
