@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, Response
 from tortoise.expressions import Q
 
 from app.lib.config import get_app_config
+from app.lib.helpers import make_clean_tag
 from app.lib.auth import get_current_user_from_request
 
 from app.ui.common.templating import templates
@@ -95,3 +96,55 @@ async def index(
         response.headers[key] = value
 
     return response
+
+
+@router.get("/test", response_class=HTMLResponse)
+def test_page_get(request: Request):
+    """Test page for development."""
+
+    tags = [
+        "python",
+        "fastapi",
+        "tortoise-orm",
+        "jinja2",
+        "tailwindcss",
+        "docker",
+        "postgresql",
+    ]
+
+    return templates.TemplateResponse("test.html.j2",{
+                                          "request": request,
+                                          "tags": tags,
+                                      })
+
+@router.post("/test/suggest")
+async def test_page_suggest(request: Request):
+    """Test endpoint for tag suggestions."""
+
+    form_data = await request.form()
+    q: str = str(form_data.get("Tag input", "")).lower()
+
+    # In a real implementation, you would query your database for tags matching the input
+    # For this example, we'll just return some hardcoded suggestions
+    existing_tags = [
+        "redis",
+        "celery",
+        "rabbitmq",
+        "kafka",
+    ]
+
+    new_tag = None
+    suggested_tags = []
+    if q != '':
+        suggested_tags = [tag.lower() for tag in existing_tags if q in tag.lower()]
+    
+        print(f"Suggesting tags for query '{q}': {suggested_tags}")
+
+        if q not in suggested_tags:
+            new_tag = make_clean_tag(q)
+
+    return templates.TemplateResponse("components/tag-suggestions.html.j2",{
+                                          "request": request,
+                                          "new_tag": new_tag,
+                                          "existing_tags": suggested_tags
+                                      })

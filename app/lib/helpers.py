@@ -129,16 +129,28 @@ def split_filename(filename: str) -> tuple[str, str]:
     return filename, ''
 
 
+def clean_text(text: str, replacement_char: str = '-') -> str:
+    """Clean a text string by removing unsafe characters and normalizing whitespace."""
+
+    # Remove all characters except alphanumerics, and underscores
+    clean_text = re.sub(rf'[^{replacement_char}a-z0-9]', replacement_char, text.lower())
+
+    # Trim and remove duplicate underscores
+    clean_text = re.sub(rf'{replacement_char}{replacement_char}+', replacement_char, clean_text).strip(replacement_char)
+
+    return clean_text
+
+
+def make_clean_tag(tag: str) -> str:
+    """Clean a tag by removing unsafe characters and normalizing whitespace."""
+
+    return clean_text(tag, replacement_char='-')
+
+
 def make_clean_filename(filename: str) -> str:
     """Clean a filename by removing unsafe characters."""
 
-    # Remove all characters except alphanumerics, and underscores
-    clean_filename = re.sub(r'[^_a-z0-9]', '_', filename.lower())
-
-    # Trim and remove duplicate underscores
-    clean_filename = re.sub(r'__+', '_', clean_filename).strip('_')
-
-    return clean_filename
+    return clean_text(filename, replacement_char='_')
 
 
 def make_unique_filename(filename: str) -> str:

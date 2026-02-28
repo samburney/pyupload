@@ -1,63 +1,54 @@
-<label class="input tag-input" for="Tag input">
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('tagInput', () => ({
+            menu: false,
+            newTag: '',
+
+            update() {
+                if (this.newTag.trim() === '') {
+                    console.log("Hiding menu because input is empty");
+                    this.menu = false;
+                }
+                else {
+                    console.log("Showing menu for query:", this.newTag);
+                    this.menu = true;
+                }
+            }
+        }))
+    })
+</script>
+
+<label class="input tag-input" for="Tag input"
+       x-data="tagInput"
+       x-init>
     <span class="label">Tag input</span>
     <div>
-        <ul>
-            <li>
-                <div class="tag">
-                    <button type="button">
+        <ul class="flex flex-wrap gap-1 items-center">
+            {% for tag in tags %}
+            <li class="text-xs">
+                <div class="px-1 py-0.5 border border-blue-500 shadow shadow-blue-300 rounded-sm uppercase hover:bg-blue-100 hover:border-blue-500">
+                    <button class="px-1 text-gray-500 hover:text-black hover:rounded-3xl hover:bg-red-300" type="button">
                         <span class="sr-only">Remove tag</span>
                         &times;
                     </button>
-                    <span>Tag 1</span>
+                    <span>{{ tag }}</span>
                 </div>
             </li>
-            <li>
-                <div class="tag">
-                    <button type="button">
-                        <span class="sr-only">Remove tag</span>
-                        &times;
-                    </button>
-                    <span>Tag 2</span>
+            {% endfor %}
+            <li class="text-xs">
+                <div class="relative">
+                    <input type="text" id="Tag input" name="Tag input"
+                           class="text-xs ring-0 px-1 py-0.5 min-w-16 field-sizing-content shadow-none border-0 rounded-none focus:border-b focus:border-b-blue-500 focus:-mb-px focus:shadow focus:shadow-blue-300"
+                           x-model="newTag"
+                           @keyup="update()"
+                           @focus="update()"
+                           @blur="menu = false"
+                           hx-trigger="keyup[event.target.value.trim() !== ''] changed"
+                           hx-post="/test/suggest"
+                           hx-target="#tag-suggestions"
+                           hx-swap="outerHTML">
+                    {% include "components/tag-suggestions.html.j2" %}
                 </div>
-            </li>
-            <li>
-                <div class="tag">
-                    <button type="button">
-                        <span class="sr-only">Remove tag</span>
-                        &times;
-                    </button>
-                    <span>Tag 3</span>
-                </div>
-            </li>
-            <li>
-                <div class="tag">
-                    <button type="button">
-                        <span class="sr-only">Remove tag</span>
-                        &times;
-                    </button>
-                    <span>Tag 4</span>
-                </div>
-            </li>
-            <li>
-                <div class="tag">
-                    <button type="button">
-                        <span class="sr-only">Remove tag</span>
-                        &times;
-                    </button>
-                    <span>Tag 5</span>
-                </div>
-            </li>
-            <li>
-                <div class="tag">
-                    <button type="button">
-                        <span class="sr-only">Remove tag</span>
-                        &times;
-                    </button>
-                    <span>Tag 6</span>
-                </div>
-            </li>
-            <li>
-                <input type="text" id="Tag input" name="Tag input">
             </li>
         </ul>
     </div>

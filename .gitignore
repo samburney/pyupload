@@ -11,6 +11,7 @@ data/*
 *.pyc
 *.sqlite3
 docker-compose.override.yaml
+test.html.j2
 
 # Node / Tailwind CSS
 node_modules/
