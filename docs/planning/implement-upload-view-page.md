@@ -48,6 +48,17 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Privacy enforcement implemented via `validate_file_request` on both `/view/{id}` and `/view/{id}/{filename}` routes (Step 1 task 6 complete).
 - Sharing, inline editing, privacy toggle, delete, and all view-page tests remain pending.
 
+### Review Snapshot (2026-03-01)
+- Tag management implemented inline on the upload view page (Step 10 below).
+- `app/models/tags.py`: `Tag.add_or_create_for_upload` and `Tag.remove_tag_from_upload` class methods added; `TagSerializer` added.
+- `app/models/uploads.py`: `tags = fields.ManyToManyField("models.Tag", ...)` added to `Upload`; `tags` field added to `UploadSerializer`.
+- Three new HTMX endpoints in `app/ui/uploads.py`: `POST /uploads/{id}/tag-suggestions`, `POST /uploads/{id}/tag`, `DELETE /uploads/{id}/tag`.
+- `app/ui/templates/components/tag-input.html.j2`: new Alpine.js tag input widget with autocomplete, add, and remove interactions.
+- `app/ui/templates/components/tag-suggestions.html.j2`: suggestions dropdown partial for HTMX swap.
+- All `prefetch_related` calls across `app/ui/main.py`, `app/ui/images.py`, `app/ui/users.py`, and `app/api/images.py` updated to include `"tags"`.
+- Tests: `tests/test_models_tags.py` (14 tests), `tests/test_lib_helpers.py` additions (`TestCleanText`, `TestMakeCleanTag`), and `tests/test_ui_uploads.py` additions (`TestTagSuggestionsEndpoint`, `TestUploadAddTagEndpoint`, `TestUploadDeleteTagEndpoint`) — all 788 tests passing.
+- Sharing, title/description inline editing, privacy toggle, and view-page tests remain pending.
+
 ### Review Snapshot (2026-02-22)
 - View page fully refactored into reusable components: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-actions.html.j2`. Steps 2 task 1 and Step 3 task 1 now complete.
 - `view-frame.html.j2` adds `id="view-frame-image"` on image for HTMX targeting, server-side cache-busting via `?t={updated_at_timestamp}`, and a loading indicator overlay (Steps 2 task 6 partial — loading state handled, broken image placeholder still pending).
@@ -490,3 +501,52 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Dependencies**:
 - All previous steps must be complete
+
+---
+
+## Step 10: Inline Tag Management (Owner Only)
+
+**Files**:
+- `app/models/tags.py`
+- `app/models/uploads.py`
+- `app/ui/uploads.py`
+- `app/ui/templates/components/tag-input.html.j2`
+- `app/ui/templates/components/tag-suggestions.html.j2`
+
+**Tasks**:
+1. [x] Add `ManyToManyField` tags relation to `Upload` model
+2. [x] Create `TagSerializer`
+3. [x] Implement `Tag.add_or_create_for_upload` class method (sanitises name, creates or reuses tag, adds M2M association)
+4. [x] Implement `Tag.remove_tag_from_upload` class method (sanitises name, removes association, deletes orphaned tags)
+5. [x] Create `POST /uploads/{id}/tag-suggestions` endpoint (HTMX, owner only)
+6. [x] Create `POST /uploads/{id}/tag` endpoint (HTMX, owner only, returns 201)
+7. [x] Create `DELETE /uploads/{id}/tag` endpoint (HTMX, owner only, returns 200)
+8. [x] Create `tag-input.html.j2` Alpine.js component with autocomplete and add/remove interactions
+9. [x] Create `tag-suggestions.html.j2` partial for HTMX suggestion dropdown swap
+10. [x] Update all `prefetch_related` calls to include `"tags"`
+
+**Tests**:
+1. [x] `TestTagAddOrCreateForUpload`: creates tag, reuses existing, adds M2M, sanitises name, raises on empty/invalid, idempotent re-add
+2. [x] `TestTagRemoveTagFromUpload`: removes association, returns False when not found, deletes orphan, preserves shared, sanitises name, raises on empty/invalid
+3. [x] `TestCleanText`: all `clean_text` helper edge cases
+4. [x] `TestMakeCleanTag`: all `make_clean_tag` helper edge cases
+5. [x] `TestTagSuggestionsEndpoint`: unauthenticated redirect, 404, 403, suggestions matching query, excludes already-attached tags
+6. [x] `TestUploadAddTagEndpoint`: unauthenticated redirect, 404, 403, successful add (201 + HTML), tag persisted in DB, 400 for invalid tag name
+7. [x] `TestUploadDeleteTagEndpoint`: unauthenticated redirect, 404, 403, successful remove (200 + HTML), tag removed from DB, 400 for invalid tag name
+
+**Acceptance Criteria**:
+- [x] Owners can add tags to their uploads via an HTMX autocomplete input
+- [x] Owners can remove tags via the same UI
+- [x] Tag names are sanitised (lowercased, special chars replaced with `-`)
+- [x] Invalid/empty tag names return 400 Bad Request
+- [x] Orphaned tags (no remaining uploads) are automatically deleted
+- [x] Non-owners receive 403; unauthenticated requests redirect to `/login`
+- [x] All tests passing (788)
+
+**Implementation Notes**:
+- Tag name sanitisation uses the existing `make_clean_tag` helper (delegates to `clean_text`).
+- The Alpine.js `tagInput` component is guarded by `{% if not request or request.headers.get('hx-request') != 'true' %}` so the `<script>` block is only emitted on full page loads, not HTMX partial responses.
+- `validate_file_update_request` is reused for ownership/access checks, which also enforces file existence. Tests that exercise successful add/remove paths create a backing file via `_create_tag_upload_with_file`.
+
+**Dependencies**:
+- Step 1 must be complete

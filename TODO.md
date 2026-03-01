@@ -8,10 +8,11 @@
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, and delete functionality (with confirmation modal) all implemented; sharing, inline editing, privacy toggle, and view-page tests are not yet implemented)*
+- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, inline tag editing, and delete functionality (with confirmation modal) all implemented; sharing, title/description inline editing, privacy toggle, and view-page tests are not yet implemented)*
   - [x] Display file metadata (size, dimensions, type, view count)
   - [x] Image rotation UI (owner only)
   - [x] Delete button for owners
+  - [x] Inline tag editing (owner only)
   - [ ] Social/direct link sharing options
   - [ ] Inline editing for title/description (owner only)
   - [ ] Privacy toggle (private/public) for owners
@@ -51,10 +52,10 @@
   - [ ] Create/edit/delete collections
   - [ ] Add/remove uploads from collections
   - [ ] Collection browsing pages
-- [ ] Tag system UI
-  - [ ] Tag creation and management
+- [ ] Tag system UI *(partial: inline tag editing on upload view page implemented; tag browsing and standalone management pages remain)*
   - [ ] Tag browsing pages
-  - [ ] Inline tag editing on upload view page
+  - [ ] Tag creation and management (standalone admin/browse pages)
+  - [x] Inline tag editing on upload view page
 
 ### Image Processing & Transformations
 - [ ] Expand processing support to all Pillow-compatible image formats

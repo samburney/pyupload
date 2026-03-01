@@ -11,7 +11,7 @@ from app.models.uploads import Upload
 from app.models.users import User
 
 from app.ui.common.errors import error_response_for_get
-from app.ui.uploads import view_upload_page
+from app.ui.uploads import view_upload_page_get
 
 
 router = APIRouter(prefix="/images", tags=["images"])
@@ -51,7 +51,7 @@ async def post_rotate_image(
 
     # Return new instance of view page
     flash_message(request, f"Image rotated {angle} degrees successfully.")
-    return await view_upload_page(
+    return await view_upload_page_get(
         request=request,
         id=upload.id,
         filename=upload.filename,

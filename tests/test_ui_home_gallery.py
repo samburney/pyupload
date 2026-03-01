@@ -199,7 +199,7 @@ class TestHomeRoute:
 class TestHomeRouteDatabaseQueryPerformance:
     """Step 7 database-focused performance regression coverage."""
 
-    SELECT_QUERY_BASELINE_BUDGET = 29
+    SELECT_QUERY_BASELINE_BUDGET = 30
 
     async def _count_home_page_select_queries(self, client, path: str = "/?page=1") -> int:
         """Count SELECT queries executed during a single home page request."""

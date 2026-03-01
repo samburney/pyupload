@@ -5,7 +5,6 @@ from fastapi.responses import HTMLResponse, Response
 from tortoise.expressions import Q
 
 from app.lib.config import get_app_config
-from app.lib.helpers import make_clean_tag
 from app.lib.auth import get_current_user_from_request
 
 from app.ui.common.templating import templates
@@ -64,7 +63,7 @@ async def index(
     pagination.count = await Upload.filter(query).count()
 
     # Get uploads
-    uploads_models = Upload.paginate(**pagination.page_data(), query=query).prefetch_related("user", "images")
+    uploads_models = Upload.paginate(**pagination.page_data(), query=query).prefetch_related("user", "images", "tags")
     uploads = await UploadSerializer.from_queryset(uploads_models)
 
     # Template context

@@ -5,6 +5,8 @@ from app.lib.helpers import (
     is_bool,
     validate_mime_types,
     split_filename,
+    clean_text,
+    make_clean_tag,
     make_clean_filename,
     make_unique_filename,
     sanitised_markdown,
@@ -206,6 +208,78 @@ class TestSplitFilename:
         # rsplit('.', 1) splits on the dot, so name='' and ext='gitignore'
         assert name == ""
         assert ext == "gitignore"
+
+
+class TestCleanText:
+    """Test the generic clean_text helper."""
+
+    def test_converts_to_lowercase(self):
+        """clean_text lowercases the input."""
+        assert clean_text("Hello") == "hello"
+
+    def test_replaces_special_characters_with_default_char(self):
+        """Non-alphanumeric characters are replaced with '-' by default."""
+        assert clean_text("hello world!") == "hello-world"
+
+    def test_custom_replacement_char(self):
+        """A custom replacement character is used when supplied."""
+        assert clean_text("hello world", replacement_char="_") == "hello_world"
+
+    def test_collapses_consecutive_replacement_chars(self):
+        """Multiple consecutive replacement chars collapse to one."""
+        assert clean_text("hello   world") == "hello-world"
+
+    def test_strips_leading_replacement_chars(self):
+        """Leading replacement chars are stripped."""
+        assert clean_text("---hello") == "hello"
+
+    def test_strips_trailing_replacement_chars(self):
+        """Trailing replacement chars are stripped."""
+        assert clean_text("hello---") == "hello"
+
+    def test_preserves_alphanumerics(self):
+        """Alphanumeric characters are preserved."""
+        assert clean_text("abc123") == "abc123"
+
+    def test_empty_string_returns_empty(self):
+        """Empty input returns empty string."""
+        assert clean_text("") == ""
+
+    def test_only_invalid_chars_returns_empty(self):
+        """Input of only invalid characters returns empty string."""
+        assert clean_text("!@#$%") == ""
+
+
+class TestMakeCleanTag:
+    """Test make_clean_tag helper."""
+
+    def test_uses_dash_as_separator(self):
+        """Spaces are replaced with dashes."""
+        assert make_clean_tag("hello world") == "hello-world"
+
+    def test_converts_to_lowercase(self):
+        """Tag names are lowercased."""
+        assert make_clean_tag("MyTag") == "mytag"
+
+    def test_removes_special_characters(self):
+        """Special characters are replaced with dashes."""
+        assert make_clean_tag("tag!") == "tag"
+
+    def test_collapses_multiple_dashes(self):
+        """Multiple consecutive dashes collapse to one."""
+        assert make_clean_tag("hello--world") == "hello-world"
+
+    def test_strips_leading_trailing_dashes(self):
+        """Leading and trailing dashes are stripped."""
+        assert make_clean_tag("-hello-") == "hello"
+
+    def test_preserves_alphanumerics(self):
+        """Alphanumeric characters are preserved."""
+        assert make_clean_tag("tag123") == "tag123"
+
+    def test_only_invalid_chars_returns_empty(self):
+        """Input of only invalid characters returns empty string."""
+        assert make_clean_tag("!@#$") == ""
 
 
 class TestMakeCleanFilename:

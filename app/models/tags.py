@@ -36,7 +36,7 @@ class Tag(models.Model, TimestampMixin):
 
     @classmethod
     async def remove_tag_from_upload(cls, upload: "Upload", tag_name: str) -> bool:
-        """Add a tag to an upload, creating the tag if it doesn't exist."""
+        """Remove a tag from an upload, deleting the tag if it has no remaining uploads."""
 
         # Sanitise tag name
         tag_name = make_clean_tag(tag_name)

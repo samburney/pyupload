@@ -23,7 +23,7 @@ router = APIRouter(tags=["uploads"])
 
 
 @router.get("/upload", response_class=HTMLResponse)
-async def show_upload_page(
+async def show_upload_page_get(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -39,7 +39,7 @@ async def show_upload_page(
 
 
 @router.post("/upload", response_class=HTMLResponse)
-async def create_upload(
+async def create_upload_post(
     current_user: Annotated[User, Depends(get_or_create_authenticated_user)],
     request: Request,
     upload_files: list[UploadFile]
@@ -75,7 +75,7 @@ async def create_upload(
 
 
 @router.get("/get/{id}", response_class=Response)
-async def get_upload_without_filename(
+async def get_upload_without_filename_get(
     id: int,
 ):
     """Redirect to an SEO friendly GET URL if filename is omitted"""
@@ -90,7 +90,7 @@ async def get_upload_without_filename(
 
 
 @router.get("/get/{id}/{filename}", response_class=Response)
-async def get_upload(
+async def get_upload_get(
     id: int,
     filename: str,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -116,18 +116,18 @@ async def get_upload(
 
 
 @router.get("/download/{id}/{filename}", response_class=Response)
-async def download_upload(
+async def download_upload_get(
     id: int,
     filename: str,
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Download an uploaded file."""
 
-    return await get_upload(id=id, filename=filename, current_user=current_user, download=True)
+    return await get_upload_get(id=id, filename=filename, current_user=current_user, download=True)
 
 
 @router.get("/view/{id}", response_class=Response)
-async def view_upload_page_without_filename(
+async def view_upload_page_without_filename_get(
     id: int,
 ):
     """Redirect to an SEO friendly GET URL if filename is omitted"""
@@ -150,7 +150,7 @@ async def view_upload_page_without_filename(
 
 
 @router.get("/view/{id}/{filename}", response_class=HTMLResponse)
-async def view_upload_page(
+async def view_upload_page_get(
     request: Request,
     id: int,
     filename: str,
@@ -193,7 +193,7 @@ async def view_upload_page(
 
 
 @router.delete("/uploads/{id}", response_class=Response)
-async def delete_upload(
+async def delete_upload_delete(
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     request: Request,
@@ -253,17 +253,18 @@ async def get_tag_suggestions_post(
         .values_list("name", flat=True)
 
     if tag_name != '':
-        print(f"Suggesting tags for query '{tag_name}': {suggested_tags}")
-
         if tag_name not in suggested_tags:
             new_tag = make_clean_tag(tag_name)
 
-    return templates.TemplateResponse("components/tag-suggestions.html.j2",{
-                                        "request": request,
-                                        "upload": upload,
-                                        "new_tag": new_tag,
-                                        "existing_tags": suggested_tags
-                                      })
+    return templates.TemplateResponse(
+        request,
+        "components/tag-suggestions.html.j2",
+        context={
+            "upload": upload,
+            "new_tag": new_tag,
+            "existing_tags": suggested_tags,
+        },
+    )
 
 
 @router.post("/uploads/{id}/tag", response_class=Response)
@@ -292,11 +293,11 @@ async def upload_add_tag_post(
         await Tag.add_or_create_for_upload(upload_model, tag_name)
 
     except ValueError as e:
-            return templates.TemplateResponse(
-                request, "layout/error.html.j2",
-                status_code=404,
-                context={"error_messages": [str(e)]},
-            )
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=400,
+            context={"error_messages": [str(e)]},
+        )
 
     # Serialize upload for template
     await upload_model.fetch_related("tags")  # Refresh related tags
@@ -317,13 +318,13 @@ async def upload_add_tag_post(
 
 
 @router.delete("/uploads/{id}/tag", response_class=Response)
-async def upload_add_tag_delete(
+async def upload_remove_tag_delete(
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     request: Request,
     tag_name: str,
 ) -> Response:
-    """Add a tag to an upload."""
+    """Remove a tag from an upload."""
     
     # Get upload from database
     upload_model = await Upload.get_or_none(id=id).prefetch_related("user", "images", "tags")
@@ -342,11 +343,11 @@ async def upload_add_tag_delete(
         await Tag.remove_tag_from_upload(upload_model, tag_name)
 
     except ValueError as e:
-            return templates.TemplateResponse(
-                request, "layout/error.html.j2",
-                status_code=404,
-                context={"error_messages": [str(e)]},
-            )
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=400,
+            context={"error_messages": [str(e)]},
+        )
 
     # Serialize upload for template
     await upload_model.fetch_related("tags")  # Refresh related tags

@@ -50,7 +50,7 @@ If you would like to upgrade to a full account, please [login](/login) or [regis
 
     # Get list of files uploaded
     upload_models = Upload.paginate(**pagination.page_data(), user=current_user) \
-        .prefetch_related("user","images")
+        .prefetch_related("user", "images", "tags")
     uploads = await UploadSerializer.from_queryset(upload_models)
 
     return templates.TemplateResponse(

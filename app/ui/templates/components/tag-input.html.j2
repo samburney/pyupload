@@ -1,3 +1,4 @@
+{%- if not request or request.headers.get('hx-request') != 'true' %}
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('tagInput', () => ({
@@ -15,6 +16,7 @@
         }))
     })
 </script>
+{% endif %}
 
 {% macro render_tags_input(upload) %}
 <label id="tag-input" class="input tag-input" for="tag_name"
@@ -73,6 +75,6 @@
 {% endmacro -%}
 
 {# Handle HTMX partial request #}
-{%- if request and 'hx-request' in request.headers and request.headers['hx-request'] =='true' %}
+{%- if request and request.headers.get('hx-request', '') == 'true' %}
 {{ render_tags_input(upload) }}
 {% endif %}
