@@ -1,47 +1,53 @@
 {% from "components/confirm-modal.html.j2" import render_dialog %}
 {% include "components/tag-input.html.j2" %}
 {% from "components/tag-input.html.j2" import render_tags_input %}
+{% include "components/collections-combo-selector.html.j2" %}
+{% from "components/collections-combo-selector.html.j2" import render_combo_selector %}
 {% if current_user and upload.user.id == current_user.id %}
         <div class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
-            <p class="text-xs font-semibold">ACTIONS</p>
             <div class="mt-2">{{ render_tags_input(upload=upload) }}</div>
+            <div>{{ render_combo_selector(upload) }}</div>
+            <p class="mt-2 text-xs text-gray-700 font-medium">Actions</p>
             <div class="flex flex-col w-full gap-1 items-center justify-left">
                 {% if upload.is_image %}
-                <div class="relative w-full"
-                     x-data="{ open: false }">
-                    <button type="button"
-                            id="rotate-toggle-{{ upload.id }}"
-                            class="px-4 py-2 w-full text-left rounded-md hover:bg-gray-200 cursor-pointer disabled:cursor-not-allowed disabled:text-gray-500 hover:disabled:bg-gray-100"
-                            aria-label="Menu"
-                            @click="open = !open">
-                        Rotate ▾
-                    </button>
-
-                    <ul role="menu"
-                        class="menu"
-                        aria-label="Download options"
-                        x-show="open"
-                        x-cloak
-                        x-transition
-                        @click="open = false"
-                        @click.outside="open = false">
-                        {% for rd in (('Rotate 90° Clockwise', 90), ('Rotate 180°', 180), ('Rotate 90° Counter-clockwise', 270),) %}
-                        <li role="menuitem"
-                            class="w-full text-left">
-                            <button hx-post="/images/{{ upload.id }}/rotate/{{ rd[1] }}"
-                                    hx-target="#view-frame-image"
-                                    hx-select="#view-frame-image"
-                                    hx-swap="outerHTML"
-                                    hx-select-oob="#messages,#upload-details"
-                                    hx-target-4*="#messages"
-                                    hx-disabled-elt="#rotate-toggle-{{ upload.id }}"
-                                    hx-indicator="#loading-indicator"
-                                    class="w-full text-left cursor-pointer">
-                                {{ rd[0] }}
+                <div class="relative input w-full" x-data="{ open: false }">
+                    <div class="w-full min-w-0">
+                        <div class="flex divide-x divide-gray-300 items-stretch px-0 py-0 bg-gray-100 outline-1 outline-gray-300 shadow-md rounded-md max-h-fit max-w-full">
+                            <div class="px-4 py-2 w-full">Rotate</div>
+                            <button type="button"
+                                    id="rotate-toggle-{{ upload.id }}"
+                                    class="flex items-center px-2 hover:bg-gray-200 rounded-r-md cursor-pointer disabled:cursor-not-allowed disabled:text-gray-400"
+                                    aria-label="Toggle rotate menu"
+                                    @click="open = !open">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"></path>
+                                </svg>
                             </button>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                        </div>
+                        <ul role="menu"
+                            class="menu absolute w-fit max-h-64 overflow-y-auto z-10"
+                            aria-label="Rotate options"
+                            x-show="open"
+                            x-cloak
+                            @click="open = false"
+                            @click.outside="open = false">
+                            {% for rd in (('Rotate 90° Clockwise', 90), ('Rotate 180°', 180), ('Rotate 90° Counter-clockwise', 270),) %}
+                            <li role="menuitem">
+                                <button hx-post="/images/{{ upload.id }}/rotate/{{ rd[1] }}"
+                                        hx-target="#view-frame-image"
+                                        hx-select="#view-frame-image"
+                                        hx-swap="outerHTML"
+                                        hx-select-oob="#messages,#upload-details"
+                                        hx-target-4*="#messages"
+                                        hx-disabled-elt="#rotate-toggle-{{ upload.id }}"
+                                        hx-indicator="#loading-indicator"
+                                        class="w-full text-left cursor-pointer">
+                                    {{ rd[0] }}
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                 </div>
                 {% endif %}
                 <div x-data="{ open: false }"
@@ -60,7 +66,7 @@
                     {% endcall %}
                     <button @click="open = true"
                             type="button"
-                            class="px-4 py-2 w-full text-left rounded-md hover:text-red-600 hover:bg-red-200 cursor-pointer">
+                            class="px-4 py-2 mt-2 w-full text-left rounded-md outline-1 outline-red-100 shadow-md hover:text-red-600 hover:bg-red-200 cursor-pointer">
                         Delete
                     </button>
                 </div>
