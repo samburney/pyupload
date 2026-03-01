@@ -34,6 +34,30 @@ class Tag(models.Model, TimestampMixin):
 
         return tag
 
+    @classmethod
+    async def remove_tag_from_upload(cls, upload: "Upload", tag_name: str) -> bool:
+        """Add a tag to an upload, creating the tag if it doesn't exist."""
+
+        # Sanitise tag name
+        tag_name = make_clean_tag(tag_name)
+        if not tag_name:
+            raise ValueError("Tag name cannot be empty or contain only invalid characters.")
+        
+        # Get Tag object, return False if it doesn't exist
+        tag = await Tag.get_or_none(name=tag_name)
+        if not tag:
+            return False
+        
+        # Remove from Upload
+        await upload.tags.remove(tag)
+
+        # Count the number of uploads with this tag
+        count = await tag.uploads.all().count() # type: ignore[no-member]
+        if count == 0:
+            await tag.delete()
+
+        return True
+
 
 class TagUpload(models.Model):
     tag_id = fields.IntField()

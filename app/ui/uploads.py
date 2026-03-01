@@ -314,3 +314,53 @@ async def upload_add_tag_post(
     )
 
     return response
+
+
+@router.delete("/uploads/{id}/tag", response_class=Response)
+async def upload_add_tag_delete(
+    id: int,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    request: Request,
+    tag_name: str,
+) -> Response:
+    """Add a tag to an upload."""
+    
+    # Get upload from database
+    upload_model = await Upload.get_or_none(id=id).prefetch_related("user", "images", "tags")
+    if upload_model is None:
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=404,
+            context={"error_messages": ["Upload not found"]},
+        )
+    else:
+        validate_file_update_request(upload_model, current_user)
+
+
+    # Remove tag from upload
+    try:
+        await Tag.remove_tag_from_upload(upload_model, tag_name)
+
+    except ValueError as e:
+            return templates.TemplateResponse(
+                request, "layout/error.html.j2",
+                status_code=404,
+                context={"error_messages": [str(e)]},
+            )
+
+    # Serialize upload for template
+    await upload_model.fetch_related("tags")  # Refresh related tags
+    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+
+    # Build response
+    response = templates.TemplateResponse(
+        request,
+        "components/tag-input.html.j2",
+        context={
+            "current_user": current_user,
+            "upload": upload,
+        },
+        status_code=200,
+    )
+
+    return response

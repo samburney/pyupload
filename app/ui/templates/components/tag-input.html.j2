@@ -27,7 +27,13 @@
             <li class="text-xs" @click.stop>
                 <div class="px-1 py-0.5 border border-blue-500 shadow shadow-blue-300 rounded-sm uppercase hover:bg-blue-100 hover:border-blue-500">
                     <button class="px-1 text-gray-300 hover:text-black hover:rounded-3xl hover:bg-red-300" type="button"
-                            @click="console.log('clicked remove tag')">
+                            hx-delete="/uploads/{{ upload.id }}/tag"
+                            hx-vals='{"tag_name": "{{ tag.name }}"}'
+                            hx-select="#tag-input"
+                            hx-target="#tag-input"
+                            hx-swap="outerHTML"
+                            hx-select-oob="#messages"
+                            hx-target-4*="#messages">
                         <span class="sr-only">Remove tag</span>
                         &times;
                     </button>
@@ -53,11 +59,11 @@
                 </div>
             </li>
         </ul>
-        <span class="absolute h-3 px-0.5 text-xs font-medium transition-transform
+        <span class="absolute h-3 px-0.5 text-xs font-medium transition-all
             inset-y-2 start-1 -translate-y-4.5 bg-gray-100 text-gray-700
             hover:bg-gray-200 peer-hover:bg-gray-200
-            peer-has-focus:-translate-y-4.5 peer-has-focus:peer-hover:bg-gray-100 peer-has-focus:text-gray-700
-            {%- if upload.tags | length == 0 %}peer-has-placeholder-shown:translate-y-0 peer-has-placeholder-shown:text-gray-500{% endif %}"
+            peer-has-focus:px-0.5 peer-has-focus:text-xs peer-has-focus:-translate-y-4.5 peer-has-focus:peer-hover:bg-gray-100 peer-has-focus:text-gray-700
+            {%- if upload.tags | length == 0 %} peer-has-placeholder-shown:px-2 peer-has-placeholder-shown:text-sm peer-has-placeholder-shown:translate-y-0 peer-has-placeholder-shown:text-gray-500{% endif %}"
               @click="$focus.focus(document.getElementById('tag_name'))">
               Tags
         </span>
