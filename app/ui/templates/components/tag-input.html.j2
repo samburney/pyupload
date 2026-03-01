@@ -49,7 +49,7 @@
                            @keyup="update()"
                            @focus="update()"
                            @click="update()"
-                           @keyup.enter="$event.preventDefault(); htmx.trigger(htmx.find('#tag-suggestions li:first-child'), 'click');"
+                           @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find('#tag-suggestions li:first-child'), 'click'); }"
                            hx-trigger="keyup[event.target.value.trim() !== ''] changed"
                            hx-post="/uploads/{{ upload.id }}/tag-suggestions"
                            hx-target="#tag-suggestions"
