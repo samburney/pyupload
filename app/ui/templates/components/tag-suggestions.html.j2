@@ -30,7 +30,7 @@
     <li class="w-full p-2 m-0 text-xs"
         hx-trigger="click"
         hx-post="/uploads/{{ upload.id }}/tag"
-        hx-vals='{"tag_name": "{{ tag.name }}"}'
+        hx-vals='{"tag_name": "{{ tag }}"}'
         hx-select="#tag-input"
         hx-target="#tag-input"
         hx-swap="outerHTML"
