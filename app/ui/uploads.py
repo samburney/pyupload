@@ -288,18 +288,17 @@ async def upload_add_tag_post(
     else:
         validate_file_update_request(upload_model, current_user)
 
-    # Sanitise tag name
-    tag_name = make_clean_tag(tag_name)
-    if not tag_name:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=404,
-            context={"error_messages": ["Tag name cannot be empty or contain only invalid characters."]},
-        )
-    
+
     # Add tag to the upload, creating the tag if it doesn't exist
-    tag, _ = await Tag.get_or_create(name=tag_name)
-    await upload_model.tags.add(tag)
+    try:
+        await Tag.add_or_create_for_upload(upload_model, tag_name)
+
+    except ValueError as e:
+            return templates.TemplateResponse(
+                request, "layout/error.html.j2",
+                status_code=404,
+                context={"error_messages": [str(e)]},
+            )
 
     # Serialize upload for template
     await upload_model.fetch_related("tags")  # Refresh related tags
