@@ -47,7 +47,7 @@
                 <div x-data="{ open: false }"
                     class="w-full">
                     {% call render_dialog(title='Confirm delete', content='Are you sure you wish to permanently delete this file?') %}
-                    <button hx-delete="/{{ upload.id }}"
+                    <button hx-delete="/uploads/{{ upload.id }}"
                             type="button"
                             class="button button-alert">
                         Delete

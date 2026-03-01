@@ -192,7 +192,7 @@ async def view_upload_page(
         return templates.TemplateResponse(request, "uploads/view.html.j2", context=context)
 
 
-@router.delete("/{id}", response_class=Response)
+@router.delete("/uploads/{id}", response_class=Response)
 async def delete_upload(
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
@@ -222,7 +222,7 @@ async def delete_upload(
     return Response(status_code=204, headers={"HX-Redirect": "/profile"})
 
 
-@router.post("/get/{id}/tag-suggestions", response_class=HTMLResponse)
+@router.post("/uploads/{id}/tag-suggestions", response_class=HTMLResponse)
 async def get_tag_suggestions_post(
     request: Request,
     id: int,
@@ -266,9 +266,7 @@ async def get_tag_suggestions_post(
                                       })
 
 
-
-
-@router.post("/edit/{id}/tag", response_class=Response)
+@router.post("/uploads/{id}/tag", response_class=Response)
 async def upload_add_tag_post(
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],

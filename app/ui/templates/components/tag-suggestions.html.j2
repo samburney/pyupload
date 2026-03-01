@@ -7,7 +7,7 @@
     {% if new_tag %}
     <li class="w-full p-2 m-0 text-xs"
         hx-trigger="click"
-        hx-post="/edit/{{ upload.id }}/tag"
+        hx-post="/uploads/{{ upload.id }}/tag"
         hx-include="#tag_name"
         hx-select="#tag-input"
         hx-target="#tag-input"
@@ -26,7 +26,7 @@
     {% for tag in existing_tags %}
     <li class="w-full p-2 m-0 text-xs"
         hx-trigger="click"
-        hx-post="/edit/{{ upload.id }}/tag"
+        hx-post="/uploads/{{ upload.id }}/tag"
         hx-vals='{"tag_name": "{{ tag }}"}'
         hx-select="#tag-input"
         hx-target="#tag-input"

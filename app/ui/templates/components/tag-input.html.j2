@@ -6,11 +6,9 @@
 
             update() {
                 if (this.newTag.trim() === '') {
-                    console.log("Hiding menu because input is empty");
                     this.menu = false;
                 }
                 else {
-                    console.log("Showing menu for query:", this.newTag);
                     this.menu = true;
                 }
             }
@@ -19,7 +17,7 @@
 </script>
 
 {% macro render_tags_input(upload) %}
-<label id="tag-input" class="input tag-input" for="Tag input"
+<label id="tag-input" class="input tag-input" for="tag_name"
        x-data="tagInput"
        x-init>
     <div class="relative hover:bg-gray-200 p-2"
@@ -40,13 +38,13 @@
             <li class="text-xs">
                 <div class="relative">
                     <input type="text" id="tag_name" name="tag_name" placeholder=""
-                           class="text-xs ring-0 px-1 py-0.5 focus:min-w-16 field-sizing-content bg-transparent shadow-none border-0 rounded-none focus:border-b focus:border-b-blue-500 focus:-mb-px peer"
+                           class="text-xs ring-0 px-1 py-0.5 min-w-16 focus:min-w-16 placeholder-shown:min-w-0 field-sizing-content bg-transparent shadow-none border-0 rounded-none focus:border-b focus:border-b-blue-500 focus:-mb-px peer"
                            x-model="newTag"
                            @keyup="update()"
                            @focus="update()"
-                           @blur="menu = false"
+                           @click="update()"
                            hx-trigger="keyup[event.target.value.trim() !== ''] changed"
-                           hx-post="/get/{{ upload.id }}/tag-suggestions"
+                           hx-post="/uploads/{{ upload.id }}/tag-suggestions"
                            hx-target="#tag-suggestions"
                            hx-swap="outerHTML"
                            hx-select-oob="#messages"
