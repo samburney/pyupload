@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
+@source "./app/ui/templates/**/*.{html,j2}";
 
 @theme {
   /* Overriding default Tailwind breakpoints with Bootstrap 4 values */
@@ -74,7 +75,16 @@
 
     /* Menus */
     .menu {
-        @apply absolute divide-y divide-gray-200 end-0 top-full mt-1 z-50 w-auto overflow-hidden whitespace-nowrap rounded border border-gray-300 bg-white shadow-sm;
+        @apply absolute divide-y divide-gray-200 end-0 mt-0.5 z-50 w-auto overflow-hidden whitespace-nowrap rounded border border-gray-300 bg-white shadow-sm;
+    }
+
+    .menu-right {
+        @apply end-0;
+    }
+
+    .menu-left {
+        @apply start-0;
+        inset-inline-end: unset;
     }
 
     .menu li {
@@ -164,6 +174,10 @@
 
     .input.tag-input > div {
         @apply my-0.5 p-1 focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500;
+    }
+
+    input[type="checkbox"] {
+        @apply size-5 rounded border-gray-300 shadow-sm;
     }
 
     /* HTMX */
