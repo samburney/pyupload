@@ -17,11 +17,12 @@ from app.models.common.pagination import PaginationMixin
 from app.models.users import User, UserSerializer
 from app.models.images import ImageSerializer, ImageMetadata
 from app.models.tags import TagSerializer
+from app.models.collections import CollectionSerializer
 
 
 if TYPE_CHECKING:
     from app.models.images import Image
-    from tortoise.queryset import QuerySet
+    from tortoise.queryset import QuerySet, QuerySetSingle
 
 
 config = get_app_config()
@@ -52,6 +53,9 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     user = fields.ForeignKeyField("models.User", related_name="uploads", on_delete=fields.RESTRICT)
     tags = fields.ManyToManyField(
         "models.Tag", related_name="uploads", through="tag_upload", forward_key="upload_id", backward_key="tag_id"
+    )
+    collections = fields.ManyToManyField(
+        "models.Collection", related_name="uploads", through="collection_upload", forward_key="upload_id", backward_key="collection_id"
     )
     description = fields.CharField(max_length=255)
     name = fields.CharField(max_length=255)
@@ -202,6 +206,11 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
 
         return True
 
+    @classmethod
+    def get_with_relations(cls, id: int) -> "QuerySetSingle[Upload | None]":
+        """Return a get_or_none queryset with all relations required by UploadSerializer prefetched."""
+        return cls.get_or_none(id=id).prefetch_related("user", "images", "tags", "collections")
+
 
 class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     """Serializer for the Upload model."""
@@ -210,6 +219,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     id: int
     user: UserSerializer
     tags: list[TagSerializer]
+    collections: list[CollectionSerializer]
     description: str
     name: str
     cleanname: str

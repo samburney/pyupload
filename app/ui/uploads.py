@@ -11,6 +11,7 @@ from app.lib.file_serving import serve_file, validate_file_request, validate_fil
 from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 from app.models.tags import Tag
+from app.models.collections import Collection
 
 from app.ui.common.errors import error_response_for_get
 from app.ui.common.templating import templates
@@ -160,7 +161,7 @@ async def view_upload_page_get(
     """View an uploaded file."""
 
     # Get upload from database
-    upload_model = await Upload.get_or_none(id=id).prefetch_related("user", "images", "tags")
+    upload_model = await Upload.get_with_relations(id=id)
     if upload_model is None:
         if modal:
             return templates.TemplateResponse(
@@ -232,7 +233,7 @@ async def get_tag_suggestions_post(
     """Get tag suggestions for current upload, filtered by the current input value."""
 
     # Get upload from database
-    upload_model = await Upload.get_or_none(id=id).prefetch_related("user", "images", "tags")
+    upload_model = await Upload.get_with_relations(id=id)
     if upload_model is None:
         return templates.TemplateResponse(
             request, "layout/error.html.j2",
@@ -277,7 +278,7 @@ async def upload_add_tag_post(
     """Add a tag to an upload."""
     
     # Get upload from database
-    upload_model = await Upload.get_or_none(id=id).prefetch_related("user", "images", "tags")
+    upload_model = await Upload.get_with_relations(id=id)
     if upload_model is None:
         return templates.TemplateResponse(
             request, "layout/error.html.j2",
@@ -327,7 +328,7 @@ async def upload_remove_tag_delete(
     """Remove a tag from an upload."""
     
     # Get upload from database
-    upload_model = await Upload.get_or_none(id=id).prefetch_related("user", "images", "tags")
+    upload_model = await Upload.get_with_relations(id=id)
     if upload_model is None:
         return templates.TemplateResponse(
             request, "layout/error.html.j2",
@@ -362,6 +363,58 @@ async def upload_remove_tag_delete(
             "upload": upload,
         },
         status_code=200,
+    )
+
+    return response
+
+
+@router.post("/uploads/{id}/collection", response_class=Response)
+async def upload_add_collection_post(
+    id: int,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    request: Request,
+    collection_name: Annotated[str, Form()],
+) -> Response:
+    """Add a collection to an upload."""
+    
+    # Get upload from database
+    upload_model = await Upload.get_with_relations(id=id)
+    if upload_model is None:
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=404,
+            context={"error_messages": ["Upload not found"]},
+        )
+    else:
+        validate_file_update_request(upload_model, current_user)
+
+
+    # Add collection to the upload, creating the collection if it doesn't exist
+    try:
+        await Collection.add_or_create_for_upload(
+            upload=upload_model, collection_name=collection_name, user_id=current_user.id
+        )
+
+    except ValueError as e:
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=400,
+            context={"error_messages": [str(e)]},
+        )
+
+    # Serialize upload for template
+    await upload_model.fetch_related("collections")  # Refresh related collections
+    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+
+    # Build response
+    response = templates.TemplateResponse(
+        request,
+        "components/collections-combo-selector.html.j2",
+        context={
+            "current_user": current_user,
+            "upload": upload,
+        },
+        status_code=201,
     )
 
     return response

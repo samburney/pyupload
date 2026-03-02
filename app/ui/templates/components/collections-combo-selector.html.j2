@@ -3,18 +3,41 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('multiSelectCombo', () => ({
             menu: false,
+            search: '',
+            selected: [],
+
+            init() {
+                this.selected = Array.from(
+                    this.$el.querySelectorAll('input[name=collections][checked]')
+                    ).map(el => el.value)
+            },
+
+            get buttonText() {
+                if (this.selected.length > 0) {
+                    if (this.selected.length == 1) {
+                        return this.$refs['collection-' + this.selected[0]].nextSibling.textContent.trim();
+                    }
+                    else {
+                        return this.selected.length + ' selected';
+                    }
+                }
+                else {
+                    return '0 selected';
+                }
+            }
         }))
     })
 </script>
 {% endif %}
 
 {% macro render_combo_selector(upload, content) %}
-<div class="relative input w-full" x-data="{ menu: false, search: '', selected: [] }">
-    <label class="text-xs text-gray-700 font-medium" for="collection_filter">Collections</label>
+<div id="collections_combo_selector" class="relative input w-full"
+    x-data="multiSelectCombo">
+    <label class="text-xs text-gray-700 font-medium" for="collection_name">Collections</label>
     <fieldset class="mt-1 w-full min-w-0">
         <legend class="sr-only">Collections</legend>
         <div class="split-button split-button-neutral w-full max-w-full">
-            <div class="split-button-label w-full truncate" x-text="selected.join(', ') !== '' ? selected.join(', ') : 'None selected'"></div>
+            <div class="split-button-label w-full truncate" x-text="buttonText"></div>
             <button class="split-button-toggle"
                     type="button"
                     aria-label="Toggle collections menu"
@@ -30,18 +53,27 @@
                 <label class="flex items-center gap-2 cursor-pointer" aria-label="Filter collections">
                     <button class="text-green-500 h-3.5 w-3.5 m-0.5 p-0" type="button" aria-label="Add as new collection"
                             x-cloak
-                            x-show="search.trim() !== ''">
+                            x-show="search.trim() !== ''"
+                            hx-post="/uploads/{{ upload.id }}/collection"
+                            hx-include="next input[name='collection_name']"
+                            hx-select="#collections_combo_selector"
+                            hx-target="#collections_combo_selector"
+                            hx-swap="outerHTML"
+                            hx-select-oob="#messages"
+                            hx-target-4*="#messages">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
-                    <input class="text-sm p-0 m-0 ring-0 border-none placeholder:text-gray-700 field-sizing-content min-w-xs"
-                           type="text" id="collection_filter" name="collection_filter" placeholder="Filter or add new..." x-model="search">
+                    <input class="text-sm p-0 m-0 ring-0 bg-transparent border-none field-sizing-content min-w-xs placeholder:text-gray-700"
+                           type="text" id="collection_name" name="collection_name" placeholder="Filter or add new" x-model="search">
                 </label>
             </li>
-            {% for collection in collections %}
-            <li x-show="'{{ collection }}'.toLowerCase().includes(search.toLowerCase())">
+            {% for collection in upload.collections %}
+            <li x-show="'{{ collection.name }}'.toLowerCase().includes(search.toLowerCase())">
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="collections" value="{{ collection }}" x-model="selected">
-                    {{ collection }}
+                    <input type="checkbox" name="collections" value="{{ collection.id }}" checked
+                        x-model="selected"
+                        x-ref="collection-{{ collection.id }}" />
+                    {{ collection.name }}
                 </label>
             </li>
             {% endfor %}
