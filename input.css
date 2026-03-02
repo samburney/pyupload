@@ -104,6 +104,14 @@
         @apply divide-green-400 bg-green-500 text-white outline-1 outline-green-500;
     }
 
+    .split-button-dark {
+        @apply divide-gray-600 bg-gray-700 text-white outline-1 outline-gray-600;
+    }
+
+    .split-button-ghost {
+        @apply divide-transparent text-white;
+    }
+
     .split-button > .split-button-action {
         @apply px-4 py-2 rounded-l-md;
     }
@@ -111,6 +119,16 @@
     /* Non-interactive left-side label (no action on click) */
     .split-button > .split-button-label {
         @apply px-4 py-2 rounded-l-md cursor-default;
+    }
+
+    /* Narrow size modifier */
+    .split-button-sm > .split-button-action,
+    .split-button-sm > .split-button-label {
+        @apply px-2 py-2 rounded-l-md;
+    }
+
+    .split-button-sm > .split-button-toggle {
+        @apply px-1.5;
     }
 
     .split-button-neutral > .split-button-action {
@@ -131,6 +149,33 @@
 
     .split-button-ok > .split-button-toggle {
         @apply hover:bg-green-400;
+    }
+
+    .split-button-dark > .split-button-action {
+        @apply hover:bg-gray-600 text-white;
+    }
+
+    .split-button-dark > .split-button-toggle {
+        @apply hover:bg-gray-600;
+    }
+
+    .split-button-ghost > .split-button-action {
+        @apply text-white hover:text-gray-300;
+    }
+
+    .split-button-ghost > .split-button-toggle {
+        @apply text-white hover:text-gray-300;
+    }
+
+    .split-button > .split-button-toggle svg {
+        stroke-width: 1.5;
+    }
+
+    /* Bolder chevrons on dark/ghost variants to maintain visibility */
+    .split-button-dark > .split-button-toggle svg,
+    .split-button-ghost > .split-button-toggle svg,
+    .split-button-ok > .split-button-toggle svg {
+        stroke-width: 2.5;
     }
 
     /* Disabled states */

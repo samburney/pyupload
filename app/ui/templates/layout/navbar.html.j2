@@ -38,17 +38,21 @@
                             <a href="/upload" class="button">Upload</a>
                             <!-- User dropdown -->
                             <div class="relative" @click.away="userOpen = false">
-                                {% if current_user is defined and current_user.is_registered %}
-                                <button class="hover:text-gray-300 text-white" @click="userOpen = !userOpen">
-                                    {{ current_user.username }} ▾
-                                </button>
-                                {% else %}
-                                <button class="hover:text-gray-300" @click="userOpen = !userOpen">
-                                    Not Logged In ▾
-                                </button>
-                                {% endif %}
+                                <div class="split-button split-button-sm split-button-ghost">
+                                    {% if current_user is defined and current_user.is_registered %}
+                                    <a class="split-button-action pr-1" href="/profile">{{ current_user.username }}</a>
+                                    {% else %}
+                                    <a class="split-button-action pr-1" href="/login">Not Logged In</a>
+                                    {% endif %}
+                                    <button class="split-button-toggle px-1"
+                                            type="button"
+                                            aria-label="Toggle user menu"
+                                            @click="userOpen = !userOpen">
+                                        <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+                                    </button>
+                                </div>
                                 <div x-show="userOpen" x-cloak
-                                    class="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded shadow-lg z-10">
+                                    class="absolute right-0 mt-1 w-48 bg-white text-gray-900 rounded shadow-lg z-10">
                                     <a href="/login" class="block px-4 py-2 hover:bg-gray-100">Log in</a>
                                     <a href="/register" class="block px-4 py-2 hover:bg-gray-100">Register</a>
                                     <a href="/profile" class="block px-4 py-2 hover:bg-gray-100">Profile</a>
