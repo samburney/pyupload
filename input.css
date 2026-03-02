@@ -91,25 +91,52 @@
         @apply block px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900;
     }
 
-    /* Dropdown buttons */
-    .dropdown {
-        @apply relative inline-flex;
+    /* Split buttons */
+    .split-button {
+        @apply flex divide-x items-stretch shadow-md rounded-md max-h-fit;
     }
 
-    .dropdown .button {
-        @apply inline-flex divide-x divide-blue-300 overflow-hidden px-0 py-0 hover:bg-blue-500 hover:border-blue-500;
+    .split-button-neutral {
+        @apply divide-gray-300 bg-gray-100 outline-1 outline-gray-300;
     }
 
-    .dropdown .button-ok {
-        @apply divide-green-300 hover:bg-green-500 hover:border-green-500;
+    .split-button-ok {
+        @apply divide-green-400 bg-green-500 text-white outline-1 outline-green-500;
     }
 
-    .dropdown .button .dropdown-button {
-        @apply px-4 py-2 hover:bg-blue-300 hover:border-blue-300;
+    .split-button > .split-button-action {
+        @apply px-4 py-2 rounded-l-md;
     }
 
-    .dropdown .button-ok .dropdown-button {
-        @apply hover:bg-green-300 hover:border-green-300;
+    /* Non-interactive left-side label (no action on click) */
+    .split-button > .split-button-label {
+        @apply px-4 py-2 rounded-l-md cursor-default;
+    }
+
+    .split-button-neutral > .split-button-action {
+        @apply hover:bg-gray-200;
+    }
+
+    .split-button-ok > .split-button-action {
+        @apply hover:bg-green-400 text-white;
+    }
+
+    .split-button > .split-button-toggle {
+        @apply flex items-center px-2 rounded-r-md cursor-pointer;
+    }
+
+    .split-button-neutral > .split-button-toggle {
+        @apply hover:bg-gray-200;
+    }
+
+    .split-button-ok > .split-button-toggle {
+        @apply hover:bg-green-400;
+    }
+
+    /* Disabled states */
+    .split-button > .split-button-action:disabled,
+    .split-button > .split-button-toggle:disabled {
+        @apply cursor-not-allowed opacity-50;
     }
 
     /* Messages */

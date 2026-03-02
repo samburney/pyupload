@@ -1,52 +1,48 @@
         <div class="flex w-full items-center justify-center">
             {% if upload.is_image %}
-            <div x-data="{ open: false }"
-                 class="dropdown">
-                <span class="button button-ok">
-                    <a class="dropdown-button" href="{{ upload.download_url }}">
+            <div class="relative" x-data="{ open: false }">
+                <div class="split-button split-button-ok">
+                    <a class="split-button-action" href="{{ upload.download_url }}">
                         Download
                     </a>
-
-                    <button class="dropdown-button"
-                            type="button"
-                            aria-label="Menu"
-                            @click="open = !open"
-                            @mouseover="open = true">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+                    <button type="button"
+                            class="split-button-toggle"
+                            aria-label="Toggle download options"
+                            @click="open = !open">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="size-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"></path>
                         </svg>
                     </button>
-                </span>
-
+                </div>
                 <ul role="menu"
-                    class="menu"
+                    class="menu absolute w-fit max-h-64 overflow-y-auto z-10"
                     aria-label="Download options"
                     x-cloak
                     x-show="open"
-                    x-transition
+                    @click="open = false"
                     @click.outside="open = false">
-                    <li role="menuitem" class="menu-item">
-                        <a href="{{ upload.download_url }}">
+                    <li role="menuitem">
+                        <a class="text-gray-700" href="{{ upload.download_url }}">
                             Download Original
                         </a>
                     </li>
                     {% if upload.type != "image/jpeg" %}
-                    <li role="menuitem" class="menu-item">
-                        <a href="{{ upload.download_url | split_filename | first }}.jpg">
+                    <li role="menuitem">
+                        <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.jpg">
                             Download as JPG
                         </a>
                     </li>
                     {% endif %}
                     {% if upload.type != "image/gif" %}
-                    <li role="menuitem" class="menu-item">
-                        <a href="{{ upload.download_url | split_filename | first }}.gif">
+                    <li role="menuitem">
+                        <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.gif">
                             Download as GIF
                         </a>
                     </li>
                     {% endif %}
                     {% if upload.type != "image/png" %}
-                    <li role="menuitem" class="menu-item">
-                        <a href="{{ upload.download_url | split_filename | first }}.png">
+                    <li role="menuitem">
+                        <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.png">
                             Download as PNG
                         </a>
                     </li>
@@ -54,7 +50,7 @@
                 </ul>
             </div>
             {% else %}
-            <a class="button button-ok" href="{{ upload.download_url }}">
+            <a class="px-4 py-2 bg-green-500 text-white outline-1 outline-green-500 shadow-md rounded-md hover:bg-green-400" href="{{ upload.download_url }}">
                 Download
             </a>
             {% endif %}

@@ -12,11 +12,11 @@
                 {% if upload.is_image %}
                 <div class="relative input w-full" x-data="{ open: false }">
                     <div class="w-full min-w-0">
-                        <div class="flex divide-x divide-gray-300 items-stretch px-0 py-0 bg-gray-100 outline-1 outline-gray-300 shadow-md rounded-md max-h-fit max-w-full">
-                            <div class="px-4 py-2 w-full">Rotate</div>
+                        <div class="split-button split-button-neutral w-full max-w-full">
+                            <div class="split-button-label w-full">Rotate</div>
                             <button type="button"
                                     id="rotate-toggle-{{ upload.id }}"
-                                    class="flex items-center px-2 hover:bg-gray-200 rounded-r-md cursor-pointer disabled:cursor-not-allowed disabled:text-gray-400"
+                                    class="split-button-toggle"
                                     aria-label="Toggle rotate menu"
                                     @click="open = !open">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
