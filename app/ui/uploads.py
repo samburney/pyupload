@@ -181,10 +181,18 @@ async def view_upload_page_get(
     # Serialize upload for template
     upload = await UploadSerializer.from_tortoise_orm(upload_model)
 
+    # Get collections with filter applied, excluding those already linked to the upload
+    existing_collection_ids = await upload_model.collections.all().values_list("id", flat=True)
+    filtered_collections = await Collection.filter(user=current_user) \
+        .exclude(id__in=existing_collection_ids) \
+        .limit(5) \
+        .order_by("name")
+
     # Template context
     context = {
         "current_user": current_user,
         "upload": upload,
+        "filtered_collections": filtered_collections,
     }
 
     if modal:
@@ -368,12 +376,52 @@ async def upload_remove_tag_delete(
     return response
 
 
+@router.post("/uploads/{id}/collection-search", response_class=HTMLResponse)
+async def get_collection_suggestions_post(
+    request: Request,
+    id: int,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    collection_name: Annotated[str, Form()] = "",
+):
+    """Get collection suggestions for current upload, filtered by the current input value."""
+
+    # Get upload from database
+    upload_model = await Upload.get_with_relations(id=id)
+    if upload_model is None:
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=404,
+            context={"error_messages": ["Upload not found"]},
+        )
+    else:
+        validate_file_update_request(upload_model, current_user)
+
+    # Serialize upload for template
+    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+
+    # Get collections with filter applied, excluding those already linked to the upload
+    existing_collection_ids = await upload_model.collections.all().values_list("id", flat=True)
+    filtered_collections = await Collection.filter(user=current_user, name__icontains=collection_name) \
+        .exclude(id__in=existing_collection_ids) \
+        .limit(5) \
+        .order_by("name")
+
+    return templates.TemplateResponse(
+        request,
+        "components/collections-combo-selector-items.html.j2",
+        context={
+            "upload": upload,
+            "filtered_collections": filtered_collections,
+        },
+    )
+
+
 @router.post("/uploads/{id}/collection", response_class=Response)
 async def upload_add_collection_post(
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     request: Request,
-    collection_name: Annotated[str, Form()],
+    collection_name: Annotated[str, Form()] = "",
 ) -> Response:
     """Add a collection to an upload."""
     
@@ -387,7 +435,6 @@ async def upload_add_collection_post(
         )
     else:
         validate_file_update_request(upload_model, current_user)
-
 
     # Add collection to the upload, creating the collection if it doesn't exist
     try:
@@ -406,6 +453,13 @@ async def upload_add_collection_post(
     await upload_model.fetch_related("collections")  # Refresh related collections
     upload = await UploadSerializer.from_tortoise_orm(upload_model)
 
+    # Get collections with filter applied, excluding those already linked to the upload
+    existing_collection_ids = await upload_model.collections.all().values_list("id", flat=True)
+    filtered_collections = await Collection.filter(user=current_user) \
+        .exclude(id__in=existing_collection_ids) \
+        .limit(5) \
+        .order_by("name")
+
     # Build response
     response = templates.TemplateResponse(
         request,
@@ -413,6 +467,7 @@ async def upload_add_collection_post(
         context={
             "current_user": current_user,
             "upload": upload,
+            "filtered_collections": filtered_collections,
         },
         status_code=201,
     )

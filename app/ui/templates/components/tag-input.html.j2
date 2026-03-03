@@ -18,7 +18,7 @@
 </script>
 {% endif %}
 
-{% macro render_tags_input(upload) %}
+{% macro render_tags_input() %}
 <label id="tag-input" class="input tag-input" for="tag_name"
        x-data="tagInput"
        x-init>
@@ -52,7 +52,7 @@
                            @focus="update()"
                            @click="update()"
                            @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find('#tag-suggestions li:first-child'), 'click'); }"
-                           hx-trigger="keyup[event.target.value.trim() !== ''] changed"
+                           hx-trigger="change, keyup[event.target.value.trim() !== ''] changed delay:200ms"
                            hx-post="/uploads/{{ upload.id }}/tag-suggestions"
                            hx-target="#tag-suggestions"
                            hx-swap="outerHTML"

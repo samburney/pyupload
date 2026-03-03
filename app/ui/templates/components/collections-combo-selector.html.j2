@@ -5,11 +5,16 @@
             menu: false,
             search: '',
             selected: [],
+            isNewCollection: false,
 
             init() {
                 this.selected = Array.from(
                     this.$el.querySelectorAll('input[name=collections][checked]')
                     ).map(el => el.value)
+
+                this.$watch('search', value => {
+                    this.isNewCollection = value.trim() !== '' && !Array.from(this.$el.querySelectorAll('ul#collections-combo-selector-options li.menu-item label')).some(label => label.textContent.trim().toLowerCase() === value.trim().toLowerCase())
+                })
             },
 
             get buttonText() {
@@ -30,8 +35,8 @@
 </script>
 {% endif %}
 
-{% macro render_combo_selector(upload, content) %}
-<div id="collections_combo_selector" class="relative input w-full"
+{% macro render_combo_selector() %}
+<div id="collections-combo-selector" class="relative input w-full"
     x-data="multiSelectCombo">
     <label class="text-xs text-gray-700 font-medium" for="collection_name">Collections</label>
     <fieldset class="mt-1 w-full min-w-0">
@@ -45,44 +50,49 @@
                 <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
             </button>
         </div>
-        <ul class="menu absolute w-fit max-h-64 overflow-y-scroll z-10"
+        <div
+            class="absolute whitespace-nowrap overflow-hidden w-fit max-h-64 end-0 mt-0.5 z-50 rounded border border-gray-300 bg-white shadow-sm"
             x-show="menu"
             x-cloak
             @click.outside="menu = false">
-            <li>
-                <label class="flex items-center gap-2 cursor-pointer" aria-label="Filter collections">
-                    <button class="text-green-500 h-3.5 w-3.5 m-0.5 p-0" type="button" aria-label="Add as new collection"
-                            x-cloak
-                            x-show="search.trim() !== ''"
-                            hx-post="/uploads/{{ upload.id }}/collection"
-                            hx-include="next input[name='collection_name']"
-                            hx-select="#collections_combo_selector"
-                            hx-target="#collections_combo_selector"
-                            hx-swap="outerHTML"
-                            hx-select-oob="#messages"
-                            hx-target-4*="#messages">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    </button>
-                    <input class="text-sm p-0 m-0 ring-0 bg-transparent border-none field-sizing-content min-w-xs placeholder:text-gray-700"
-                           type="text" id="collection_name" name="collection_name" placeholder="Filter or add new" x-model="search">
-                </label>
-            </li>
-            {% for collection in upload.collections %}
-            <li x-show="'{{ collection.name }}'.toLowerCase().includes(search.toLowerCase())">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="collections" value="{{ collection.id }}" checked
-                        x-model="selected"
-                        x-ref="collection-{{ collection.id }}" />
-                    {{ collection.name }}
-                </label>
-            </li>
-            {% endfor %}
-        </ul>
+            <ul id="collections-combo-selector-search"
+                class="border-b border-gray-300 mb-0.5">
+                <li class="menu-item rounded-t-md focus-within:outline-2 focus-within:-outline-offset-4 focus-within:outline-blue-500">
+                    <label class="flex items-center gap-2" aria-label="Search collections">
+                        <button class="text-green-500 h-3.5 w-3.5 m-0.5 p-0" type="button" aria-label="Add as new collection"
+                                x-cloak
+                                x-bind:class="isNewCollection ? 'visible cursor-pointer' : 'invisible cursor-default'"
+                                x-bind:disabled="!isNewCollection"
+                                hx-post="/uploads/{{ upload.id }}/collection"
+                                hx-include="next input[name='collection_name']"
+                                hx-select="#collections-combo-selector"
+                                hx-target="#collections-combo-selector"
+                                hx-swap="innerHTML"
+                                hx-select-oob="#messages"
+                                hx-target-4*="#messages">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </button>
+                        <input class="text-sm p-0 m-0 ring-0 bg-transparent border-none field-sizing-content min-w-xs
+                        placeholder:text-gray-500"
+                            type="text" id="collection_name" name="collection_name" placeholder="Start typing to search or add a new collection"
+                            x-model="search"
+                            @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find(htmx.find('#collections-combo-selector-search'), 'button'), 'click'); }"
+                            hx-trigger="change, keyup changed delay:200ms"
+                            hx-post="/uploads/{{ upload.id }}/collection-search"
+                            hx-target="#collections-combo-selector-options">
+                    </label>
+                </li>
+            </ul>
+            <ul id="collections-combo-selector-options"
+                class="max-h-54 divide-y divide-gray-200 overflow-y-auto">
+                {% include "components/collections-combo-selector-items.html.j2" %}
+            </ul>
+        </div>
     </fieldset>
 </div>
 {% endmacro -%}
 
 {# Handle HTMX partial request #}
 {%- if request and request.headers.get('hx-request', '') == 'true' %}
-{{ render_combo_selector(upload) }}
+{{ render_combo_selector() }}
 {% endif %}

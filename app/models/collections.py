@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class Collection(models.Model, TimestampMixin):
     id = fields.IntField(primary_key=True)
-    user_id = fields.IntField()
+    user = fields.ForeignKeyField("models.User", related_name="collections", on_delete=fields.CASCADE)
     name = fields.CharField(max_length=255)
     name_unique = fields.CharField(max_length=255)
 

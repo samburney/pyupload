@@ -1,0 +1,29 @@
+{% if upload.collections | length > 0 or filtered_collections | length > 0 %}
+{% for collection in upload.collections %}
+<li class="menu-item {{ 'border-b-blue-300' if loop.last else '' }}"
+    x-show="'{{ collection.name }}'.toLowerCase().includes(search.toLowerCase())">
+    <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" name="collections" value="{{ collection.id }}" checked
+            x-model="selected"
+            x-ref="collection-{{ collection.id }}" />
+        {{ collection.name }}
+    </label>
+</li>
+{% endfor %}
+{% for collection in filtered_collections %}
+<li class="menu-item">
+    <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" name="collections" value="{{ collection.id }}"
+            x-model="selected"
+            x-ref="collection-{{ collection.id }}" />
+        {{ collection.name }}
+    </label>
+</li>
+{% endfor %}
+{% else %}
+<li class="menu-item">
+    <div class="flex items-center gap-2 text-gray-500 italic">
+        No collections found
+    </div>
+</li>
+{% endif %}
