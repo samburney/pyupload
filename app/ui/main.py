@@ -63,7 +63,8 @@ async def index(
     pagination.count = await Upload.filter(query).count()
 
     # Get uploads
-    uploads_models = Upload.paginate(**pagination.page_data(), query=query).prefetch_related("user", "images", "tags")
+    uploads_models = Upload.paginate(**pagination.page_data(), query=query) \
+        .prefetch_related("user", "images", "tags", "collections")
     uploads = await UploadSerializer.from_queryset(uploads_models)
 
     # Template context

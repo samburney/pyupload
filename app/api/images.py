@@ -25,7 +25,7 @@ async def post_rotate_image(
     if angle not in [90, 180, 270]:
         raise HTTPException(status_code=400, detail="Invalid rotation angle. Must be one of: 90, 180, 270.")
 
-    upload = await Upload.get_or_none(id=id).prefetch_related("user", "images", "tags")
+    upload = await Upload.get_with_relations(id=id)
     if upload is None:
         raise HTTPException(status_code=404, detail="Image not found.")
 
