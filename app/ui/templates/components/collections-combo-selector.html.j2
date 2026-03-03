@@ -72,9 +72,9 @@
                                 hx-target-4*="#messages">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         </button>
-                        <input class="text-sm p-0 m-0 ring-0 bg-transparent border-none field-sizing-content min-w-xs
-                        placeholder:text-gray-500"
-                            type="text" id="collection_name" name="collection_name" placeholder="Start typing to search or add a new collection"
+                        <input class="text-sm p-0 m-0 ring-0 bg-transparent border-none field-sizing-content min-w-3xs
+                        placeholder:text-gray-500 placeholder:italic"
+                            type="text" id="collection_name" name="collection_name" placeholder="Type to search or add a new collection"
                             x-model="search"
                             @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find(htmx.find('#collections-combo-selector-search'), 'button'), 'click'); }"
                             hx-trigger="change, keyup changed delay:200ms"
