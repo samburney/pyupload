@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 from app.models.users import User
 from app.models.uploads import Upload, UploadMetadata, UploadResult, make_user_filepath
+from app.models.collections import Collection
 from app.lib.config import get_app_config
 
 config = get_app_config()
@@ -1523,3 +1524,119 @@ class TestUploadRotateImage:
 
         refreshed_upload = await Upload.get(id=upload.id)
         assert refreshed_upload.size == file_size_on_disk
+
+
+def _upload_kwargs(user, suffix: str = "") -> dict:
+    """Minimal Upload.create kwargs for tests in this section."""
+    return {
+        "user": user,
+        "description": f"test{suffix}",
+        "name": f"file{suffix}_20250101-000000_a1b2c3d4",
+        "cleanname": f"file{suffix}",
+        "originalname": f"file{suffix}.txt",
+        "ext": "txt",
+        "size": 10,
+        "type": "text/plain",
+        "extra": "0",
+    }
+
+
+class TestUploadGetWithRelations:
+    """Tests for Upload.get_with_relations classmethod."""
+
+    @pytest.mark.asyncio
+    async def test_returns_upload_for_valid_id(self, db):
+        """get_with_relations returns the upload when the ID exists."""
+        user = await User.create(username="gwr1", email="gwr1@example.com", password="pw")
+        upload = await Upload.create(**_upload_kwargs(user, "gwr1"))
+
+        result = await Upload.get_with_relations(id=upload.id)
+
+        assert result is not None
+        assert result.id == upload.id
+
+    @pytest.mark.asyncio
+    async def test_returns_none_for_nonexistent_id(self, db):
+        """get_with_relations returns None when the ID does not exist."""
+        result = await Upload.get_with_relations(id=999999)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_prefetches_collections(self, db):
+        """get_with_relations prefetches the collections relation without raising."""
+        user = await User.create(username="gwr2", email="gwr2@example.com", password="pw")
+        upload = await Upload.create(**_upload_kwargs(user, "gwr2"))
+        collection = await Collection.create(user=user, name="My Pics", name_unique="my-pics")
+        await upload.collections.add(collection)
+
+        result = await Upload.get_with_relations(id=upload.id)
+
+        assert result is not None
+        # Access the prefetched relation — should not raise
+        col_ids = [c.id for c in result.collections]
+        assert collection.id in col_ids
+
+    @pytest.mark.asyncio
+    async def test_prefetches_tags(self, db):
+        """get_with_relations prefetches the tags relation without raising."""
+        from app.models.tags import Tag
+
+        user = await User.create(username="gwr3", email="gwr3@example.com", password="pw")
+        upload = await Upload.create(**_upload_kwargs(user, "gwr3"))
+        await Tag.add_or_create_for_upload(upload, "gwr-tag")
+
+        result = await Upload.get_with_relations(id=upload.id)
+
+        assert result is not None
+        tag_names = [t.name for t in result.tags]
+        assert "gwr-tag" in tag_names
+
+
+class TestUploadUserCollections:
+    """Tests for Upload.user_collections instance method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_collections_owned_by_user(self, db):
+        """user_collections returns collections belonging to the specified user."""
+        user = await User.create(username="uc1", email="uc1@example.com", password="pw")
+        upload = await Upload.create(**_upload_kwargs(user, "uc1"))
+        col = await Collection.create(user=user, name="My Set", name_unique="my-set")
+        await upload.collections.add(col)
+
+        qs = upload.user_collections(user)
+        results = await qs
+
+        assert len(results) == 1
+        assert results[0].id == col.id
+
+    @pytest.mark.asyncio
+    async def test_excludes_collections_owned_by_other_users(self, db):
+        """user_collections excludes collections owned by other users."""
+        owner = await User.create(username="uc2a", email="uc2a@example.com", password="pw")
+        other = await User.create(username="uc2b", email="uc2b@example.com", password="pw")
+        upload = await Upload.create(**_upload_kwargs(owner, "uc2"))
+
+        owner_col = await Collection.create(user=owner, name="Owner Col", name_unique="owner-col")
+        other_col = await Collection.create(user=other, name="Other Col", name_unique="other-col")
+        await upload.collections.add(owner_col)
+        await upload.collections.add(other_col)
+
+        qs = upload.user_collections(owner)
+        results = await qs
+
+        result_ids = [r.id for r in results]
+        assert owner_col.id in result_ids
+        assert other_col.id not in result_ids
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_when_upload_has_no_user_collections(self, db):
+        """user_collections returns an empty queryset when the user has no collections on this upload."""
+        user = await User.create(username="uc3", email="uc3@example.com", password="pw")
+        upload = await Upload.create(**_upload_kwargs(user, "uc3"))
+
+        qs = upload.user_collections(user)
+        results = await qs
+
+        assert len(results) == 0
+

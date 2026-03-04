@@ -988,8 +988,8 @@ class TestTagSuggestionsEndpoint:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_returns_403_for_non_owner(self, client):
-        """Returns 403 when the authenticated user is not the upload owner."""
+    async def test_any_authenticated_user_can_get_suggestions(self, client):
+        """Any authenticated user may request tag suggestions for any upload."""
         owner = await User.create(username="tsugowner", email="tsugowner@example.com", password="pw", is_registered=True)
         other = await User.create(username="tsugother", email="tsugother@example.com", password="pw", is_registered=True)
         upload = await Upload.create(**_tag_upload_data(owner, "sug403"))
@@ -998,7 +998,17 @@ class TestTagSuggestionsEndpoint:
         client.cookies = {"access_token": token}
 
         response = await client.post(f"/uploads/{upload.id}/tag-suggestions", data={"tag_name": "foo"})
-        assert response.status_code == 403
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_returns_204_for_empty_tag_name(self, client):
+        """An empty tag_name returns 204 No Content without hitting the database."""
+        user = await User.create(username="tsugempty", email="tsugempty@example.com", password="pw", is_registered=True)
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.post("/uploads/1/tag-suggestions", data={"tag_name": ""})
+        assert response.status_code == 204
 
     @pytest.mark.asyncio
     async def test_returns_suggestions_matching_query(self, client, tmp_path, monkeypatch):
@@ -1060,8 +1070,8 @@ class TestUploadAddTagEndpoint:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_returns_403_for_non_owner(self, client):
-        """Returns 403 when the authenticated user is not the upload owner."""
+    async def test_any_authenticated_user_can_add_tag(self, client):
+        """Any authenticated user may add a tag to any upload."""
         owner = await User.create(username="taddowner", email="taddowner@example.com", password="pw", is_registered=True)
         other = await User.create(username="taddother", email="taddother@example.com", password="pw", is_registered=True)
         upload = await Upload.create(**_tag_upload_data(owner, "add403"))
@@ -1070,7 +1080,7 @@ class TestUploadAddTagEndpoint:
         client.cookies = {"access_token": token}
 
         response = await client.post(f"/uploads/{upload.id}/tag", data={"tag_name": "foo"})
-        assert response.status_code == 403
+        assert response.status_code == 201
 
     @pytest.mark.asyncio
     async def test_adds_tag_and_returns_201(self, client, tmp_path, monkeypatch):
@@ -1137,8 +1147,8 @@ class TestUploadDeleteTagEndpoint:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_returns_403_for_non_owner(self, client):
-        """Returns 403 when the authenticated user is not the upload owner."""
+    async def test_any_authenticated_user_can_remove_tag(self, client):
+        """Any authenticated user may remove a tag from any upload."""
         owner = await User.create(username="tdelowner", email="tdelowner@example.com", password="pw", is_registered=True)
         other = await User.create(username="tdelother", email="tdelother@example.com", password="pw", is_registered=True)
         upload = await Upload.create(**_tag_upload_data(owner, "del403"))
@@ -1146,8 +1156,9 @@ class TestUploadDeleteTagEndpoint:
         token = create_access_token({"sub": other.username})
         client.cookies = {"access_token": token}
 
+        # Tag does not exist so removal succeeds silently — returns 200 with updated HTML
         response = await client.delete(f"/uploads/{upload.id}/tag?tag_name=foo")
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     @pytest.mark.asyncio
     async def test_removes_tag_and_returns_200(self, client, tmp_path, monkeypatch):
@@ -1193,3 +1204,273 @@ class TestUploadDeleteTagEndpoint:
 
         response = await client.delete(f"/uploads/{upload.id}/tag?tag_name=!@%23%24")
         assert response.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Collection endpoint helpers
+# ---------------------------------------------------------------------------
+
+def _col_upload_data(user, suffix: str = "") -> dict:
+    """Minimal Upload.create kwargs for collection endpoint tests."""
+    return {
+        "user": user,
+        "description": f"col test {suffix}",
+        "name": f"colfile{suffix}_20250301-000000_a1b2c3d4",
+        "cleanname": f"colfile{suffix}",
+        "originalname": f"colfile{suffix}.txt",
+        "ext": "txt",
+        "size": 10,
+        "type": "text/plain",
+        "extra": "0",
+    }
+
+
+class TestCollectionSearchEndpoint:
+    """Tests for POST /uploads/{id}/collection-search."""
+
+    @pytest.mark.asyncio
+    async def test_redirects_to_login_when_unauthenticated(self, client):
+        """Unauthenticated requests redirect to /login."""
+        response = await client.post("/uploads/1/collection-search", data={"collection_name": "foo"}, follow_redirects=False)
+        assert response.status_code == 303
+        assert "/login" in response.headers.get("location", "")
+
+    @pytest.mark.asyncio
+    async def test_returns_404_for_nonexistent_upload(self, client):
+        """Returns 404 when the upload does not exist."""
+        user = await User.create(username="cse404", email="cse404@example.com", password="pw", is_registered=True)
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.post("/uploads/999999/collection-search", data={"collection_name": "foo"})
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_returns_html_with_matching_collections(self, client):
+        """Returns filtered collections matching the query string."""
+        from app.models.collections import Collection
+
+        user = await User.create(username="csematch", email="csematch@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "sematch"))
+        await Collection.create(user=user, name="Python Pics", name_unique="python-pics")
+        await Collection.create(user=user, name="Pyupload Tests", name_unique="pyupload-tests")
+        await Collection.create(user=user, name="Unrelated", name_unique="unrelated")
+
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.post(f"/uploads/{upload.id}/collection-search", data={"collection_name": "py"})
+        assert response.status_code == 200
+        html = response.text
+        assert "Python Pics" in html
+        assert "Pyupload Tests" in html
+        assert "Unrelated" not in html
+
+    @pytest.mark.asyncio
+    async def test_already_linked_collection_rendered_as_checked(self, client):
+        """Collections already linked to the upload are rendered as checked; unlinked ones are not."""
+        from app.models.collections import Collection
+
+        user = await User.create(username="cseexcl", email="cseexcl@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "seexcl"))
+        already = await Collection.create(user=user, name="Already Added", name_unique="already-added")
+        await Collection.create(user=user, name="Available", name_unique="available")
+        await upload.collections.add(already)
+
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.post(f"/uploads/{upload.id}/collection-search", data={"collection_name": ""})
+        assert response.status_code == 200
+        html = response.text
+        # Already linked collection is rendered as a checked checkbox
+        assert "Already Added" in html
+        assert f'value="{already.id}" checked' in html or f'value="{already.id}"\n                        checked' in html
+        # Unlinked collection appears without checked
+        assert "Available" in html
+
+
+class TestCollectionAddEndpoint:
+    """Tests for POST /uploads/{id}/collection."""
+
+    @pytest.mark.asyncio
+    async def test_redirects_to_login_when_unauthenticated(self, client):
+        """Unauthenticated requests redirect to /login."""
+        response = await client.post("/uploads/1/collection", data={"collection_name": "foo"}, follow_redirects=False)
+        assert response.status_code == 303
+        assert "/login" in response.headers.get("location", "")
+
+    @pytest.mark.asyncio
+    async def test_returns_404_for_nonexistent_upload(self, client):
+        """Returns 404 when the upload does not exist."""
+        user = await User.create(username="cadd404", email="cadd404@example.com", password="pw", is_registered=True)
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.post("/uploads/999999/collection", data={"collection_name": "foo"})
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_creates_collection_and_returns_201(self, client):
+        """Successfully adding a new collection returns 201 with updated HTML."""
+        user = await User.create(username="caddsucc", email="caddsucc@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "addsucc"))
+
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.post(f"/uploads/{upload.id}/collection", data={"collection_name": "New Collection"})
+        assert response.status_code == 201
+        assert "text/html" in response.headers.get("content-type", "")
+
+    @pytest.mark.asyncio
+    async def test_collection_persisted_and_linked(self, client):
+        """The new collection is saved to the database and linked to the upload."""
+        from app.models.collections import Collection
+
+        user = await User.create(username="cadddb", email="cadddb@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "adddb"))
+
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        await client.post(f"/uploads/{upload.id}/collection", data={"collection_name": "Persisted"})
+
+        col = await Collection.get_or_none(name="Persisted", user=user)
+        assert col is not None
+        await upload.fetch_related("collections")
+        assert any(c.id == col.id for c in upload.collections)
+
+    @pytest.mark.asyncio
+    async def test_any_authenticated_user_can_add_collection(self, client):
+        """Any authenticated user may add their own collection to any upload."""
+        from app.models.collections import Collection
+
+        owner = await User.create(username="caddanyowner", email="caddanyowner@example.com", password="pw", is_registered=True)
+        other = await User.create(username="caddanyother", email="caddanyother@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(owner, "addany"))
+
+        token = create_access_token({"sub": other.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.post(f"/uploads/{upload.id}/collection", data={"collection_name": "Other User Col"})
+        assert response.status_code == 201
+
+        col = await Collection.get_or_none(name="Other User Col", user=other)
+        assert col is not None
+
+
+class TestCollectionPatchEndpoint:
+    """Tests for PATCH /uploads/{id}/collection."""
+
+    @pytest.mark.asyncio
+    async def test_redirects_to_login_when_unauthenticated(self, client):
+        """Unauthenticated requests redirect to /login."""
+        response = await client.patch("/uploads/1/collection", data={"collection_ids": "1"}, follow_redirects=False)
+        assert response.status_code == 303
+        assert "/login" in response.headers.get("location", "")
+
+    @pytest.mark.asyncio
+    async def test_returns_404_for_nonexistent_upload(self, client):
+        """Returns 404 when the upload does not exist."""
+        from app.models.collections import Collection
+
+        user = await User.create(username="cpatch404", email="cpatch404@example.com", password="pw", is_registered=True)
+        col = await Collection.create(user=user, name="Col", name_unique="col-p404")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch("/uploads/999999/collection", data={"collection_ids": str(col.id)})
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_returns_400_when_all_collection_ids_invalid(self, client):
+        """Returns 400 when every supplied collection ID is unknown or not owned."""
+        user = await User.create(username="cpatch400", email="cpatch400@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "patch400"))
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/collection", data={"collection_ids": "999999"})
+        assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_adds_collection_to_upload(self, client):
+        """Sending a collection ID adds that collection to the upload."""
+        from app.models.collections import Collection
+
+        user = await User.create(username="cpatchadd", email="cpatchadd@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "patchadd"))
+        col = await Collection.create(user=user, name="To Add", name_unique="to-add")
+
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/collection", data={"collection_ids": str(col.id)})
+        assert response.status_code == 202
+
+        await upload.fetch_related("collections")
+        assert any(c.id == col.id for c in upload.collections)
+
+    @pytest.mark.asyncio
+    async def test_removes_unchecked_collection_from_upload(self, client):
+        """Collections owned by the user that are absent from the payload are removed."""
+        from app.models.collections import Collection
+
+        user = await User.create(username="cpatchrm", email="cpatchrm@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "patchrm"))
+        col_keep = await Collection.create(user=user, name="Keep", name_unique="keep-rm")
+        col_remove = await Collection.create(user=user, name="Remove", name_unique="remove-rm")
+        await upload.collections.add(col_keep)
+        await upload.collections.add(col_remove)
+
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        # Only send col_keep; col_remove should be removed
+        response = await client.patch(f"/uploads/{upload.id}/collection", data={"collection_ids": str(col_keep.id)})
+        assert response.status_code == 202
+
+        await upload.fetch_related("collections")
+        col_ids = [c.id for c in upload.collections]
+        assert col_keep.id in col_ids
+        assert col_remove.id not in col_ids
+
+    @pytest.mark.asyncio
+    async def test_ignores_collections_owned_by_other_users(self, client):
+        """Collections owned by another user are rejected and not added."""
+        from app.models.collections import Collection
+
+        owner = await User.create(username="cpermown", email="cpermown@example.com", password="pw", is_registered=True)
+        other = await User.create(username="cpermoth", email="cpermoth@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(owner, "perm"))
+        other_col = await Collection.create(user=other, name="Other Col", name_unique="other-col-perm")
+
+        token = create_access_token({"sub": owner.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/collection", data={"collection_ids": str(other_col.id)})
+        assert response.status_code == 400
+
+        await upload.fetch_related("collections")
+        assert all(c.id != other_col.id for c in upload.collections)
+
+    @pytest.mark.asyncio
+    async def test_empty_payload_removes_all_user_collections(self, client):
+        """Sending no collection IDs clears all of the current user's collections from the upload."""
+        from app.models.collections import Collection
+
+        user = await User.create(username="cpatchclear", email="cpatchclear@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "patchclear"))
+        col = await Collection.create(user=user, name="Will Be Cleared", name_unique="will-be-cleared")
+        await upload.collections.add(col)
+
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/collection")
+        assert response.status_code == 202
+
+        await upload.fetch_related("collections")
+        assert all(c.id != col.id for c in upload.collections)
+
