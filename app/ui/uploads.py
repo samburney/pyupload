@@ -473,3 +473,72 @@ async def upload_add_collection_post(
     )
 
     return response
+
+
+@router.patch("/uploads/{id}/collection", response_class=Response)
+async def update_upload_collections_patch(
+    request: Request,
+    id: int,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    collection_ids: Annotated[list[int], Form()] = [],
+):
+
+    """Update the collections linked to an upload based on a list of collection IDs."""
+    
+    error_messages = []
+    collections = []
+    
+    # Confirm user owns the collections provided
+    for collection_id in collection_ids:
+        collection = await Collection.get_or_none(id=collection_id).prefetch_related("user")
+        if collection is None or collection.user.id != current_user.id:
+            error_message = f"Collection with ID {collection_id} not found or insufficient permissions."
+            error_messages.append(error_message)
+
+        else:
+            collections.append(collection)
+
+    # If no supplied collection IDs were invalid, return error response
+    if error_messages and len(error_messages) == len(collection_ids):
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=400,
+            context={"error_messages": error_messages},
+        )
+
+    # Add valid collections to the upload
+    upload_model = await Upload.get_with_relations(id=id)
+    if upload_model is None:
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=404,
+            context={"error_messages": ["Upload not found"]},
+        )
+    
+    for collection in collections:
+        await upload_model.collections.add(collection)
+
+    # Refresh upload collections and serialize for template
+    await upload_model.fetch_related("collections")
+    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+
+    # Get collections with filter applied, excluding those already linked to the upload
+    existing_collection_ids = await upload_model.collections.all().values_list("id", flat=True)
+    filtered_collections = await Collection.filter(user=current_user) \
+        .exclude(id__in=existing_collection_ids) \
+        .limit(5) \
+        .order_by("name")
+
+    # Build response
+    response = templates.TemplateResponse(
+        request,
+        "components/collections-combo-selector-items.html.j2",
+        context={
+            "current_user": current_user,
+            "upload": upload,
+            "filtered_collections": filtered_collections,
+        },
+        status_code=202,
+    )
+
+    return response

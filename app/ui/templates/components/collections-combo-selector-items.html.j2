@@ -5,7 +5,10 @@
     <label class="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" name="collections" value="{{ collection.id }}" checked
             x-model="selected"
-            x-ref="collection-{{ collection.id }}" />
+            x-ref="collection-{{ collection.id }}"
+            hx-patch="/uploads/{{ upload.id }}/collection"
+            hx-include="closest fieldset"
+            hx-target="#collections-combo-selector-options" />
         {{ collection.name }}
     </label>
 </li>
@@ -13,9 +16,12 @@
 {% for collection in filtered_collections %}
 <li class="menu-item">
     <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" name="collections" value="{{ collection.id }}"
+        <input type="checkbox" name="collection_ids" value="{{ collection.id }}"
             x-model="selected"
-            x-ref="collection-{{ collection.id }}" />
+            x-ref="collection-{{ collection.id }}"
+            hx-patch="/uploads/{{ upload.id }}/collection"
+            hx-include="closest fieldset"
+            hx-target="#collections-combo-selector-options" />
         {{ collection.name }}
     </label>
 </li>
