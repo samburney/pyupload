@@ -8,7 +8,7 @@
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, inline tag editing, and delete functionality (with confirmation modal) all implemented; sharing, title/description inline editing, privacy toggle, and view-page tests are not yet implemented)*
+- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, inline tag editing, collection assignment UI, and delete functionality (with confirmation modal) all implemented; sharing, title/description inline editing, privacy toggle, and view-page route tests are not yet implemented)*
   - [x] Display file metadata (size, dimensions, type, view count)
   - [x] Image rotation UI (owner only)
   - [x] Delete button for owners
@@ -48,14 +48,14 @@
 ### Collections & Organization
 - [ ] Tags navbar link and browsing page (/tags)
 - [ ] Collections navbar link and browsing page (/collections)
-- [ ] Collection management UI
-  - [ ] Create/edit/delete collections
-  - [ ] Add/remove uploads from collections
+- [ ] Collection management UI *(partial: collection assignment (add/remove) implemented via upload view page; collection creation possible via same UI; collection browsing, edit, and delete not yet implemented)*
+  - [ ] Create/edit/delete collections *(partial: collection creation supported via upload view page)*
+  - [x] Add/remove uploads from collections
   - [ ] Collection browsing pages
-- [ ] Tag system UI *(partial: inline tag editing on upload view page implemented; tag browsing and standalone management pages remain)*
+- [ ] Tag system UI *(partial: inline tag editing and read-only display on upload view page implemented; any authenticated user can tag any upload; tag browsing and standalone management pages remain)*
   - [ ] Tag browsing pages
   - [ ] Tag creation and management (standalone admin/browse pages)
-  - [x] Inline tag editing on upload view page
+  - [x] Inline tag editing on upload view page (any authenticated user)
 
 ### Image Processing & Transformations
 - [ ] Expand processing support to all Pillow-compatible image formats

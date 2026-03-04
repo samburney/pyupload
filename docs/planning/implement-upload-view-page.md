@@ -48,6 +48,15 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Privacy enforcement implemented via `validate_file_request` on both `/view/{id}` and `/view/{id}/{filename}` routes (Step 1 task 6 complete).
 - Sharing, inline editing, privacy toggle, delete, and all view-page tests remain pending.
 
+### Review Snapshot (2026-02-22)
+- View page fully refactored into reusable components: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-actions.html.j2`. Steps 2 task 1 and Step 3 task 1 now complete.
+- `view-frame.html.j2` adds `id="view-frame-image"` on image for HTMX targeting, server-side cache-busting via `?t={updated_at_timestamp}`, and a loading indicator overlay (Steps 2 task 6 partial — loading state handled, broken image placeholder still pending).
+- `upload-actions.html.j2` implements owner-only image rotation UI: HTMX-powered dropdown with 90° CW, 180°, and 90° CCW options. HTMX swaps `#view-frame-image`, `#upload-details`, and `#messages` in-place after rotation; Rotate button disabled during in-flight requests via `hx-disabled-elt`; loading spinner shown via `hx-indicator`.
+- `app/ui/images.py` provides the `POST /images/{id}/rotate/{angle}` UI endpoint that rotates the image and returns the full rendered view page for HTMX partial extraction.
+- `app/ui/__init__.py` and `app/main.py` updated to register the new UI images router.
+- Delete functionality implemented: `Upload.delete()` model method added (`await super().delete()` then `asyncio.to_thread(delete_file, self.filepath)`); `DELETE /{id}` UI endpoint in `app/ui/uploads.py` (owner-only, HTMX-powered, 204 + `HX-Redirect: /profile`); `DELETE /api/v1/uploads/{id}` API endpoint in `app/api/uploads.py` (200 + JSON result); confirmation modal in `confirm-modal.html.j2`. `app/lib/file_io.py` created as pure I/O layer; I/O functions moved from `file_storage.py` to `file_io.py`.
+- Sharing, inline editing, privacy toggle, and all view-page tests remain pending.
+
 ### Review Snapshot (2026-03-01)
 - Tag management implemented inline on the upload view page (Step 10 below).
 - `app/models/tags.py`: `Tag.add_or_create_for_upload` and `Tag.remove_tag_from_upload` class methods added; `TagSerializer` added.
@@ -58,15 +67,6 @@ Implement individual upload detail/view pages that display file metadata, provid
 - All `prefetch_related` calls across `app/ui/main.py`, `app/ui/images.py`, `app/ui/users.py`, and `app/api/images.py` updated to include `"tags"`.
 - Tests: `tests/test_models_tags.py` (14 tests), `tests/test_lib_helpers.py` additions (`TestCleanText`, `TestMakeCleanTag`), and `tests/test_ui_uploads.py` additions (`TestTagSuggestionsEndpoint`, `TestUploadAddTagEndpoint`, `TestUploadDeleteTagEndpoint`) — all 788 tests passing.
 - Sharing, title/description inline editing, privacy toggle, and view-page tests remain pending.
-
-### Review Snapshot (2026-02-22)
-- View page fully refactored into reusable components: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-actions.html.j2`. Steps 2 task 1 and Step 3 task 1 now complete.
-- `view-frame.html.j2` adds `id="view-frame-image"` on image for HTMX targeting, server-side cache-busting via `?t={updated_at_timestamp}`, and a loading indicator overlay (Steps 2 task 6 partial — loading state handled, broken image placeholder still pending).
-- `upload-actions.html.j2` implements owner-only image rotation UI: HTMX-powered dropdown with 90° CW, 180°, and 90° CCW options. HTMX swaps `#view-frame-image`, `#upload-details`, and `#messages` in-place after rotation; Rotate button disabled during in-flight requests via `hx-disabled-elt`; loading spinner shown via `hx-indicator`.
-- `app/ui/images.py` provides the `POST /images/{id}/rotate/{angle}` UI endpoint that rotates the image and returns the full rendered view page for HTMX partial extraction.
-- `app/ui/__init__.py` and `app/main.py` updated to register the new UI images router.
-- Delete functionality implemented: `Upload.delete()` model method added (`await super().delete()` then `asyncio.to_thread(delete_file, self.filepath)`); `DELETE /{id}` UI endpoint in `app/ui/uploads.py` (owner-only, HTMX-powered, 204 + `HX-Redirect: /profile`); `DELETE /api/v1/uploads/{id}` API endpoint in `app/api/uploads.py` (200 + JSON result); confirmation modal in `confirm-modal.html.j2`. `app/lib/file_io.py` created as pure I/O layer; I/O functions moved from `file_storage.py` to `file_io.py`.
-- Sharing, inline editing, privacy toggle, and all view-page tests remain pending.
 
 ### Target State
 - `/view/{id}/{filename}` endpoint renders upload detail page
@@ -530,23 +530,96 @@ Implement individual upload detail/view pages that display file metadata, provid
 2. [x] `TestTagRemoveTagFromUpload`: removes association, returns False when not found, deletes orphan, preserves shared, sanitises name, raises on empty/invalid
 3. [x] `TestCleanText`: all `clean_text` helper edge cases
 4. [x] `TestMakeCleanTag`: all `make_clean_tag` helper edge cases
-5. [x] `TestTagSuggestionsEndpoint`: unauthenticated redirect, 404, 403, suggestions matching query, excludes already-attached tags
-6. [x] `TestUploadAddTagEndpoint`: unauthenticated redirect, 404, 403, successful add (201 + HTML), tag persisted in DB, 400 for invalid tag name
-7. [x] `TestUploadDeleteTagEndpoint`: unauthenticated redirect, 404, 403, successful remove (200 + HTML), tag removed from DB, 400 for invalid tag name
+5. [x] `TestTagSuggestionsEndpoint`: unauthenticated redirect, 404, any authenticated user can get suggestions, 204 for empty query, suggestions matching query, excludes already-attached tags
+6. [x] `TestUploadAddTagEndpoint`: unauthenticated redirect, 404, any authenticated user can add tag, tag persisted in DB, 400 for invalid/empty tag name
+7. [x] `TestUploadDeleteTagEndpoint`: unauthenticated redirect, 404, any authenticated user can remove tag, tag removed from DB, 400 for invalid/empty tag name
 
 **Acceptance Criteria**:
-- [x] Owners can add tags to their uploads via an HTMX autocomplete input
-- [x] Owners can remove tags via the same UI
+- [x] Any authenticated user can add tags to any upload via an HTMX autocomplete input
+- [x] Any authenticated user can remove tags via the same UI; unauthenticated users see read-only tags
 - [x] Tag names are sanitised (lowercased, special chars replaced with `-`)
-- [x] Invalid/empty tag names return 400 Bad Request
+- [x] Invalid/empty tag names return 400 Bad Request; empty suggestion query returns 204
 - [x] Orphaned tags (no remaining uploads) are automatically deleted
-- [x] Non-owners receive 403; unauthenticated requests redirect to `/login`
+- [x] Unauthenticated requests redirect to `/login`
 - [x] All tests passing (788)
 
 **Implementation Notes**:
 - Tag name sanitisation uses the existing `make_clean_tag` helper (delegates to `clean_text`).
 - The Alpine.js `tagInput` component is guarded by `{% if not request or request.headers.get('hx-request') != 'true' %}` so the `<script>` block is only emitted on full page loads, not HTMX partial responses.
 - `validate_file_update_request` is reused for ownership/access checks, which also enforces file existence. Tests that exercise successful add/remove paths create a backing file via `_create_tag_upload_with_file`.
+- **Design change (2026-03-04):** Tags are public/shared constructs — ownership of the upload is not required to tag it. `validate_file_update_request` was removed from all three tag endpoints. The tag input is shown to all authenticated users; a read-only `render_tags_readonly()` macro is shown to unauthenticated users. Tests updated accordingly.
 
 **Dependencies**:
 - Step 1 must be complete
+
+---
+
+### Review Snapshot (2026-03-04)
+- Tag access control opened up: `validate_file_update_request` removed from tag endpoints; any authenticated user can now tag any upload (tags are public/shared constructs). Unauthenticated users see a read-only tag display via new `render_tags_readonly()` macro in `tag-input.html.j2`. Step 10 acceptance criteria and test descriptions updated to reflect this.
+- `Upload.get_with_relations(id)` classmethod added to `app/models/uploads.py`; replaces inline `prefetch_related` chains throughout all endpoints.
+- Collections UI implemented on the upload view page (Step 11 below): per-user collection assignment via an Alpine.js multi-select combo selector; any authenticated user can assign their own collections to any public upload.
+- `/test` dev endpoint and `test.html.j2` template removed.
+- Debug `print()` statement and unused `upload_user_collections` variable removed from `view_upload_page_get`.
+- `existing_collection_ids` query now filtered by `user=current_user` in all three collection endpoints (was missing the user filter).
+- Test suite updated: `conftest.py` registers `app.models.collections`; new `tests/test_models_collections.py` (15 tests); new `TestUploadGetWithRelations` and `TestUploadUserCollections` in `test_models_uploads.py`; collection endpoint classes in `test_ui_uploads.py`; `SELECT_QUERY_BASELINE_BUDGET` updated 30 → 31.
+- 827 tests passing.
+- Sharing, title/description inline editing, privacy toggle, and view-page route tests remain pending.
+
+---
+
+## Step 11: Collections UI on Upload View Page
+
+**Files**:
+- `app/models/collections.py`
+- `app/models/uploads.py`
+- `app/ui/uploads.py`
+- `app/ui/templates/components/collections-combo-selector.html.j2` (new)
+- `app/ui/templates/components/collections-combo-selector-items.html.j2` (new)
+- `app/ui/templates/components/image-rotate-select.html.j2` (new, extracted)
+- `app/ui/templates/components/upload-delete-button.html.j2` (new, extracted)
+- `app/ui/templates/components/upload-actions.html.j2`
+- `app/ui/templates/components/tag-input.html.j2`
+- `input.css`
+
+**Tasks**:
+1. [x] Update `Collection` model: replace `user_id` IntField with proper `user` ForeignKeyField; add `_make_name_unique`, `add_or_create_for_upload`, `add_for_upload`, `remove_from_upload` classmethods; add `CollectionSerializer`
+2. [x] Update `Upload` model: add `collections` M2M field, `user_collections()` instance method, `get_with_relations()` classmethod; expand `UploadSerializer` with `collections` and context-resolved `user_collections` fields
+3. [x] Create `POST /uploads/{id}/collection-search` endpoint (HTMX, authenticated)
+4. [x] Create `POST /uploads/{id}/collection` endpoint (HTMX, authenticated, creates or links collection, returns 201)
+5. [x] Create `PATCH /uploads/{id}/collection` endpoint (HTMX, authenticated, full add/remove reconciliation for current user, returns 202)
+6. [x] Create `collections-combo-selector.html.j2` Alpine.js multi-select combo with search/filter, new collection creation, and checked-state management
+7. [x] Create `collections-combo-selector-items.html.j2` HTMX partial for rendered items list
+8. [x] Restructure `upload-actions.html.j2`: gate interactive tags and collections on `current_user`; show read-only tags for unauthenticated users; keep rotate and delete owner-only
+9. [x] Add `render_tags_readonly()` macro to `tag-input.html.j2` for unauthenticated users
+10. [x] Add comprehensive `.split-button` CSS system to `input.css`; remove legacy `.dropdown` classes
+11. [x] Update all `prefetch_related` calls to include `"collections"`
+
+**Tests**:
+1. [x] `TestMakeNameUnique`: base slug free, appends `-2`, increments past `-2`, similar prefix slug does not cause false conflict
+2. [x] `TestAddOrCreateForUpload`: creates and links new collection, reuses existing by name, unique slug across users, strips surrounding whitespace, raises for empty/whitespace-only/invalid-chars names
+3. [x] `TestAddForUpload`: links existing collection to upload, returns `False` for unknown collection ID
+4. [x] `TestRemoveFromUpload`: removes collection from upload, returns `False` for collection not linked
+5. [x] `TestUploadGetWithRelations`: valid ID returns upload, `None` for missing ID, prefetches collections, prefetches tags
+6. [x] `TestUploadUserCollections`: returns current user's collections, excludes other-user collections, empty when user has none
+7. [x] `TestCollectionSearchEndpoint`: unauthenticated redirect, 404 for missing upload, matching collections in response, already-linked collections rendered as checked
+8. [x] `TestCollectionAddEndpoint`: unauthenticated redirect, 404, 201 on success, collection persisted and linked, any authenticated user can add to any upload
+9. [x] `TestCollectionPatchEndpoint`: unauthenticated redirect, 404, 400 for all-invalid IDs, adds collection, removes unchecked collection, ignores other-user collections, empty payload clears all user collections
+
+**Acceptance Criteria**:
+- [x] Any authenticated user can assign their own collections to any upload
+- [x] Collections are per-user: each user's collections are isolated; `upload.user_collections` resolves to the requesting user's collections only
+- [x] New collection names are slugified into a globally unique `name_unique` value via `_make_name_unique`
+- [x] The combo-selector supports incremental search/filter, new collection creation inline, and pre-checked state for already-linked collections
+- [x] Unauthenticated users see read-only tags only; collections panel hidden entirely
+- [x] All collection endpoints validate that the collection belongs to `current_user` before add/remove
+- [x] All tests passing (827)
+
+**Implementation Notes**:
+- `_make_name_unique` uses a regex boundary check (`^{slug}(-\d+)?$`) to avoid false matches between similarly-prefixed slugs (e.g. `my-trip` vs `my-trip-photos`).
+- The `PATCH` endpoint performs a full reconciliation: all user-owned collections absent from the payload are removed; the supplied IDs that pass ownership validation are added. Collections owned by other users linked to the same upload are untouched.
+- `UploadSerializer.user_collections` uses a `resolve_user_collections` resolver that reads `context["user"]`; returns `None` when no user is in context (unauthenticated), `[]` when authenticated but no collections linked.
+- The `collections-combo-selector-items.html.j2` empty-state condition uses `upload.user_collections` (per-user), not `upload.collections` (global), to correctly detect the empty state.
+
+**Dependencies**:
+- Step 1 must be complete
+- Step 10 must be complete
