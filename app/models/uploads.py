@@ -21,6 +21,7 @@ from app.models.collections import CollectionSerializer
 
 
 if TYPE_CHECKING:
+    from app.models.collections import Collection
     from app.models.images import Image
     from tortoise.queryset import QuerySet, QuerySetSingle
 
@@ -72,6 +73,7 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     # Type hints for reverse relationships
     if TYPE_CHECKING:
         images: "QuerySet[Image]"
+
 
     class Meta:  # type: ignore[override]
         table = "uploads"
@@ -183,6 +185,10 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         """Return whether or not this file is owned by the current user."""
         return getattr(self, "user_id") == user.id
     
+    def user_collections(self, user: User) -> "QuerySet[Collection]":
+        """Return a queryset of collections that the current user has which include this upload."""
+        return self.collections.filter(user=user)  # type: ignore[return-value]
+    
     async def rotate_image(self, angle: int) -> bool:
         """Rotate the image by a specified angle. Returns True if successful."""
         if not self.is_image:
@@ -231,6 +237,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     viewed: int
     private: int
     image: ImageSerializer | None = None
+    user_collections: Optional[list[CollectionSerializer]] = None
 
     @classmethod
     async def resolve_image(cls, instance: Upload, context: ContextType) -> ImageSerializer | None:
@@ -243,6 +250,18 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
                 return images[0]
 
         return None
+    
+    @classmethod
+    async def resolve_user_collections(cls, instance: Upload, context: ContextType) -> Optional[list[CollectionSerializer]]:
+        """Resolve the user's collections that include this upload."""
+        user = context.get("user")
+        if user is None:
+            return None
+
+        user_collections = await CollectionSerializer.from_queryset(instance.user_collections(user))
+        if user_collections:
+            return user_collections
+        return []
 
     # Computed fields
     dot_ext: str

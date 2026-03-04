@@ -3,71 +3,16 @@
 {% from "components/tag-input.html.j2" import render_tags_input with context %}
 {% include "components/collections-combo-selector.html.j2" %}
 {% from "components/collections-combo-selector.html.j2" import render_combo_selector with context %}
-{% if current_user and upload.user.id == current_user.id %}
         <div class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
-            <div class="mt-2">{{ render_tags_input() }}</div>
+            <div>{{ render_tags_input() }}</div>
             <div>{{ render_combo_selector() }}</div>
+{% if current_user and upload.user.id == current_user.id %}
             <p class="mt-2 text-xs text-gray-700 font-medium">Actions</p>
-            <div class="flex flex-col w-full gap-1 items-center justify-left">
+            <div class="flex flex-col w-full gap-2">
                 {% if upload.is_image %}
-                <div class="relative input w-full" x-data="{ open: false }">
-                    <div class="w-full min-w-0">
-                        <div class="split-button split-button-neutral w-full max-w-full">
-                            <div class="split-button-label w-full">Rotate</div>
-                            <button type="button"
-                                    id="rotate-toggle-{{ upload.id }}"
-                                    class="split-button-toggle"
-                                    aria-label="Toggle rotate menu"
-                                    @click="open = !open">
-                                <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
-                            </button>
-                        </div>
-                        <ul role="menu"
-                            class="menu absolute w-fit max-h-64 overflow-y-auto z-10"
-                            aria-label="Rotate options"
-                            x-show="open"
-                            x-cloak
-                            @click="open = false"
-                            @click.outside="open = false">
-                            {% for rd in (('Rotate 90° Clockwise', 90), ('Rotate 180°', 180), ('Rotate 90° Counter-clockwise', 270),) %}
-                            <li role="menuitem">
-                                <button hx-post="/images/{{ upload.id }}/rotate/{{ rd[1] }}"
-                                        hx-target="#view-frame-image"
-                                        hx-select="#view-frame-image"
-                                        hx-swap="outerHTML"
-                                        hx-select-oob="#messages,#upload-details"
-                                        hx-target-4*="#messages"
-                                        hx-disabled-elt="#rotate-toggle-{{ upload.id }}"
-                                        hx-indicator="#loading-indicator"
-                                        class="w-full text-left cursor-pointer">
-                                    {{ rd[0] }}
-                                </button>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
+                {% include "components/image-rotate-select.html.j2" %}
                 {% endif %}
-                <div x-data="{ open: false }"
-                    class="w-full">
-                    {% call render_dialog(title='Confirm delete', content='Are you sure you wish to permanently delete this file?') %}
-                    <button hx-delete="/uploads/{{ upload.id }}"
-                            type="button"
-                            class="button button-alert">
-                        Delete
-                    </button>
-                    <button @click="open = false"
-                            type="button"
-                            class="button button-outline">
-                        Cancel
-                    </button>
-                    {% endcall %}
-                    <button @click="open = true"
-                            type="button"
-                            class="px-4 py-2 mt-2 w-full text-left rounded-md outline-1 outline-red-100 shadow-md hover:text-red-600 hover:bg-red-200 cursor-pointer">
-                        Delete
-                    </button>
-                </div>
+                {% include "components/upload-delete-button.html.j2" %}
             </div>
-        </div>
 {% endif %}
+        </div>

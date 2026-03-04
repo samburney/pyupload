@@ -19,62 +19,57 @@
 {% endif %}
 
 {% macro render_tags_input() %}
-<label id="tag-input" class="input tag-input" for="tag_name"
-       x-data="tagInput"
-       x-init>
-    <div class="relative hover:bg-gray-200 p-2"
-         @click="$focus.focus(document.getElementById('tag_name'))">
-        <ul class="peer flex flex-wrap gap-1 items-center">
-            {% for tag in upload.tags %}
-            <li class="text-xs" @click.stop>
-                <div class="px-1 py-0.5 border border-blue-500 shadow shadow-blue-300 rounded-sm uppercase hover:bg-blue-100 hover:border-blue-500">
-                    <button class="px-1 text-gray-300 hover:text-black hover:rounded-3xl hover:bg-red-300" type="button"
-                            hx-delete="/uploads/{{ upload.id }}/tag"
-                            hx-vals='{"tag_name": "{{ tag.name }}"}'
-                            hx-select="#tag-input"
-                            hx-target="#tag-input"
-                            hx-swap="outerHTML"
-                            hx-select-oob="#messages"
-                            hx-target-4*="#messages">
-                        <span class="sr-only">Remove tag</span>
-                        &times;
-                    </button>
-                    <span>{{ tag.name }}</span>
-                </div>
-            </li>
-            {% endfor %}
-            <li class="text-xs">
-                <div class="relative">
-                    <input type="text" id="tag_name" name="tag_name" placeholder=""
-                           class="text-xs ring-0 px-1 py-0.5 min-w-16 focus:min-w-16 placeholder-shown:min-w-0 field-sizing-content bg-transparent shadow-none border-0 rounded-none focus:border-b focus:border-b-blue-500 focus:-mb-px peer"
-                           x-model="newTag"
-                           @keyup="update()"
-                           @focus="update()"
-                           @click="update()"
-                           @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find('#tag-suggestions li:first-child'), 'click'); }"
-                           hx-trigger="change, keyup[event.target.value.trim() !== ''] changed delay:200ms"
-                           hx-post="/uploads/{{ upload.id }}/tag-suggestions"
-                           hx-target="#tag-suggestions"
-                           hx-swap="outerHTML"
-                           hx-select-oob="#messages"
-                           hx-target-4*="#messages">
-                    {% include "components/tag-suggestions.html.j2" %}
-                </div>
-            </li>
-        </ul>
-        <span class="absolute h-3 px-0.5 text-xs font-medium transition-all
-            inset-y-2 start-1 -translate-y-4.5 bg-gray-100 text-gray-700
-            hover:bg-gray-200 peer-hover:bg-gray-200
-            peer-has-focus:px-0.5 peer-has-focus:text-xs peer-has-focus:-translate-y-4.5 peer-has-focus:peer-hover:bg-gray-100 peer-has-focus:text-gray-700
-            {%- if upload.tags | length == 0 %} peer-has-placeholder-shown:px-2 peer-has-placeholder-shown:text-sm peer-has-placeholder-shown:translate-y-0 peer-has-placeholder-shown:text-gray-500{% endif %}"
-              @click="$focus.focus(document.getElementById('tag_name'))">
-              Tags
-        </span>
+<div id="tag-input">
+    <label class="text-xs text-gray-700 font-medium" for="tag_name">Tags</label>
+    <div class="input tag-input mt-1"
+         @click="$focus.focus(document.getElementById('tag_name'))"
+         x-data="tagInput"
+         x-init>
+        <div class="relative hover:bg-gray-200 p-2">
+            <ul class="peer flex flex-wrap gap-1 items-center">
+                {% for tag in upload.tags %}
+                <li class="text-xs" @click.stop>
+                    <div class="px-1 py-0.5 border border-blue-500 shadow shadow-blue-300 rounded-sm uppercase hover:bg-blue-100 hover:border-blue-500">
+                        <button class="px-1 text-gray-300 hover:text-black hover:rounded-3xl hover:bg-red-300" type="button"
+                                hx-delete="/uploads/{{ upload.id }}/tag"
+                                hx-vals='{"tag_name": "{{ tag.name }}"}'
+                                hx-select="#tag-input"
+                                hx-target="#tag-input"
+                                hx-swap="outerHTML"
+                                hx-select-oob="#messages"
+                                hx-target-4*="#messages">
+                            <span class="sr-only">Remove tag</span>
+                            &times;
+                        </button>
+                        <span>{{ tag.name }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+                <li class="text-xs">
+                    <div class="relative">
+                        <input type="text" id="tag_name" name="tag_name" placeholder="{{ 'Click to add tags...' if upload.tags|length == 0 else '' }}"
+                               class="text-xs ring-0 px-1 py-0.5 min-w-16 focus:min-w-16 placeholder-shown:min-w-0 placeholder:italic field-sizing-content bg-transparent shadow-none border-0 rounded-none focus:border-b focus:border-b-blue-500 focus:-mb-px peer"
+                               x-model="newTag"
+                               @keyup="update()"
+                               @focus="update()"
+                               @click="update()"
+                               @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find('#tag-suggestions li:first-child'), 'click'); }"
+                               hx-trigger="change, keyup[event.target.value.trim() !== ''] changed delay:200ms"
+                               hx-post="/uploads/{{ upload.id }}/tag-suggestions"
+                               hx-target="#tag-suggestions"
+                               hx-swap="outerHTML"
+                               hx-select-oob="#messages"
+                               hx-target-4*="#messages">
+                        {% include "components/tag-suggestions.html.j2" %}
+                    </div>
+                </li>
+            </ul>
+        </div>
     </div>
-</label>
+</div>
 {% endmacro -%}
 
 {# Handle HTMX partial request #}
 {%- if request and request.headers.get('hx-request', '') == 'true' %}
-{{ render_tags_input(upload) }}
+{{ render_tags_input() }}
 {% endif %}

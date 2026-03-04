@@ -9,7 +9,7 @@
 
             init() {
                 this.selected = Array.from(
-                    this.$el.querySelectorAll('input[name=collections][checked]')
+                    this.$el.querySelectorAll('input[name=collection_ids][checked]')
                     ).map(el => el.value)
 
                 this.$watch('search', value => {
@@ -74,7 +74,7 @@
                         </button>
                         <input class="text-sm p-0 m-0 ring-0 bg-transparent border-none field-sizing-content min-w-3xs
                         placeholder:text-gray-500 placeholder:italic"
-                            type="text" id="collection_name" name="collection_name" placeholder="Type to search or add a new collection"
+                            type="text" id="collection_name" name="collection_name" placeholder="Search existing, or add to a new collection..."
                             x-model="search"
                             @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find(htmx.find('#collections-combo-selector-search'), 'button'), 'click'); }"
                             hx-trigger="change, keyup changed delay:200ms"
@@ -87,6 +87,9 @@
                 class="max-h-54 divide-y divide-gray-200 overflow-y-auto">
                 {% include "components/collections-combo-selector-items.html.j2" %}
             </ul>
+            <div id="collections-loading" class="absolute top-0 left-0 bg-black/10 w-full h-full flex justify-center items-center htmx-indicator">
+                <svg class="size-6 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><use href="#icon-loading-spinner"></use></svg>
+            </div>
         </div>
     </fieldset>
 </div>

@@ -1,14 +1,15 @@
 {% if upload.collections | length > 0 or filtered_collections | length > 0 %}
-{% for collection in upload.collections %}
+{% for collection in upload.user_collections %}
 <li class="menu-item {{ 'border-b-blue-300' if loop.last else '' }}"
     x-show="'{{ collection.name }}'.toLowerCase().includes(search.toLowerCase())">
     <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" name="collections" value="{{ collection.id }}" checked
+        <input type="checkbox" name="collection_ids" value="{{ collection.id }}" checked
             x-model="selected"
             x-ref="collection-{{ collection.id }}"
             hx-patch="/uploads/{{ upload.id }}/collection"
             hx-include="closest fieldset"
-            hx-target="#collections-combo-selector-options" />
+            hx-target="#collections-combo-selector-options"
+            hx-indicator="#collections-loading" />
         {{ collection.name }}
     </label>
 </li>
@@ -21,7 +22,8 @@
             x-ref="collection-{{ collection.id }}"
             hx-patch="/uploads/{{ upload.id }}/collection"
             hx-include="closest fieldset"
-            hx-target="#collections-combo-selector-options" />
+            hx-target="#collections-combo-selector-options"
+            hx-indicator="#collections-loading" />
         {{ collection.name }}
     </label>
 </li>

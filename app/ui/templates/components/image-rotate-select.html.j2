@@ -1,0 +1,37 @@
+<div class="relative input w-full" x-data="{ open: false }">
+    <div class="w-full min-w-0">
+        <div class="split-button split-button-neutral w-full max-w-full">
+            <div class="split-button-label w-full">Rotate</div>
+            <button type="button"
+                    id="rotate-toggle-{{ upload.id }}"
+                    class="split-button-toggle"
+                    aria-label="Toggle rotate menu"
+                    @click="open = !open">
+                <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </button>
+        </div>
+        <ul role="menu"
+            class="menu absolute w-fit max-h-64 overflow-y-auto z-10"
+            aria-label="Rotate options"
+            x-show="open"
+            x-cloak
+            @click="open = false"
+            @click.outside="open = false">
+            {% for rd in (('Rotate 90° Clockwise', 90), ('Rotate 180°', 180), ('Rotate 90° Counter-clockwise', 270),) %}
+            <li role="menuitem">
+                <button hx-post="/images/{{ upload.id }}/rotate/{{ rd[1] }}"
+                        hx-target="#view-frame-image"
+                        hx-select="#view-frame-image"
+                        hx-swap="outerHTML"
+                        hx-select-oob="#messages,#upload-details"
+                        hx-target-4*="#messages"
+                        hx-disabled-elt="#rotate-toggle-{{ upload.id }}"
+                        hx-indicator="#loading-indicator"
+                        class="w-full text-left cursor-pointer">
+                    {{ rd[0] }}
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>

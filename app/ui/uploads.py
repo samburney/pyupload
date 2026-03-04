@@ -179,10 +179,10 @@ async def view_upload_page_get(
         validate_file_request(upload_model, current_user)
 
     # Serialize upload for template
-    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+    upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
     # Get collections with filter applied, excluding those already linked to the upload
-    existing_collection_ids = await upload_model.collections.all().values_list("id", flat=True)
+    existing_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
     filtered_collections = await Collection.filter(user=current_user) \
         .exclude(id__in=existing_collection_ids) \
         .limit(5) \
@@ -236,9 +236,12 @@ async def get_tag_suggestions_post(
     request: Request,
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    tag_name: Annotated[str, Form()],
+    tag_name: Annotated[str, Form()] = "",
 ):
     """Get tag suggestions for current upload, filtered by the current input value."""
+
+    if tag_name == '':
+        return Response(status_code=204)  # Return empty response if input is empty to avoid unnecessary database query
 
     # Get upload from database
     upload_model = await Upload.get_with_relations(id=id)
@@ -248,12 +251,9 @@ async def get_tag_suggestions_post(
             status_code=404,
             context={"error_messages": ["Upload not found"]},
         )
-    else:
-        validate_file_update_request(upload_model, current_user)
 
     # Serialize upload for template
     upload = await UploadSerializer.from_tortoise_orm(upload_model)
-
 
     # Get tag suggestions
     new_tag = None
@@ -293,9 +293,6 @@ async def upload_add_tag_post(
             status_code=404,
             context={"error_messages": ["Upload not found"]},
         )
-    else:
-        validate_file_update_request(upload_model, current_user)
-
 
     # Add tag to the upload, creating the tag if it doesn't exist
     try:
@@ -343,9 +340,6 @@ async def upload_remove_tag_delete(
             status_code=404,
             context={"error_messages": ["Upload not found"]},
         )
-    else:
-        validate_file_update_request(upload_model, current_user)
-
 
     # Remove tag from upload
     try:
@@ -393,14 +387,12 @@ async def get_collection_suggestions_post(
             status_code=404,
             context={"error_messages": ["Upload not found"]},
         )
-    else:
-        validate_file_update_request(upload_model, current_user)
 
     # Serialize upload for template
-    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+    upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
     # Get collections with filter applied, excluding those already linked to the upload
-    existing_collection_ids = await upload_model.collections.all().values_list("id", flat=True)
+    existing_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
     filtered_collections = await Collection.filter(user=current_user, name__icontains=collection_name) \
         .exclude(id__in=existing_collection_ids) \
         .limit(5) \
@@ -433,8 +425,6 @@ async def upload_add_collection_post(
             status_code=404,
             context={"error_messages": ["Upload not found"]},
         )
-    else:
-        validate_file_update_request(upload_model, current_user)
 
     # Add collection to the upload, creating the collection if it doesn't exist
     try:
@@ -451,10 +441,10 @@ async def upload_add_collection_post(
 
     # Serialize upload for template
     await upload_model.fetch_related("collections")  # Refresh related collections
-    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+    upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
     # Get collections with filter applied, excluding those already linked to the upload
-    existing_collection_ids = await upload_model.collections.all().values_list("id", flat=True)
+    existing_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
     filtered_collections = await Collection.filter(user=current_user) \
         .exclude(id__in=existing_collection_ids) \
         .limit(5) \
@@ -487,7 +477,7 @@ async def update_upload_collections_patch(
     
     error_messages = []
     collections = []
-    
+
     # Confirm user owns the collections provided
     for collection_id in collection_ids:
         collection = await Collection.get_or_none(id=collection_id).prefetch_related("user")
@@ -514,16 +504,27 @@ async def update_upload_collections_patch(
             status_code=404,
             context={"error_messages": ["Upload not found"]},
         )
-    
-    for collection in collections:
-        await upload_model.collections.add(collection)
+
+    # Get list of user-owned collections already on the upload
+    user_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
+
+    # Add new collections to upload
+    collections_to_add = [collection for collection in collections if collection.id not in user_collection_ids]
+    if len(collections_to_add) > 0:
+        await upload_model.collections.add(*collections_to_add)
+
+    # Remove collections that are no longer included
+    collection_ids_to_remove = [collection for collection in user_collection_ids if collection not in collection_ids]
+    if len(collection_ids_to_remove) > 0:
+        collections_to_remove = await Collection.filter(id__in=collection_ids_to_remove)
+        await upload_model.collections.remove(*collections_to_remove)
 
     # Refresh upload collections and serialize for template
     await upload_model.fetch_related("collections")
-    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+    upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
     # Get collections with filter applied, excluding those already linked to the upload
-    existing_collection_ids = await upload_model.collections.all().values_list("id", flat=True)
+    existing_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
     filtered_collections = await Collection.filter(user=current_user) \
         .exclude(id__in=existing_collection_ids) \
         .limit(5) \
