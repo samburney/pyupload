@@ -97,37 +97,3 @@ async def index(
 
     return response
 
-
-@router.get("/test", response_class=HTMLResponse)
-async def test_get(
-    request: Request,
-    pagination: Annotated[HomePaginationParams, Depends()],
-):
-    """Render the main index page."""
-    
-    current_user = await get_current_user_from_request(request)
-
-    collections = [
-        "Wanderlust Chronicles",
-        "Chasing Sunsets",
-        "Passport Pages",
-        "The Great Escape",
-        "Miles and Memories",
-        "A Year in the Life",
-        "Everyday Magic",
-        "The Little Things",
-        "Growing Up Too Fast",
-        "Our Beautiful Chaos",
-        "Cheers to the Years",
-        "A Night to Remember",
-        "The Golden Hours",
-        "Flashbacks & Festivities",
-        "The Birthday Bash",
-        "Paws and Play",
-        "Into the Wild",
-        "Seasons Change",
-        "Tail Wags & Whiskers",
-        "Through the Lens"
-    ]
-
-    return templates.TemplateResponse(request, "test.html.j2", context={"current_user": current_user, "collections": collections})

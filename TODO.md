@@ -104,6 +104,7 @@
 ---
 
 ## Fixes or Minor Enhancements
+- [ ] Provide user feedback when some collection IDs are invalid/not owned in `PATCH /uploads/{id}/collection` (currently silently processes valid IDs and discards errors).
 - [ ] Make home gallery page size user-configurable.
 - [ ] Scheduler: delete files owned by abandoned users when marked private.
 - [ ] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`, `/tags`, `/collections`) until their pages are implemented.

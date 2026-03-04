@@ -18,6 +18,25 @@
 </script>
 {% endif %}
 
+{% macro render_tags_readonly() %}
+<div id="tag-input">
+    <label class="text-xs text-gray-700 font-medium">Tags</label>
+    <div class="input tag-input mt-1">
+        <div class="p-2">
+            <ul class="flex flex-wrap gap-1 items-center">
+                {% for tag in upload.tags %}
+                <li class="text-xs">
+                    <div class="px-1 py-0.5 border border-blue-500 shadow shadow-blue-300 rounded-sm uppercase">
+                        <span>{{ tag.name }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
 {% macro render_tags_input() %}
 <div id="tag-input">
     <label class="text-xs text-gray-700 font-medium" for="tag_name">Tags</label>
