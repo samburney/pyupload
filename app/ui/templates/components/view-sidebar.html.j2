@@ -1,5 +1,10 @@
-    <aside class="hidden md:flex flex-col gap-4 w-1/4 items-center">
+<aside class="hidden md:flex flex-col gap-4 w-1/4">
+    <div class="flex w-full items-center {{ 'justify-center' if upload.is_private else 'justify-between'}}">
         {% include "components/upload-download-button.html.j2" %}
-        {% include "components/upload-details.html.j2" %}
-        {% include "components/upload-actions.html.j2" %}
-    </aside>
+        {% if not upload.is_private %}
+        {% include "components/upload-share-button.html.j2" %}
+        {% endif %}
+    </div>
+    {% include "components/upload-details.html.j2" %}
+    {% include "components/upload-actions.html.j2" %}
+</aside>

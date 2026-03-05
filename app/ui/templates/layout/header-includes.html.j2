@@ -76,5 +76,11 @@
                 return (bytes / 1048576).toFixed(1) + ' MB';
             }
         });
+
+        // Clipboard magic for share button
+        Alpine.magic('clipboard', () => {
+            return subject => navigator.clipboard.writeText(subject)
+        })
     });
+
 </script>

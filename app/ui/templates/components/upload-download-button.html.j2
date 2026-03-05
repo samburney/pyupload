@@ -1,55 +1,55 @@
-        <div class="flex w-full items-center justify-center">
-            {% if upload.is_image %}
-            <div class="relative" x-data="{ open: false }">
-                <div class="split-button split-button-ok">
-                    <a class="split-button-action" href="{{ upload.download_url }}">
-                        Download
-                    </a>
-                    <button type="button"
-                            class="split-button-toggle"
-                            aria-label="Toggle download options"
-                            @click="open = !open">
-                        <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
-                    </button>
-                </div>
-                <ul role="menu"
-                    class="menu absolute w-fit max-h-64 overflow-y-auto z-10"
-                    aria-label="Download options"
-                    x-cloak
-                    x-show="open"
-                    @click="open = false"
-                    @click.outside="open = false">
-                    <li role="menuitem">
-                        <a class="text-gray-700" href="{{ upload.download_url }}">
-                            Download Original
-                        </a>
-                    </li>
-                    {% if upload.type != "image/jpeg" %}
-                    <li role="menuitem">
-                        <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.jpg">
-                            Download as JPG
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if upload.type != "image/gif" %}
-                    <li role="menuitem">
-                        <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.gif">
-                            Download as GIF
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if upload.type != "image/png" %}
-                    <li role="menuitem">
-                        <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.png">
-                            Download as PNG
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-            {% else %}
-            <a class="px-4 py-2 bg-green-500 text-white outline-1 outline-green-500 shadow-md rounded-md hover:bg-green-400" href="{{ upload.download_url }}">
+<div class="flex items-center">
+    {% if upload.is_image %}
+    <div class="relative" x-data="{ open: false }">
+        <div class="split-button split-button-ok">
+            <a class="split-button-action" href="{{ upload.download_url }}">
                 Download
             </a>
-            {% endif %}
+            <button type="button"
+                    class="split-button-toggle"
+                    aria-label="Toggle download options"
+                    @click="open = !open">
+                <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </button>
         </div>
+        <ul role="menu"
+            class="menu absolute w-fit max-h-64 overflow-y-auto z-10"
+            aria-label="Download options"
+            x-cloak
+            x-show="open"
+            @click="open = false"
+            @click.outside="open = false">
+            <li role="menuitem">
+                <a class="text-gray-700" href="{{ upload.download_url }}">
+                    Download Original
+                </a>
+            </li>
+            {% if upload.type != "image/jpeg" %}
+            <li role="menuitem">
+                <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.jpg">
+                    Download as JPG
+                </a>
+            </li>
+            {% endif %}
+            {% if upload.type != "image/gif" %}
+            <li role="menuitem">
+                <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.gif">
+                    Download as GIF
+                </a>
+            </li>
+            {% endif %}
+            {% if upload.type != "image/png" %}
+            <li role="menuitem">
+                <a class="text-gray-700" href="{{ upload.download_url | split_filename | first }}.png">
+                    Download as PNG
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% else %}
+    <a class="px-4 py-2 bg-green-500 text-white outline-1 outline-green-500 shadow-md rounded-md hover:bg-green-400" href="{{ upload.download_url }}">
+        Download
+    </a>
+    {% endif %}
+</div>
