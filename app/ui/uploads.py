@@ -543,3 +543,40 @@ async def update_upload_collections_patch(
     )
 
     return response
+
+
+@router.patch("/uploads/{id}/private", response_class=Response)
+async def toggle_upload_private_patch(
+        request: Request,
+        id: int,
+        current_user: Annotated[User, Depends(get_current_authenticated_user)],
+        upload_private: Annotated[bool, Form()] = False,
+):
+    """Update the private status of an upload."""
+    
+    # Check upload exists and user has permission to edit it
+    upload = await Upload.get_or_none(id=id)
+    if upload is None:
+        return templates.TemplateResponse(
+            request, "layout/error.html.j2",
+            status_code=404,
+            context={"error_messages": ["Upload not found"]},
+        )
+    validate_file_update_request(upload, current_user)
+
+    # Set new status
+    upload.private = upload_private
+    await upload.save()
+
+    # Build response
+    response = templates.TemplateResponse(
+        request,
+        "components/upload-private-toggle.html.j2",
+        context={
+            "current_user": current_user,
+            "upload": upload,
+        },
+        status_code=200,
+    )
+
+    return response
