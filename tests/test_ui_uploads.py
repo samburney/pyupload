@@ -9,6 +9,7 @@ This module tests the FastAPI/Starlette file upload endpoints:
 - POST /uploads/{id}/tag-suggestions - Get tag suggestions (owner only, HTMX)
 - POST /uploads/{id}/tag - Add a tag to an upload (owner only, HTMX)
 - DELETE /uploads/{id}/tag - Remove a tag from an upload (owner only, HTMX)
+- PATCH /uploads/{id}/private - Toggle upload privacy (owner only, HTMX)
 
 Tests verify:
 - Endpoint accessibility and routing
@@ -1473,4 +1474,104 @@ class TestCollectionPatchEndpoint:
 
         await upload.fetch_related("collections")
         assert all(c.id != col.id for c in upload.collections)
+
+
+class TestUploadPrivateTogglePatchEndpoint:
+    """Tests for PATCH /uploads/{id}/private."""
+
+    @pytest.mark.asyncio
+    async def test_redirects_to_login_when_unauthenticated(self, client):
+        """Unauthenticated requests redirect to /login."""
+        response = await client.patch("/uploads/1/private", follow_redirects=False)
+        assert response.status_code == 303
+        assert "/login" in response.headers.get("location", "")
+
+    @pytest.mark.asyncio
+    async def test_returns_404_for_nonexistent_upload(self, client):
+        """Returns 404 when the upload does not exist."""
+        user = await User.create(
+            username="priv404",
+            email="priv404@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch("/uploads/999999/private", data={"upload_private": "true"})
+        assert response.status_code == 404
+        assert "Upload not found" in response.text
+
+    @pytest.mark.asyncio
+    async def test_owner_can_toggle_public_to_private(self, client, tmp_path, monkeypatch):
+        """Owner can set a public upload to private and receives updated toggle HTML."""
+        owner = await User.create(
+            username="privown1",
+            email="privown1@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await _create_tag_upload_with_file(owner, "privtoggle1", tmp_path, monkeypatch)
+
+        token = create_access_token({"sub": owner.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/private", data={"upload_private": "true"})
+        assert response.status_code == 200
+        assert "Private" in response.text
+        assert "checked" in response.text
+        assert f'hx-patch="/uploads/{upload.id}/private"' in response.text
+
+        await upload.refresh_from_db()
+        assert upload.private == 1
+
+    @pytest.mark.asyncio
+    async def test_owner_can_toggle_private_to_public(self, client, tmp_path, monkeypatch):
+        """Owner can clear private status and receives updated toggle HTML."""
+        owner = await User.create(
+            username="privown2",
+            email="privown2@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await _create_tag_upload_with_file(owner, "privtoggle2", tmp_path, monkeypatch)
+        upload.private = 1
+        await upload.save()
+
+        token = create_access_token({"sub": owner.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/private")
+        assert response.status_code == 200
+        assert "Public" in response.text
+        assert 'class="peer sr-only" checked' not in response.text
+
+        await upload.refresh_from_db()
+        assert upload.private == 0
+
+    @pytest.mark.asyncio
+    async def test_non_owner_cannot_toggle_privacy(self, client, tmp_path, monkeypatch):
+        """Non-owners receive 403 and the upload privacy flag is unchanged."""
+        owner = await User.create(
+            username="privowner",
+            email="privowner@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        other = await User.create(
+            username="privother",
+            email="privother@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await _create_tag_upload_with_file(owner, "privtoggle3", tmp_path, monkeypatch)
+
+        token = create_access_token({"sub": other.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/private", data={"upload_private": "true"})
+        assert response.status_code == 403
+
+        await upload.refresh_from_db()
+        assert upload.private == 0
 

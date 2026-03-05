@@ -22,14 +22,15 @@ Implement individual upload detail/view pages that display file metadata, provid
 - File preview in `view-frame.html.j2`: images display inline with loading indicator overlay, server-side cache-busting (`?t={updated_at_timestamp}`), and `id="view-frame-image"` for HTMX targeting; non-images show a file-type icon/link
 - Sidebar metadata panel in `upload-details.html.j2` with all fields and responsive styling
 - Download button in `upload-download-button.html.j2`: dropdown for images (original, JPG, GIF, PNG conversions); plain button for non-images
+- Share button/modal in `upload-share-button.html.j2` for public uploads with copyable direct URLs (image URL, details URL, download URL)
 - Image rotation UI in `upload-actions.html.j2`: owner-only, HTMX-powered rotate dropdown (90° CW, 180°, 90° CCW) with loading indicator and Rotate button disabled during requests
+- Privacy toggle in `upload-private-toggle.html.j2`: owner-only, HTMX `PATCH /uploads/{id}/private` checkbox switch with inline state update
 - Modal view variant exists via `?modal=true`
 - `/view/{id}` redirects to `/view/{id}/{cleanname}` with 301 (404 if upload not found); private files return 403 on this route (no user context, prevents information disclosure)
 - Privacy enforced on `/view/{id}/{filename}`: `validate_file_request` returns 403 for non-owner access to private uploads
 - No UI for editing upload metadata
-- No UI for privacy controls
 - Delete functionality implemented (owner-only): confirmation modal, UI/API delete endpoints, model-level hard delete, and cache-aware file deletion helper
-- No tests for the view page exist
+- Integration tests exist for gallery-to-view and modal/responsive/accessibility flows; dedicated route-level matrix tests remain incomplete
 - Profile page shows list of user's uploads
 
 ### Review Snapshot (2026-02-15)
@@ -66,7 +67,15 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/templates/components/tag-suggestions.html.j2`: suggestions dropdown partial for HTMX swap.
 - All `prefetch_related` calls across `app/ui/main.py`, `app/ui/images.py`, `app/ui/users.py`, and `app/api/images.py` updated to include `"tags"`.
 - Tests: `tests/test_models_tags.py` (14 tests), `tests/test_lib_helpers.py` additions (`TestCleanText`, `TestMakeCleanTag`), and `tests/test_ui_uploads.py` additions (`TestTagSuggestionsEndpoint`, `TestUploadAddTagEndpoint`, `TestUploadDeleteTagEndpoint`) — all 788 tests passing.
-- Sharing, title/description inline editing, privacy toggle, and view-page tests remain pending.
+- Title/description inline editing and broader view-page route matrix tests remain pending.
+
+### Review Snapshot (2026-03-05)
+- Sharing UI implemented for public uploads: new `upload-share-button.html.j2` component with a modal (`modal-basic.html.j2`) that exposes copyable direct URLs for image/details/download links.
+- Sidebar behavior updated in `view-sidebar.html.j2`: share button is rendered only for non-private uploads.
+- Privacy toggle implemented for owners: new `PATCH /uploads/{id}/private` endpoint in `app/ui/uploads.py` and `upload-private-toggle.html.j2` HTMX component rendered from `upload-actions.html.j2`.
+- `confirm-modal.html.j2` was renamed to `modal-dialog.html.j2`; delete button component updated to use the renamed macro.
+- Tests added: `TestUploadPrivateTogglePatchEndpoint` in `tests/test_ui_uploads.py` and share/private view integration assertions in `tests/test_integration_gallery.py`.
+- Remaining major gap for this plan: title/description inline editing and broader per-route view-page test matrix.
 
 ### Target State
 - `/view/{id}/{filename}` endpoint renders upload detail page
@@ -227,29 +236,30 @@ Implement individual upload detail/view pages that display file metadata, provid
 ## Step 4: Implement Sharing Options
 
 **Files**: 
-- `app/ui/templates/uploads/view.html.j2`
-- `app/ui/templates/uploads/components/share-panel.html.j2` (new)
-- `app/static/js/share.js` (new, or use Alpine.js)
+- `app/ui/templates/components/view-sidebar.html.j2`
+- `app/ui/templates/components/upload-share-button.html.j2` (new)
+- `app/ui/templates/components/modal-basic.html.j2` (new)
+- `app/ui/templates/layout/icons-sprite.html.j2`
 
 **Tasks**:
-1. [ ] Create share panel component
-2. [ ] Display direct link (view page URL)
-3. [ ] Display file link (direct file URL with target=_blank)
-4. [ ] Add copy-to-clipboard buttons for both links
-5. [ ] Add visual feedback on copy (toast/notification)
-6. [ ] Make links selectable for manual copy
+1. [x] Create share panel component
+2. [x] Display direct link (view page URL)
+3. [x] Display file link (direct file/download URLs)
+4. [x] Add copy-to-clipboard buttons for links
+5. [x] Add visual feedback on copy
+6. [x] Make links selectable for manual copy
 
 **Tests**:
-1. [ ] Test direct link displays correct view page URL
-2. [ ] Test file link displays correct file URL
+1. [x] Test direct link displays correct view page URL
+2. [x] Test file link displays correct file URL
 3. [ ] Test file link opens in new tab (target=_blank)
 4. [ ] Test copy-to-clipboard functionality
 5. [ ] Test visual feedback on copy
-6. [ ] Test links are selectable
+6. [x] Test links are selectable
 7. [ ] Test on mobile devices
 
 **Acceptance Criteria**:
-- [ ] Share links displayed correctly
+- [x] Share links displayed correctly
 - [ ] File link opens in new tab
 - [ ] Copy-to-clipboard works
 - [ ] Good user feedback
@@ -324,32 +334,32 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Files**: 
 - `app/ui/uploads.py`
-- `app/ui/templates/uploads/view.html.j2`
-- `app/ui/templates/uploads/components/privacy-toggle.html.j2` (new)
+- `app/ui/templates/components/upload-actions.html.j2`
+- `app/ui/templates/components/upload-private-toggle.html.j2` (new)
 
 **Tasks**:
-1. [ ] Add privacy toggle switch (public/private)
-2. [ ] Show toggle only to upload owner
-3. [ ] Create POST endpoint for toggling privacy
-4. [ ] Use HTMX for toggle without page reload
-5. [ ] Update `private` field in database (0 or 1)
-6. [ ] Return updated toggle state
-7. [ ] Show visual feedback on change
+1. [x] Add privacy toggle switch (public/private)
+2. [x] Show toggle only to upload owner
+3. [x] Create PATCH endpoint for toggling privacy
+4. [x] Use HTMX for toggle without page reload
+5. [x] Update `private` field in database (0 or 1)
+6. [x] Return updated toggle state
+7. [x] Show visual feedback on change
 
 **Tests**:
 1. [ ] Test toggle visible to owner
 2. [ ] Test toggle hidden from non-owners
-3. [ ] Test toggle from public to private
-4. [ ] Test toggle from private to public
-5. [ ] Test HTMX behavior
-6. [ ] Test unauthorized toggle attempt (403)
-7. [ ] Test database update
+3. [x] Test toggle from public to private
+4. [x] Test toggle from private to public
+5. [x] Test HTMX behavior
+6. [x] Test unauthorized toggle attempt (403)
+7. [x] Test database update
 
 **Acceptance Criteria**:
-- [ ] Owner can toggle privacy inline
-- [ ] Non-owners cannot see toggle
-- [ ] Updates work without page reload
-- [ ] Database updated correctly
+- [x] Owner can toggle privacy inline
+- [x] Non-owners cannot see toggle
+- [x] Updates work without page reload
+- [x] Database updated correctly
 - [ ] All tests passing
 
 **Implementation Notes**:
@@ -563,7 +573,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `existing_collection_ids` query now filtered by `user=current_user` in all three collection endpoints (was missing the user filter).
 - Test suite updated: `conftest.py` registers `app.models.collections`; new `tests/test_models_collections.py` (15 tests); new `TestUploadGetWithRelations` and `TestUploadUserCollections` in `test_models_uploads.py`; collection endpoint classes in `test_ui_uploads.py`; `SELECT_QUERY_BASELINE_BUDGET` updated 30 → 31.
 - 827 tests passing.
-- Sharing, title/description inline editing, privacy toggle, and view-page route tests remain pending.
+- Title/description inline editing and broader view-page route tests remain pending.
 
 ---
 

@@ -2,6 +2,7 @@
 
 import pytest
 
+from app.lib.auth import create_access_token
 from app.models.images import Image
 from app.models.uploads import Upload
 from app.models.users import User
@@ -223,3 +224,80 @@ class TestGalleryIntegrationWorkflows:
         modal_response = await client.get(f"/view/{upload.id}/{upload.cleanname}.{upload.ext}?modal=true")
         assert modal_response.status_code == 200
         assert "aria-label=\"Close upload preview\"" in modal_response.text
+
+    @pytest.mark.anyio
+    async def test_public_view_includes_share_modal_urls(self, client, monkeypatch):
+        """Public upload view includes share UI with expected copyable URLs."""
+        monkeypatch.setattr("app.ui.uploads.validate_file_request", lambda upload, user=None: True)
+        owner = await User.create(
+            password="hashed_password",
+            username="integration_share_owner",
+            email="integration.share.owner@test.com",
+        )
+        upload = await Upload.create(
+            user=owner,
+            description="Shareable Upload",
+            name="shareable_upload",
+            cleanname="shareable_upload",
+            originalname="shareable_upload.jpg",
+            ext="jpg",
+            size=2048,
+            type="image/jpeg",
+            extra="",
+            private=0,
+        )
+        await Image.create(
+            upload=upload,
+            type="image/jpeg",
+            width=1280,
+            height=720,
+            bits=8,
+            channels=3,
+        )
+
+        response = await client.get(f"/view/{upload.id}/{upload.cleanname}.{upload.ext}")
+        assert response.status_code == 200
+        assert "material-symbols-outlined-share" in response.text
+        assert "Share upload" in response.text
+        assert f'value="{upload.view_url}"' in response.text
+        assert f'value="{upload.download_url}"' in response.text
+        assert f'value="{upload.url}"' in response.text
+
+    @pytest.mark.anyio
+    async def test_private_view_hides_share_button_for_owner(self, client, monkeypatch):
+        """Private upload view hides share button even when accessed by owner."""
+        monkeypatch.setattr("app.ui.uploads.validate_file_request", lambda upload, user=None: True)
+        owner = await User.create(
+            password="hashed_password",
+            username="integration_private_share_owner",
+            email="integration.private.share.owner@test.com",
+        )
+        upload = await Upload.create(
+            user=owner,
+            description="Private Upload",
+            name="private_upload",
+            cleanname="private_upload",
+            originalname="private_upload.jpg",
+            ext="jpg",
+            size=2048,
+            type="image/jpeg",
+            extra="",
+            private=1,
+        )
+        await Image.create(
+            upload=upload,
+            type="image/jpeg",
+            width=1280,
+            height=720,
+            bits=8,
+            channels=3,
+        )
+
+        token = create_access_token({"sub": owner.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.get(f"/view/{upload.id}/{upload.cleanname}.{upload.ext}")
+        assert response.status_code == 200
+        assert "Share upload" not in response.text
+        assert "shareable-page" not in response.text
+        assert "private-upload-toggle" in response.text

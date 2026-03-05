@@ -8,14 +8,14 @@
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, inline tag editing, collection assignment UI, and delete functionality (with confirmation modal) all implemented; sharing, title/description inline editing, privacy toggle, and view-page route tests are not yet implemented)*
+- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, direct-link sharing modal, inline tag editing, collection assignment UI, owner privacy toggle, and delete functionality (with confirmation modal) all implemented; title/description inline editing and broader view-page route tests remain)*
   - [x] Display file metadata (size, dimensions, type, view count)
   - [x] Image rotation UI (owner only)
   - [x] Delete button for owners
   - [x] Inline tag editing (owner only)
-  - [ ] Social/direct link sharing options
+  - [x] Direct link sharing options
   - [ ] Inline editing for title/description (owner only)
-  - [ ] Privacy toggle (private/public) for owners
+  - [x] Privacy toggle (private/public) for owners
 
 ### Image Processing
 - [x] Image rotation API endpoint (`POST /api/v1/images/{id}/rotate`) with metadata update and cache invalidation
