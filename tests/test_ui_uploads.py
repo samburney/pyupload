@@ -10,6 +10,7 @@ This module tests the FastAPI/Starlette file upload endpoints:
 - POST /uploads/{id}/tag - Add a tag to an upload (owner only, HTMX)
 - DELETE /uploads/{id}/tag - Remove a tag from an upload (owner only, HTMX)
 - PATCH /uploads/{id}/private - Toggle upload privacy (owner only, HTMX)
+- PATCH /uploads/{id}/description - Update upload description (owner only, HTMX)
 
 Tests verify:
 - Endpoint accessibility and routing
@@ -1574,4 +1575,120 @@ class TestUploadPrivateTogglePatchEndpoint:
 
         await upload.refresh_from_db()
         assert upload.private == 0
+
+
+class TestUploadDescriptionPatchEndpoint:
+    """Tests for PATCH /uploads/{id}/description."""
+
+    @pytest.mark.asyncio
+    async def test_redirects_to_login_when_unauthenticated(self, client):
+        """Unauthenticated requests redirect to /login."""
+        response = await client.patch("/uploads/1/description", follow_redirects=False)
+        assert response.status_code == 303
+        assert "/login" in response.headers.get("location", "")
+
+    @pytest.mark.asyncio
+    async def test_returns_404_for_nonexistent_upload(self, client):
+        """Returns 404 when the upload does not exist."""
+        user = await User.create(
+            username="desc404",
+            email="desc404@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch("/uploads/999999/description", data={"description": "hello"})
+        assert response.status_code == 404
+        assert "Upload not found" in response.text
+
+    @pytest.mark.asyncio
+    async def test_owner_can_update_description(self, client, tmp_path, monkeypatch):
+        """Owner can set a description and receives updated description HTML."""
+        owner = await User.create(
+            username="descown1",
+            email="descown1@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await _create_tag_upload_with_file(owner, "desctoggle1", tmp_path, monkeypatch)
+
+        token = create_access_token({"sub": owner.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/description", data={"description": "My new description"})
+        assert response.status_code == 200
+
+        await upload.refresh_from_db()
+        assert upload.description == "My new description"
+
+    @pytest.mark.asyncio
+    async def test_owner_can_clear_description(self, client, tmp_path, monkeypatch):
+        """Owner can clear the description by submitting an empty string."""
+        owner = await User.create(
+            username="descown2",
+            email="descown2@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await _create_tag_upload_with_file(owner, "desctoggle2", tmp_path, monkeypatch)
+        upload.description = "Some existing description"
+        await upload.save()
+
+        token = create_access_token({"sub": owner.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/description")
+        assert response.status_code == 200
+
+        await upload.refresh_from_db()
+        assert upload.description == ""
+
+    @pytest.mark.asyncio
+    async def test_description_is_html_escaped(self, client, tmp_path, monkeypatch):
+        """HTML characters in description are escaped to prevent XSS."""
+        owner = await User.create(
+            username="descesc",
+            email="descesc@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await _create_tag_upload_with_file(owner, "descescape", tmp_path, monkeypatch)
+
+        token = create_access_token({"sub": owner.username})
+        client.cookies = {"access_token": token}
+
+        await client.patch(f"/uploads/{upload.id}/description", data={"description": "<script>alert('xss')</script>"})
+
+        await upload.refresh_from_db()
+        assert "<script>" not in upload.description
+        assert "&lt;script&gt;" in upload.description
+
+    @pytest.mark.asyncio
+    async def test_non_owner_cannot_update_description(self, client, tmp_path, monkeypatch):
+        """Non-owners receive 403 and the upload description is unchanged."""
+        owner = await User.create(
+            username="descowner",
+            email="descowner@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        other = await User.create(
+            username="descother",
+            email="descother@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await _create_tag_upload_with_file(owner, "desctoggle3", tmp_path, monkeypatch)
+        original_description = upload.description
+
+        token = create_access_token({"sub": other.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.patch(f"/uploads/{upload.id}/description", data={"description": "Hijacked!"})
+        assert response.status_code == 403
+
+        await upload.refresh_from_db()
+        assert upload.description == original_description
 

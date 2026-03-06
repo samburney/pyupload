@@ -1,3 +1,5 @@
+import html
+
 from typing import Annotated
 from fastapi import APIRouter, Request, Depends, UploadFile, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -6,15 +8,16 @@ from app.lib.config import get_app_config
 from app.lib.helpers import make_clean_tag
 from app.lib.error_handling import NotAuthorisedError
 from app.lib.upload_handler import handle_uploaded_files
-from app.lib.file_serving import serve_file, validate_file_request, validate_file_update_request
+from app.lib.file_serving import serve_file, validate_file_request
 
 from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 from app.models.tags import Tag
 from app.models.collections import Collection
 
-from app.ui.common.errors import error_response_for_get
+from app.ui.common.errors import error_response_for_get, error_template_response
 from app.ui.common.templating import templates
+from app.ui.common.uploads import get_upload_or_404_for_update, get_upload_with_relations_or_404
 from app.ui.common.security import get_current_user, get_current_authenticated_user, get_or_create_authenticated_user
 from app.ui.common.session import flash_message
 
@@ -31,6 +34,17 @@ async def _render_tag_input(request: Request, current_user: User, upload_model: 
         "components/tag-input.html.j2",
         context={"current_user": current_user, "upload": upload},
         status_code=status_code,
+    )
+
+
+async def _render_upload_component(request: Request, current_user: User, upload_model: Upload, template: str) -> Response:
+    await upload_model.fetch_relations()
+    upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
+    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
+    return templates.TemplateResponse(
+        request,
+        template,
+        context={"current_user": current_user, "upload": upload, "filtered_collections": filtered_collections},
     )
 
 
@@ -252,13 +266,7 @@ async def get_tag_suggestions_post(
         return Response(status_code=204)  # Return empty response if input is empty to avoid unnecessary database query
 
     # Get upload from database
-    upload_model = await Upload.get_with_relations(id=id)
-    if upload_model is None:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=404,
-            context={"error_messages": ["Upload not found"]},
-        )
+    upload_model = await get_upload_with_relations_or_404(id)
 
     # Serialize upload for template
     upload = await UploadSerializer.from_tortoise_orm(upload_model)
@@ -294,24 +302,14 @@ async def upload_add_tag_post(
     """Add a tag to an upload."""
     
     # Get upload from database
-    upload_model = await Upload.get_with_relations(id=id)
-    if upload_model is None:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=404,
-            context={"error_messages": ["Upload not found"]},
-        )
+    upload_model = await get_upload_with_relations_or_404(id)
 
     # Add tag to the upload, creating the tag if it doesn't exist
     try:
         await Tag.add_or_create_for_upload(upload_model, tag_name)
 
     except ValueError as e:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=400,
-            context={"error_messages": [str(e)]},
-        )
+        return error_template_response(request, [str(e)], status_code=400)
 
     return await _render_tag_input(request, current_user, upload_model, status_code=201)
 
@@ -326,24 +324,14 @@ async def upload_remove_tag_delete(
     """Remove a tag from an upload."""
     
     # Get upload from database
-    upload_model = await Upload.get_with_relations(id=id)
-    if upload_model is None:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=404,
-            context={"error_messages": ["Upload not found"]},
-        )
+    upload_model = await get_upload_with_relations_or_404(id)
 
     # Remove tag from upload
     try:
         await Tag.remove_tag_from_upload(upload_model, tag_name)
 
     except ValueError as e:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=400,
-            context={"error_messages": [str(e)]},
-        )
+        return error_template_response(request, [str(e)], status_code=400)
 
     return await _render_tag_input(request, current_user, upload_model, status_code=200)
 
@@ -358,13 +346,7 @@ async def get_collection_suggestions_post(
     """Get collection suggestions for current upload, filtered by the current input value."""
 
     # Get upload from database
-    upload_model = await Upload.get_with_relations(id=id)
-    if upload_model is None:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=404,
-            context={"error_messages": ["Upload not found"]},
-        )
+    upload_model = await get_upload_with_relations_or_404(id)
 
     # Serialize upload for template
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
@@ -392,13 +374,7 @@ async def upload_add_collection_post(
     """Add a collection to an upload."""
     
     # Get upload from database
-    upload_model = await Upload.get_with_relations(id=id)
-    if upload_model is None:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=404,
-            context={"error_messages": ["Upload not found"]},
-        )
+    upload_model = await get_upload_with_relations_or_404(id)
 
     # Add collection to the upload, creating the collection if it doesn't exist
     try:
@@ -407,11 +383,7 @@ async def upload_add_collection_post(
         )
 
     except ValueError as e:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=400,
-            context={"error_messages": [str(e)]},
-        )
+        return error_template_response(request, [str(e)], status_code=400)
 
     # Serialize upload for template
     await upload_model.fetch_relations()  # Refresh related models
@@ -467,13 +439,7 @@ async def update_upload_collections_patch(
         )
 
     # Add valid collections to the upload
-    upload_model = await Upload.get_with_relations(id=id)
-    if upload_model is None:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=404,
-            context={"error_messages": ["Upload not found"]},
-        )
+    upload_model = await get_upload_with_relations_or_404(id)
 
     # Get list of user-owned collections already on the upload
     user_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
@@ -520,35 +486,25 @@ async def toggle_upload_private_patch(
 ):
     """Update the private status of an upload."""
     
-    # Check upload exists and user has permission to edit it
-    upload = await Upload.get_or_none(id=id)
-    if upload is None:
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=404,
-            context={"error_messages": ["Upload not found"]},
-        )
-    validate_file_update_request(upload, current_user)
+    upload_model = await get_upload_or_404_for_update(id, current_user)
 
-    # Set new status
-    upload.private = upload_private
-    await upload.save()
+    upload_model.private = upload_private
+    await upload_model.save()
 
-    # Get collections with filter applied, excluding those already linked to the upload
-    await upload.fetch_relations()  # Refresh related models
-    upload_serialized = await UploadSerializer.from_tortoise_orm(upload, context={"user": current_user})
-    filtered_collections = await Collection.get_filtered_for_upload(upload, current_user)
+    return await _render_upload_component(request, current_user, upload_model, "components/view-sidebar.html.j2")
 
-    # Build response
-    response = templates.TemplateResponse(
-        request,
-        "components/view-sidebar.html.j2",
-        context={
-            "current_user": current_user,
-            "upload": upload_serialized,
-            "filtered_collections": filtered_collections,
-        },
-        status_code=200,
-    )
+@router.patch("/uploads/{id}/description", response_class=Response)
+async def toggle_upload_description_patch(
+        request: Request,
+        id: int,
+        current_user: Annotated[User, Depends(get_current_authenticated_user)],
+        description: Annotated[str, Form()] = '',
+):
+    """Update the description of an upload."""
 
-    return response
+    upload_model = await get_upload_or_404_for_update(id, current_user)
+
+    upload_model.description = html.escape(description).strip()
+    await upload_model.save()
+
+    return await _render_upload_component(request, current_user, upload_model, "components/upload-description.html.j2")

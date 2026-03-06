@@ -77,12 +77,21 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Tests added: `TestUploadPrivateTogglePatchEndpoint` in `tests/test_ui_uploads.py` and share/private view integration assertions in `tests/test_integration_gallery.py`.
 - Remaining major gap for this plan: title/description inline editing and broader per-route view-page test matrix.
 
+### Review Snapshot (2026-03-07)
+- Description inline editing implemented (Step 5 partial): `upload-description.html.j2` Alpine.js component with hover-to-edit overlay, inline `<textarea>`, save via `hx-patch="/uploads/{id}/description"`, and Escape key to cancel. Non-owners see a read-only `<p>` display.
+- `PATCH /uploads/{id}/description` endpoint added to `app/ui/uploads.py`; uses `html.escape()` + `.strip()` to sanitise input before persisting to `upload.description`.
+- `app/ui/common/uploads.py` created with four UI-layer helpers to eliminate repeated boilerplate across route handlers: `get_upload_or_404`, `get_upload_with_relations_or_404`, `get_upload_or_404_for_read`, `get_upload_or_404_for_update`.
+- DRY refactoring in `app/ui/uploads.py`: `_render_tag_input` and `_render_upload_component` private helpers eliminate repeated template context construction across multiple routes.
+- Tests: `TestUploadDescriptionPatchEndpoint` (6 tests: 404, owner update, clear, HTML-escape/XSS, non-owner 403) added to `tests/test_ui_uploads.py`; privacy toggle test suite complete.
+- 846 tests passing.
+- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix.
+
 ### Target State
 - `/view/{id}/{filename}` endpoint renders upload detail page
 - File preview displayed appropriately based on type
 - All metadata visible (size, dimensions, type, views, date)
 - Copy-to-clipboard sharing links
-- Inline edit form for title/description (HTMX-powered)
+- Inline edit form for description (HTMX-powered; doubles as title — `upload.display_name` returns `description` if set, else `originalname`)
 - Privacy toggle switch (HTMX-powered)
 - Delete button with confirmation modal
 - Owner-only controls properly hidden for non-owners
@@ -288,34 +297,37 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/templates/uploads/components/edit-form.html.j2` (new)
 
 **Tasks**:
-1. [ ] Add edit form for description field
-2. [ ] Show edit form only to upload owner
-3. [ ] Create PATCH endpoint for updating upload description
-4. [ ] Use HTMX for inline editing without page reload
-5. [ ] Validate description (prevent injection attacks, max 255 chars)
-6. [ ] Update upload.description in database
-7. [ ] Return updated content to replace form
-8. [ ] Add cancel button to revert changes
+1. [x] Add edit form for description field
+2. [x] Show edit form only to upload owner
+3. [x] Create PATCH endpoint for updating upload description
+4. [x] Use HTMX for inline editing without page reload
+5. [ ] Validate description (prevent injection attacks, max 255 chars) *(partial: `html.escape()` applied; max 255 chars not enforced)*
+6. [x] Update upload.description in database
+7. [x] Return updated content to replace form
+8. [ ] Add cancel button to revert changes *(partial: Escape key exits edit mode; no explicit cancel button)*
+
+**Note**: There is no separate `title` field in the database. `upload.description` doubles as the title — `upload.display_name` returns `description` if set, else `originalname`. Editing the description field is the complete implementation of title/description inline editing.
 
 **Tests**:
 1. [ ] Test edit form visible to owner
 2. [ ] Test edit form hidden from non-owners
-3. [ ] Test successful description update
-4. [ ] Test validation prevents injection attacks
+3. [x] Test successful description update — `TestUploadDescriptionPatchEndpoint.test_owner_can_update_description`
+4. [x] Test validation prevents injection attacks — `TestUploadDescriptionPatchEndpoint.test_description_is_html_escaped`
 5. [ ] Test max length validation (255 chars)
 6. [ ] Test HTMX swap behavior
 7. [ ] Test cancel button
-8. [ ] Test unauthorized edit attempt (403)
+8. [x] Test unauthorized edit attempt (403) — `TestUploadDescriptionPatchEndpoint.test_non_owner_cannot_update_description`
 
 **Acceptance Criteria**:
-- [ ] Owner can edit description inline
-- [ ] Non-owners cannot see edit controls
-- [ ] Updates work without page reload
-- [ ] Proper validation and error handling
-- [ ] All tests passing
+- [x] Owner can edit description inline
+- [x] Non-owners cannot see edit controls
+- [x] Updates work without page reload
+- [ ] Proper validation and error handling *(partial: XSS prevented via `html.escape()`; max-length and explicit cancel not yet implemented)*
+- [ ] All tests passing *(partial: route-level CRUD and access control tests passing; template-level and edge-case tests remain)*
 
 **Implementation Notes**:
-- Edit field: `upload.description` (max 255 chars, defaults to originalname.ext)
+- There is no separate `title` field in the database. `upload.description` doubles as the title — `upload.display_name` returns `description` if set, else `originalname`. Steps referring to "title" editing are all satisfied by this single field.
+- Edit field: `upload.description` (max 255 chars, defaults to originalname when empty)
 - `upload.name` is the filesystem filename and should NOT be editable
 - Use HTMX `hx-patch` for form submission
 - Endpoint: `PATCH /uploads/{id}`
@@ -360,7 +372,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - [x] Non-owners cannot see toggle
 - [x] Updates work without page reload
 - [x] Database updated correctly
-- [ ] All tests passing
+- [x] All tests passing
 
 **Implementation Notes**:
 - Use checkbox or toggle switch UI component
@@ -573,7 +585,16 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `existing_collection_ids` query now filtered by `user=current_user` in all three collection endpoints (was missing the user filter).
 - Test suite updated: `conftest.py` registers `app.models.collections`; new `tests/test_models_collections.py` (15 tests); new `TestUploadGetWithRelations` and `TestUploadUserCollections` in `test_models_uploads.py`; collection endpoint classes in `test_ui_uploads.py`; `SELECT_QUERY_BASELINE_BUDGET` updated 30 → 31.
 - 827 tests passing.
-- Title/description inline editing and broader view-page route tests remain pending.
+- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix.
+
+### Review Snapshot (2026-03-07)
+- Description inline editing implemented (Step 5 partial): `upload-description.html.j2` Alpine.js component with hover-to-edit overlay, inline `<textarea>`, save via `hx-patch="/uploads/{id}/description"`, and Escape key to cancel. Non-owners see a read-only `<p>` display.
+- `PATCH /uploads/{id}/description` endpoint added to `app/ui/uploads.py`; uses `html.escape()` + `.strip()` to sanitise input before persisting to `upload.description`.
+- `app/ui/common/uploads.py` created with four UI-layer helpers to eliminate repeated boilerplate across route handlers: `get_upload_or_404`, `get_upload_with_relations_or_404`, `get_upload_or_404_for_read`, `get_upload_or_404_for_update`.
+- DRY refactoring in `app/ui/uploads.py`: `_render_tag_input` and `_render_upload_component` private helpers eliminate repeated template context construction across multiple routes.
+- Tests: `TestUploadDescriptionPatchEndpoint` (6 tests: 404, owner update, clear, HTML-escape/XSS, non-owner 403) added to `tests/test_ui_uploads.py`; privacy toggle test suite complete.
+- 846 tests passing.
+- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix.
 
 ---
 

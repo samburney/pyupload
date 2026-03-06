@@ -115,8 +115,8 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     # Skip for API endpoints
     if not request.url.path.startswith("/api/"):
 
-        # Error 405: Method Not Allowed
-        if exc.status_code == 405:
+        # Render HTML error pages for common error codes on UI routes
+        if exc.status_code in (404, 405):
             return error_template_response(request=request, status_code=exc.status_code, title=f"Error: {exc.status_code}", error_messages=[str(exc.detail)])
 
     # Return default response for everything else

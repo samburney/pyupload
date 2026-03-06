@@ -8,13 +8,13 @@
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, direct-link sharing modal, inline tag editing, collection assignment UI, owner privacy toggle, and delete functionality (with confirmation modal) all implemented; title/description inline editing and broader view-page route tests remain)*
+- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, direct-link sharing modal, inline tag editing, collection assignment UI, owner privacy toggle, description inline editing, and delete functionality (with confirmation modal) all implemented; broader view-page route tests remain)*
   - [x] Display file metadata (size, dimensions, type, view count)
   - [x] Image rotation UI (owner only)
   - [x] Delete button for owners
   - [x] Inline tag editing (owner only)
   - [x] Direct link sharing options
-  - [ ] Inline editing for title/description (owner only)
+  - [x] Inline editing for description/title (owner only) *(description doubles as title — `upload.display_name` returns `description` if set, else `originalname`)*
   - [x] Privacy toggle (private/public) for owners
 
 ### Image Processing
@@ -106,6 +106,8 @@
 ## Fixes or Minor Enhancements
 - [ ] Provide user feedback when some collection IDs are invalid/not owned in `PATCH /uploads/{id}/collection` (currently silently processes valid IDs and discards errors).
 - [ ] Make home gallery page size user-configurable.
+- [ ] Make home gallery private-upload inclusion user-configurable (currently, logged-in users always see their own private uploads mixed into the home page feed).
+- [ ] Replace `?modal=true` query parameter on `/view/{id}/{filename}` with HTMX response headers to consolidate modal and full-page view into a single endpoint.
 - [ ] Scheduler: delete files owned by abandoned users when marked private.
 - [ ] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`, `/tags`, `/collections`) until their pages are implemented.
 - [x] Refactor `app/lib/file_serving.py` to raise typed exceptions instead of returning responses directly, eliminating its `app/lib → app/ui` import of `error_response_for_get`.
