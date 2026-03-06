@@ -89,6 +89,6 @@
 {% endmacro -%}
 
 {# Handle HTMX partial request #}
-{%- if request and request.headers.get('hx-request', '') == 'true' %}
+{%- if request and request.headers.get('hx-target', '') == 'tag-input' %}
 {{ render_tags_input() }}
 {% endif %}

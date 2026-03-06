@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from tortoise import fields, models
 from tortoise_serializer import ModelSerializer
@@ -11,6 +11,7 @@ from app.models.common.base import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.uploads import Upload  # noqa: F401
+    from app.models.users import User  # noqa: F401
 
 
 class Collection(models.Model, TimestampMixin):
@@ -98,6 +99,20 @@ class Collection(models.Model, TimestampMixin):
 
         await upload.collections.remove(collection)  # type: ignore[union-attr]
         return True
+
+    @classmethod
+    async def get_filtered_for_upload(cls, upload: "Upload", user: "User", name_filter: str = "", limit: int = 5) -> Sequence["Collection"]:
+        """Return collections owned by user that are not already linked to upload.
+
+        Results are ordered by name and capped at limit (default 5).  Pass
+        name_filter to restrict results to collections whose name contains that
+        string.
+        """
+        existing_ids = await upload.collections.filter(user=user).values_list("id", flat=True)  # type: ignore[union-attr]
+        qs = cls.filter(user=user).exclude(id__in=existing_ids).limit(limit).order_by("name")
+        if name_filter:
+            qs = qs.filter(name__icontains=name_filter)
+        return await qs
 
 
 class CollectionUpload(models.Model):

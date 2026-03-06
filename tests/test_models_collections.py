@@ -5,6 +5,7 @@ Validates:
 - Collection.add_or_create_for_upload: creates/reuses collections, validates input, links uploads
 - Collection.add_for_upload: links an existing collection, returns False for unknown ID
 - Collection.remove_from_upload: removes a collection link, returns False for unknown ID
+- Collection.get_filtered_for_upload: returns unlinked collections, supports name filtering
 """
 import pytest
 
@@ -200,3 +201,80 @@ class TestRemoveFromUpload:
         result = await Collection.remove_from_upload(upload, 999999)
 
         assert result is False
+
+
+class TestGetFilteredForUpload:
+    """Tests for Collection.get_filtered_for_upload."""
+
+    @pytest.mark.asyncio
+    async def test_returns_unlinked_collections(self, db):
+        """Returns collections not yet linked to the upload."""
+        user, upload = await _make_user_upload("gf1")
+        linked = await Collection.create(user=user, name="Linked", name_unique="linked-gf1")
+        unlinked = await Collection.create(user=user, name="Unlinked", name_unique="unlinked-gf1")
+        await upload.collections.add(linked)
+
+        result = await Collection.get_filtered_for_upload(upload, user)
+
+        result_ids = [c.id for c in result]
+        assert unlinked.id in result_ids
+        assert linked.id not in result_ids
+
+    @pytest.mark.asyncio
+    async def test_excludes_other_users_collections(self, db):
+        """Does not return collections belonging to a different user."""
+        user, upload = await _make_user_upload("gf2a")
+        other_user, _ = await _make_user_upload("gf2b")
+        await Collection.create(user=other_user, name="Other", name_unique="other-gf2")
+        own = await Collection.create(user=user, name="Own", name_unique="own-gf2")
+
+        result = await Collection.get_filtered_for_upload(upload, user)
+
+        result_ids = [c.id for c in result]
+        assert own.id in result_ids
+        assert all(c.user_id == user.id for c in result)
+
+    @pytest.mark.asyncio
+    async def test_name_filter_restricts_results(self, db):
+        """name_filter limits results to collections whose name contains the string."""
+        user, upload = await _make_user_upload("gf3")
+        await Collection.create(user=user, name="Holiday Photos", name_unique="holiday-photos-gf3")
+        await Collection.create(user=user, name="Work Stuff", name_unique="work-stuff-gf3")
+
+        result = await Collection.get_filtered_for_upload(upload, user, name_filter="holiday")
+
+        assert len(result) == 1
+        assert result[0].name == "Holiday Photos"
+
+    @pytest.mark.asyncio
+    async def test_empty_name_filter_returns_all(self, db):
+        """An empty name_filter returns all unlinked collections (up to 5)."""
+        user, upload = await _make_user_upload("gf4")
+        await Collection.create(user=user, name="Alpha", name_unique="alpha-gf4")
+        await Collection.create(user=user, name="Beta", name_unique="beta-gf4")
+
+        result = await Collection.get_filtered_for_upload(upload, user, name_filter="")
+
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_results_limited_to_five_by_default(self, db):
+        """Returns at most 5 collections by default when more exist."""
+        user, upload = await _make_user_upload("gf5")
+        for i in range(8):
+            await Collection.create(user=user, name=f"Col {i}", name_unique=f"col-{i}-gf5")
+
+        result = await Collection.get_filtered_for_upload(upload, user)
+
+        assert len(result) == 5
+
+    @pytest.mark.asyncio
+    async def test_custom_limit_is_respected(self, db):
+        """A custom limit parameter overrides the default of 5."""
+        user, upload = await _make_user_upload("gf6")
+        for i in range(4):
+            await Collection.create(user=user, name=f"Col {i}", name_unique=f"col-{i}-gf6")
+
+        result = await Collection.get_filtered_for_upload(upload, user, limit=2)
+
+        assert len(result) == 2

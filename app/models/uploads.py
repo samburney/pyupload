@@ -14,14 +14,13 @@ from app.lib.image_processing import do_image_rotation
 
 from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 from app.models.common.pagination import PaginationMixin
+from app.models.collections import Collection, CollectionSerializer
 from app.models.users import User, UserSerializer
 from app.models.images import ImageSerializer, ImageMetadata
 from app.models.tags import TagSerializer
-from app.models.collections import CollectionSerializer
 
 
 if TYPE_CHECKING:
-    from app.models.collections import Collection
     from app.models.images import Image
     from tortoise.queryset import QuerySet, QuerySetSingle
 
@@ -35,6 +34,9 @@ CLEAN_FILENAME_PATTERN = r'[a-z0-9](?:[a-z0-9_]*[a-z0-9])?'
 DATETIME_STAMP_PATTERN = r'\d{8}-\d{6}'
 SHORT_UUID_PATTERN = r'[a-f0-9]{8}'
 UNIQUE_FILENAME_PATTERN = rf'^{CLEAN_FILENAME_PATTERN}_{DATETIME_STAMP_PATTERN}_{SHORT_UUID_PATTERN}$'
+
+# Related fields that are commonly prefetched together for UploadSerializer
+UPLOAD_PREFETCH_MODELS = ("user", "images", "tags", "collections")
 
 
 def make_user_filepath(user_id: int, filename: str) -> Path:
@@ -94,6 +96,11 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
             "images.id",
             "images.upload_id",
         )
+
+    @property
+    def display_name(self) -> str:
+        """Return a user-friendly display name for the upload."""
+        return self.description if self.description else self.originalname
 
     @property
     def dot_ext(self) -> str:
@@ -212,10 +219,14 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
 
         return True
 
+    async def fetch_relations(self) -> None:
+        """Fetch related fields for this upload instance."""
+        await self.fetch_related(*UPLOAD_PREFETCH_MODELS)
+
     @classmethod
     def get_with_relations(cls, id: int) -> "QuerySetSingle[Upload | None]":
         """Return a get_or_none queryset with all relations required by UploadSerializer prefetched."""
-        return cls.get_or_none(id=id).prefetch_related("user", "images", "tags", "collections")
+        return cls.get_or_none(id=id).prefetch_related(*UPLOAD_PREFETCH_MODELS)
 
 
 class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
@@ -264,6 +275,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
         return []
 
     # Computed fields
+    display_name: str
     dot_ext: str
     filepath: Path
     filename: str

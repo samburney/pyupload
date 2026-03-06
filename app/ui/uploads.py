@@ -23,6 +23,17 @@ config = get_app_config()
 router = APIRouter(tags=["uploads"])
 
 
+async def _render_tag_input(request: Request, current_user: User, upload_model: Upload, status_code: int) -> Response:
+    await upload_model.fetch_relations()
+    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+    return templates.TemplateResponse(
+        request,
+        "components/tag-input.html.j2",
+        context={"current_user": current_user, "upload": upload},
+        status_code=status_code,
+    )
+
+
 @router.get("/upload", response_class=HTMLResponse)
 async def show_upload_page_get(
     request: Request,
@@ -182,11 +193,7 @@ async def view_upload_page_get(
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
     # Get collections with filter applied, excluding those already linked to the upload
-    existing_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
-    filtered_collections = await Collection.filter(user=current_user) \
-        .exclude(id__in=existing_collection_ids) \
-        .limit(5) \
-        .order_by("name")
+    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
 
     # Template context
     context = {
@@ -195,6 +202,7 @@ async def view_upload_page_get(
         "filtered_collections": filtered_collections,
     }
 
+    # TODO: Update to use HTMX headers instead of separate modal endpoint
     if modal:
         return templates.TemplateResponse(request, "uploads/view-modal.html.j2", context=context)
     else:
@@ -305,22 +313,7 @@ async def upload_add_tag_post(
             context={"error_messages": [str(e)]},
         )
 
-    # Serialize upload for template
-    await upload_model.fetch_related("tags")  # Refresh related tags
-    upload = await UploadSerializer.from_tortoise_orm(upload_model)
-
-    # Build response
-    response = templates.TemplateResponse(
-        request,
-        "components/tag-input.html.j2",
-        context={
-            "current_user": current_user,
-            "upload": upload,
-        },
-        status_code=201,
-    )
-
-    return response
+    return await _render_tag_input(request, current_user, upload_model, status_code=201)
 
 
 @router.delete("/uploads/{id}/tag", response_class=Response)
@@ -352,22 +345,7 @@ async def upload_remove_tag_delete(
             context={"error_messages": [str(e)]},
         )
 
-    # Serialize upload for template
-    await upload_model.fetch_related("tags")  # Refresh related tags
-    upload = await UploadSerializer.from_tortoise_orm(upload_model)
-
-    # Build response
-    response = templates.TemplateResponse(
-        request,
-        "components/tag-input.html.j2",
-        context={
-            "current_user": current_user,
-            "upload": upload,
-        },
-        status_code=200,
-    )
-
-    return response
+    return await _render_tag_input(request, current_user, upload_model, status_code=200)
 
 
 @router.post("/uploads/{id}/collection-search", response_class=HTMLResponse)
@@ -392,11 +370,7 @@ async def get_collection_suggestions_post(
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
     # Get collections with filter applied, excluding those already linked to the upload
-    existing_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
-    filtered_collections = await Collection.filter(user=current_user, name__icontains=collection_name) \
-        .exclude(id__in=existing_collection_ids) \
-        .limit(5) \
-        .order_by("name")
+    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user, name_filter=collection_name)
 
     return templates.TemplateResponse(
         request,
@@ -440,15 +414,11 @@ async def upload_add_collection_post(
         )
 
     # Serialize upload for template
-    await upload_model.fetch_related("collections")  # Refresh related collections
+    await upload_model.fetch_relations()  # Refresh related models
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
     # Get collections with filter applied, excluding those already linked to the upload
-    existing_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
-    filtered_collections = await Collection.filter(user=current_user) \
-        .exclude(id__in=existing_collection_ids) \
-        .limit(5) \
-        .order_by("name")
+    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
 
     # Build response
     response = templates.TemplateResponse(
@@ -520,15 +490,11 @@ async def update_upload_collections_patch(
         await upload_model.collections.remove(*collections_to_remove)
 
     # Refresh upload collections and serialize for template
-    await upload_model.fetch_related("collections")
+    await upload_model.fetch_relations()  # Refresh related models
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
     # Get collections with filter applied, excluding those already linked to the upload
-    existing_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
-    filtered_collections = await Collection.filter(user=current_user) \
-        .exclude(id__in=existing_collection_ids) \
-        .limit(5) \
-        .order_by("name")
+    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
 
     # Build response
     response = templates.TemplateResponse(
@@ -568,13 +534,19 @@ async def toggle_upload_private_patch(
     upload.private = upload_private
     await upload.save()
 
+    # Get collections with filter applied, excluding those already linked to the upload
+    await upload.fetch_relations()  # Refresh related models
+    upload_serialized = await UploadSerializer.from_tortoise_orm(upload, context={"user": current_user})
+    filtered_collections = await Collection.get_filtered_for_upload(upload, current_user)
+
     # Build response
     response = templates.TemplateResponse(
         request,
-        "components/upload-private-toggle.html.j2",
+        "components/view-sidebar.html.j2",
         context={
             "current_user": current_user,
-            "upload": upload,
+            "upload": upload_serialized,
+            "filtered_collections": filtered_collections,
         },
         status_code=200,
     )

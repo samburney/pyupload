@@ -96,6 +96,6 @@
 {% endmacro -%}
 
 {# Handle HTMX partial request #}
-{%- if request and request.headers.get('hx-request', '') == 'true' %}
+{%- if request and request.headers.get('hx-target', '') == 'collections-combo-selector-options' %}
 {{ render_combo_selector() }}
 {% endif %}
