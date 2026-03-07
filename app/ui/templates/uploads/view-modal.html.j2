@@ -1,7 +1,7 @@
 {%- set ar_decimal = (upload.image.width / upload.image.height) | round(3) %}
 
 <head>
-{% include 'layout/header-includes.html.j2' %}
+{% include "layout/header-includes.html.j2" %}
 </head>
 
 <div class="modal-image fixed inset-0 z-50 grid place-content-center bg-black/50 sm:p-4" role="dialog" aria-modal="true"
@@ -14,7 +14,7 @@
          x-transition.duration.150ms
          x-cloak
          @click.stop >
-        <div class="relative" x-data="{ loaded: false}" x-init="loaded = $el.querySelector('img')?.complete || false;">
+        <div class="relative" x-data="{ loaded: false }" x-init="loaded = $el.querySelector('img')?.complete || false;">
             <button class="absolute top-2 right-2 z-10 rounded-full bg-black/25 p-1 text-white hover:bg-black/50"
                 aria-label="Close upload preview"
                 @click="open = false">
@@ -23,27 +23,16 @@
                 </svg>
             </button>
 
-            <!-- Placeholder: calculated dimensions with Alpine.js -->
-            <div class="bg-gray-200 animate-pulse flex items-center justify-center rounded-none sm:rounded-md"
-                x-show="!loaded && ready" x-data="imagePlaceholder({{ upload.image.width }}, {{ upload.image.height }})"
-                x-effect="if (ready) $dispatch('placeholder-ready')"
-                @resize.window="!loaded && calculateSize()"
-                :style="`width: ${width}px; height: ${height}px;`">
-                <svg class="text-gray-400 size-24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                    viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z" />
-                </svg>
-            </div>
+            {% include "components/image-placeholder.html.j2" %}
 
-            <!-- Image -->
             <img class="rounded-none sm:rounded-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]"
-                 src="{{ upload.url }}"
-                  alt="{{ upload.description or upload.originalname }}"
+                 src="{{ upload.autoresize_url(1920) }}"
+                 alt="{{ upload.description or upload.originalname }}"
                  @load="loaded = true"
                  x-show="loaded"
                  x-transition.opacity.duration.150ms
                  x-cloak>
+
             <p
                 class="absolute bottom-2 left-0 flex w-full justify-center text-xs sm:text-sm md:text-base font-medium bg-black/25 p-1">
                 <a href="{{ upload.view_url }}" class="text-white hover:text-gray-300">

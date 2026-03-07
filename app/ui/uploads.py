@@ -17,7 +17,7 @@ from app.models.collections import Collection
 
 from app.ui.common.errors import error_response_for_get, error_template_response
 from app.ui.common.templating import templates
-from app.ui.common.uploads import get_upload_or_404_for_update, get_upload_with_relations_or_404
+from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_for_update, get_upload_with_relations_or_404
 from app.ui.common.security import get_current_user, get_current_authenticated_user, get_or_create_authenticated_user
 from app.ui.common.session import flash_message
 
@@ -181,14 +181,15 @@ async def view_upload_page_get(
     id: int,
     filename: str,
     current_user: Annotated[User, Depends(get_current_user)],
-    modal: bool | None = False,
 ) -> Response:
     """View an uploaded file."""
+
+    is_modal = request.headers.get("HX-Target") == "body"
 
     # Get upload from database
     upload_model = await Upload.get_with_relations(id=id)
     if upload_model is None:
-        if modal:
+        if is_modal:
             return templates.TemplateResponse(
                 request, "layout/messages.html.j2",
                 status_code=404,
@@ -216,12 +217,60 @@ async def view_upload_page_get(
         "filtered_collections": filtered_collections,
     }
 
-    # TODO: Update to use HTMX headers instead of separate modal endpoint
-    if modal:
+    if is_modal:
         return templates.TemplateResponse(request, "uploads/view-modal.html.j2", context=context)
     else:
         return templates.TemplateResponse(request, "uploads/view.html.j2", context=context)
 
+
+@router.get("/uploads/{id}/image", response_class=Response)
+async def get_upload_image_src_get(
+    request: Request,
+    id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    width: int | None = None,
+    height: int | None = None,
+    context: str = "frame",
+) -> Response:
+    """Get the image source URL for an upload, with optional resizing parameters."""
+
+    upload_model = await get_upload_or_404_for_read(id, current_user)
+    await upload_model.fetch_relations()
+    upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
+
+    if context == "modal":
+        element_id = "view-modal-image"
+        container_js = "window"
+        ignore_height_js = "false"
+        img_class = "rounded-none sm:rounded-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]"
+        placeholder_container = "window"
+        placeholder_sidebar = False
+    else:
+        element_id = "view-frame-image"
+        container_js = "document.querySelector('main').querySelector('article')"
+        ignore_height_js = "true"
+        img_class = ""
+        placeholder_container = "document.querySelector('main').querySelector('article')"
+        placeholder_sidebar = True
+
+    response = templates.TemplateResponse(
+        request,
+        "components/image-element.html.j2",
+        context={
+            "upload": upload,
+            "width": width,
+            "height": height,
+            "element_id": element_id,
+            "container_js": container_js,
+            "ignore_height_js": ignore_height_js,
+            "img_class": img_class,
+            "image_context": context,
+            "placeholder_container": placeholder_container,
+            "placeholder_sidebar": placeholder_sidebar,
+        },
+    )
+
+    return response
 
 @router.delete("/uploads/{id}", response_class=Response)
 async def delete_upload_delete(

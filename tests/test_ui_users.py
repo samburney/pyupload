@@ -170,10 +170,9 @@ class TestUserProfileIntegration:
         # Check image upload rendering
         assert "photo.jpg" in html
         assert ">jpeg<" in html
-        # Should have img tag
+        # Should have img tag with original URL (image is 100px wide, below thumbnail threshold)
         assert "<img" in html
-        expected_thumbnail_url = f"{image_upload.url.rsplit('.', 1)[0]}-640x0.jpg"
-        assert f'src="{expected_thumbnail_url}"' in html
+        assert f'src="{image_upload.url}"' in html
 
     @pytest.mark.asyncio
     async def test_profile_pagination_integration(self, client):

@@ -6,7 +6,7 @@
         <title>{{ config.app_site_name }}</title>
 {%- include 'layout/header-includes.html.j2' %}
     </head>
-    <body hx-ext="response-targets" class="flex flex-col min-h-screen">
+    <body id="body" hx-ext="response-targets" class="flex flex-col min-h-screen">
 {%- include 'layout/icons-sprite.html.j2' %}
         <section class="sm:mx-2 mb-2">
 {%- include "layout/navbar.html.j2" %}

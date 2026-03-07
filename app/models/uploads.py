@@ -8,7 +8,7 @@ from tortoise.exceptions import NoValuesFetched
 from tortoise_serializer import ModelSerializer, ContextType
 
 from app.lib.config import get_app_config
-from app.lib.helpers import MIME_TYPE_PATTERN
+from app.lib.helpers import MIME_TYPE_PATTERN, IMAGE_CONVERSION_DST_FORMATS, split_filename
 from app.lib.file_io import delete_file
 from app.lib.image_processing import do_image_rotation
 
@@ -285,6 +285,28 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     is_image: bool
     is_private: bool
     short_type: str
+
+    def autoresize_url(self, max_width: int) -> str:
+        """Return a resized image URL constrained to max_width, preserving format where possible.
+
+        If the image doesn't support processing or is already smaller than max_width,
+        returns the original URL unchanged.
+        """
+        if not self.image or not self.image.supports_processing:
+            return self.url
+
+        if self.image.width <= max_width:
+            return self.url
+
+        # Determine output extension: preserve original if it's a supported output format, else .jpg
+        image_ext = f".{self.image.type}"
+        if image_ext in IMAGE_CONVERSION_DST_FORMATS:
+            out_ext = image_ext
+        else:
+            out_ext = ".jpg"
+
+        base, _ = split_filename(self.url)
+        return f"{base}-{max_width}x0{out_ext}"
 
 
 class UploadMetadata(BaseModel):

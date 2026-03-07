@@ -4,9 +4,64 @@
 <script defer src="/static/js/alpine.min.js"></script>
 <link href="/static/css/tailwind.css" rel="stylesheet">
 <script>
+    // Calculate constrained display dimensions for an image
+    function calculateDisplaySize(naturalW, naturalH, container=window, ignore_height=false) {
+        // Determine padding based on breakpoint
+        let padding = 16; // Default for <sm
+        if (window.innerWidth >= 640) padding = 32;
+
+        // Calculate max dimensions based on container size and padding
+        let maxW, maxH;
+        if (container === window) {
+            maxW = window.innerWidth - padding;
+            maxH = window.innerHeight - padding;
+        } else {
+            maxW = container.clientWidth - padding;
+            maxH = container.clientHeight - padding;
+        }
+        let w = naturalW;
+        let h = naturalH;
+
+        // Scale down if wider than container
+        if (w > maxW) {
+            h = (maxW / w) * h;
+            w = maxW;
+        }
+
+        // Scale down if taller than container
+        if (h > maxH && !ignore_height) {
+            w = (maxH / h) * w;
+            h = maxH;
+        }
+
+        return { width: parseInt(w), height: parseInt(h) };
+    }
+
+    // Calculate image request size snapped to nearest breakpoint
+    function calculateMaxImageSize(naturalW, naturalH, container=window, ignore_height=false) {
+        const breakpoints = [640, 768, 1024, 1280, 1536, 1920, 2560];
+
+        const { width: displayW } = calculateDisplaySize(naturalW, naturalH, container, ignore_height);
+
+        // Snap up to nearest breakpoint
+        let w = displayW;
+        for (let i = 0; i < breakpoints.length; i++) {
+            if (w <= breakpoints[i]) {
+                w = breakpoints[i];
+                break;
+            }
+        }
+
+        // Don't exceed natural width
+        w = Math.min(w, naturalW);
+        let h = parseInt((w / naturalW) * naturalH);
+
+        return { width: w, height: h };
+    }
+
     document.addEventListener('alpine:init', () => {
         // Image placeholder resize hack
-        Alpine.data('imagePlaceholder', (naturalW, naturalH) => ({
+        Alpine.data('imagePlaceholder', (naturalW, naturalH, container=window, ignore_height=false) => ({
             width: 0,
             height: 0,
             ready: false,
@@ -16,26 +71,7 @@
             },
 
             calculateSize() {
-                // Use -1rem (16px) for <sm, -2rem (32px) for >=sm (640px)
-                const isSm = window.innerWidth >= 640;
-                const padding = isSm ? 32 : 16;
-                const maxW = window.innerWidth - padding;
-                const maxH = window.innerHeight - padding;
-
-                let w = naturalW;
-                let h = naturalH;
-
-                // Scale down if wider than viewport
-                if (w > maxW) {
-                    h = (maxW / w) * h;
-                    w = maxW;
-                }
-
-                // Scale down if taller than viewport
-                if (h > maxH) {
-                    w = (maxH / h) * w;
-                    h = maxH;
-                }
+                const { width: w, height: h } = calculateDisplaySize(naturalW, naturalH, container, ignore_height);
 
                 this.width = w;
                 this.height = h;
@@ -82,5 +118,4 @@
             return subject => navigator.clipboard.writeText(subject)
         })
     });
-
 </script>
