@@ -7,12 +7,12 @@
 {%- include 'layout/header-includes.html.j2' %}
     </head>
     <body id="body" hx-ext="response-targets" class="flex flex-col min-h-screen">
-{%- include 'layout/icons-sprite.html.j2' %}
+{%- include 'components/core/icons-sprite.html.j2' %}
         <section class="sm:mx-2 mb-2">
 {%- include "layout/navbar.html.j2" %}
         </section>
         <section class="mx-2">
-{%- include "layout/messages.html.j2" %}
+{%- include "components/core/messages.html.j2" %}
         </section>
         <main class="mx-2 mb-2 flex flex-col grow">
             <div class="container mx-auto flex flex-col grow">

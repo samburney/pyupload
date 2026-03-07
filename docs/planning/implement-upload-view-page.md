@@ -63,8 +63,8 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/models/tags.py`: `Tag.add_or_create_for_upload` and `Tag.remove_tag_from_upload` class methods added; `TagSerializer` added.
 - `app/models/uploads.py`: `tags = fields.ManyToManyField("models.Tag", ...)` added to `Upload`; `tags` field added to `UploadSerializer`.
 - Three new HTMX endpoints in `app/ui/uploads.py`: `POST /uploads/{id}/tag-suggestions`, `POST /uploads/{id}/tag`, `DELETE /uploads/{id}/tag`.
-- `app/ui/templates/components/tag-input.html.j2`: new Alpine.js tag input widget with autocomplete, add, and remove interactions.
-- `app/ui/templates/components/tag-suggestions.html.j2`: suggestions dropdown partial for HTMX swap.
+- `app/ui/templates/components/core/tag-input.html.j2`: new Alpine.js tag input widget with autocomplete, add, and remove interactions.
+- `app/ui/templates/components/core/tag-suggestions.html.j2`: suggestions dropdown partial for HTMX swap.
 - All `prefetch_related` calls across `app/ui/main.py`, `app/ui/images.py`, `app/ui/users.py`, and `app/api/images.py` updated to include `"tags"`.
 - Tests: `tests/test_models_tags.py` (14 tests), `tests/test_lib_helpers.py` additions (`TestCleanText`, `TestMakeCleanTag`), and `tests/test_ui_uploads.py` additions (`TestTagSuggestionsEndpoint`, `TestUploadAddTagEndpoint`, `TestUploadDeleteTagEndpoint`) — all 788 tests passing.
 - Title/description inline editing and broader view-page route matrix tests remain pending.
@@ -246,10 +246,10 @@ Implement individual upload detail/view pages that display file metadata, provid
 ## Step 4: Implement Sharing Options
 
 **Files**: 
-- `app/ui/templates/components/view-sidebar.html.j2`
-- `app/ui/templates/components/upload-share-button.html.j2` (new)
-- `app/ui/templates/components/modal-basic.html.j2` (new)
-- `app/ui/templates/layout/icons-sprite.html.j2`
+- `app/ui/templates/uploads/partials/view-sidebar.html.j2`
+- `app/ui/templates/components/upload/share-button.html.j2` (new)
+- `app/ui/templates/components/core/modal-basic.html.j2` (new)
+- `app/ui/templates/components/core/icons-sprite.html.j2`
 
 **Tasks**:
 1. [x] Create share panel component
@@ -347,8 +347,8 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Files**: 
 - `app/ui/uploads.py`
-- `app/ui/templates/components/upload-actions.html.j2`
-- `app/ui/templates/components/upload-private-toggle.html.j2` (new)
+- `app/ui/templates/components/upload/actions.html.j2`
+- `app/ui/templates/components/upload/private-toggle.html.j2` (new)
 
 **Tasks**:
 1. [x] Add privacy toggle switch (public/private)
@@ -392,7 +392,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Files**: 
 - `app/ui/uploads.py`
-- `app/ui/templates/components/upload-actions.html.j2`
+- `app/ui/templates/components/upload/actions.html.j2`
 - `app/ui/templates/components/confirm-modal.html.j2` (new)
 - `app/models/uploads.py`
 - `app/api/uploads.py`
@@ -533,8 +533,8 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/models/tags.py`
 - `app/models/uploads.py`
 - `app/ui/uploads.py`
-- `app/ui/templates/components/tag-input.html.j2`
-- `app/ui/templates/components/tag-suggestions.html.j2`
+- `app/ui/templates/components/core/tag-input.html.j2`
+- `app/ui/templates/components/core/tag-suggestions.html.j2`
 
 **Tasks**:
 1. [x] Add `ManyToManyField` tags relation to `Upload` model
@@ -606,12 +606,12 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/models/collections.py`
 - `app/models/uploads.py`
 - `app/ui/uploads.py`
-- `app/ui/templates/components/collections-combo-selector.html.j2` (new)
-- `app/ui/templates/components/collections-combo-selector-items.html.j2` (new)
-- `app/ui/templates/components/image-rotate-select.html.j2` (new, extracted)
-- `app/ui/templates/components/upload-delete-button.html.j2` (new, extracted)
-- `app/ui/templates/components/upload-actions.html.j2`
-- `app/ui/templates/components/tag-input.html.j2`
+- `app/ui/templates/components/collections/combo-selector.html.j2` (new)
+- `app/ui/templates/components/collections/combo-selector-items.html.j2` (new)
+- `app/ui/templates/components/core/image-rotate-select.html.j2` (new, extracted)
+- `app/ui/templates/components/upload/delete-button.html.j2` (new, extracted)
+- `app/ui/templates/components/upload/actions.html.j2`
+- `app/ui/templates/components/core/tag-input.html.j2`
 - `input.css`
 
 **Tasks**:

@@ -79,7 +79,7 @@
                     hx-vals="js:{ width: htmx.find('#view-frame-image').parentElement.clientWidth, height: document.getElementById('view-frame-image').parentElement.clientHeight }"
                     hx-trigger="load"
                     hx-swap="outerHTML">
-                    {% include "components/image-placeholder.html.j2" %}
+                    {% include "components/core/image-placeholder.html.j2" %}
                 </div>
                 <div id="loading-indicator" class="htmx-indicator hidden absolute top-0 left-0 w-full h-full items-center justify-center bg-black/75">
                     <svg class="size-12 animate-spin" fill="none" viewBox="0 0 24 24">

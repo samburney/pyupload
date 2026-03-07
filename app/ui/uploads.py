@@ -31,7 +31,7 @@ async def _render_tag_input(request: Request, current_user: User, upload_model: 
     upload = await UploadSerializer.from_tortoise_orm(upload_model)
     return templates.TemplateResponse(
         request,
-        "components/tag-input.html.j2",
+        "components/core/tag-input.html.j2",
         context={"current_user": current_user, "upload": upload},
         status_code=status_code,
     )
@@ -184,14 +184,17 @@ async def view_upload_page_get(
 ) -> Response:
     """View an uploaded file."""
 
-    is_modal = request.headers.get("HX-Target") == "body"
+    is_modal = (
+        request.headers.get("HX-Target") == "body"
+        or request.query_params.get("modal", "").lower() in {"1", "true", "yes"}
+    )
 
     # Get upload from database
     upload_model = await Upload.get_with_relations(id=id)
     if upload_model is None:
         if is_modal:
             return templates.TemplateResponse(
-                request, "layout/messages.html.j2",
+                request, "components/core/messages.html.j2",
                 status_code=404,
                 context={"error_messages": ["Upload not found"]},
             )
@@ -255,7 +258,7 @@ async def get_upload_image_src_get(
 
     response = templates.TemplateResponse(
         request,
-        "components/image-element.html.j2",
+        "components/core/image-element.html.j2",
         context={
             "upload": upload,
             "width": width,
@@ -332,7 +335,7 @@ async def get_tag_suggestions_post(
 
     return templates.TemplateResponse(
         request,
-        "components/tag-suggestions.html.j2",
+        "components/core/tag-suggestions.html.j2",
         context={
             "upload": upload,
             "new_tag": new_tag,
@@ -405,7 +408,7 @@ async def get_collection_suggestions_post(
 
     return templates.TemplateResponse(
         request,
-        "components/collections-combo-selector-items.html.j2",
+        "components/collections/combo-selector-items.html.j2",
         context={
             "upload": upload,
             "filtered_collections": filtered_collections,
@@ -444,7 +447,7 @@ async def upload_add_collection_post(
     # Build response
     response = templates.TemplateResponse(
         request,
-        "components/collections-combo-selector.html.j2",
+        "components/collections/combo-selector.html.j2",
         context={
             "current_user": current_user,
             "upload": upload,
@@ -514,7 +517,7 @@ async def update_upload_collections_patch(
     # Build response
     response = templates.TemplateResponse(
         request,
-        "components/collections-combo-selector-items.html.j2",
+        "components/collections/combo-selector-items.html.j2",
         context={
             "current_user": current_user,
             "upload": upload,
@@ -540,7 +543,7 @@ async def toggle_upload_private_patch(
     upload_model.private = upload_private
     await upload_model.save()
 
-    return await _render_upload_component(request, current_user, upload_model, "components/view-sidebar.html.j2")
+    return await _render_upload_component(request, current_user, upload_model, "uploads/partials/view-sidebar.html.j2")
 
 @router.patch("/uploads/{id}/description", response_class=Response)
 async def toggle_upload_description_patch(
@@ -556,4 +559,4 @@ async def toggle_upload_description_patch(
     upload_model.description = html.escape(description).strip()
     await upload_model.save()
 
-    return await _render_upload_component(request, current_user, upload_model, "components/upload-description.html.j2")
+    return await _render_upload_component(request, current_user, upload_model, "components/upload/description.html.j2")

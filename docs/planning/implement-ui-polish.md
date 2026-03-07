@@ -194,7 +194,7 @@ Polish the user interface with improved navigation, responsive design refinement
 ## Step 4: Polish Flash Message System
 
 **Files**: 
-- `app/ui/templates/layout/messages.html.j2`
+- `app/ui/templates/components/core/messages.html.j2`
 
 **Tasks**:
 1. [ ] Add icons for message types (info, success/ok, warning, error/alert)

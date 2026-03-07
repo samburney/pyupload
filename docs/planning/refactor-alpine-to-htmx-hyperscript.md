@@ -59,7 +59,7 @@ This document analyzes the current use of Alpine.js in the pyupload project and 
 
 ---
 
-### 2. Flash Messages System (`layout/messages.html.j2`)
+### 2. Flash Messages System (`components/core/messages.html.j2`)
 
 **Lines**: 86 total
 **Alpine.js Usage**: High complexity
@@ -1092,7 +1092,7 @@ Given the hyperscript-native architectural analysis above, here are updated reco
 
 ### Files Using Alpine.js
 1. `app/ui/templates/layout/navbar.html.j2` - Dropdowns, mobile menu
-2. `app/ui/templates/layout/messages.html.j2` - Flash message system
+2. `app/ui/templates/components/core/messages.html.j2` - Flash message system
 3. `app/ui/templates/uploads/widget.html.j2` - Upload widget (store)
 4. `app/ui/templates/uploads/form.html.j2` - Form state
 5. `app/ui/templates/uploads/view-modal.html.j2` - Modal
