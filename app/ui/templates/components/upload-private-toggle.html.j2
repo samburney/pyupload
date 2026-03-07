@@ -1,12 +1,12 @@
 <div class="flex flex-row mt-1 gap-2 items-center justify-center">
-    <label for="private-upload-toggle" class="relative block h-8 w-14 rounded-full bg-gray-300 transition-colors [-webkit-tap-highlight-color:transparent] has-checked:bg-green-500">
+    <label for="private-upload-toggle" class="relative block h-6 w-12 lg:h-8 lg:w-14 rounded-full bg-gray-300 transition-colors [-webkit-tap-highlight-color:transparent] has-checked:bg-green-500">
       <input type="checkbox" id="private-upload-toggle" name="upload_private" class="peer sr-only" {{ 'checked' if upload.is_private else '' }}
              hx-patch="/uploads/{{ upload.id }}/private"
              hx-target="closest aside"
              hx-swap="outerHTML">
-      <span class="absolute inset-y-0 start-0 m-1 size-6 rounded-full bg-white transition-[inset-inline-start] peer-checked:start-6"></span>
+      <span class="absolute inset-y-0 start-0 m-1 md:size-4 lg:size-6 rounded-full bg-white transition-[inset-inline-start] peer-checked:start-6"></span>
     </label>
-    <span>
+    <span class="text-sm lg:text-base">
         {{ 'Private' if upload.is_private else 'Public' }}
     </span>
 </div>

@@ -47,9 +47,8 @@
         <div class="relative hover:bg-gray-200 p-2">
             <ul class="peer flex flex-wrap gap-1 items-center">
                 {% for tag in upload.tags %}
-                <li class="text-xs" @click.stop>
-                    <div class="px-1 py-0.5 border border-blue-500 shadow shadow-blue-300 rounded-sm uppercase hover:bg-blue-100 hover:border-blue-500">
-                        <button class="px-1 text-gray-300 hover:text-black hover:rounded-3xl hover:bg-red-300" type="button"
+                <li class="tag-item md:max-lg:tag-item-sm" @click.stop>
+                        <button class="tag-remove" type="button"
                                 hx-delete="/uploads/{{ upload.id }}/tag"
                                 hx-vals='{"tag_name": "{{ tag.name }}"}'
                                 hx-select="#tag-input"
@@ -61,7 +60,6 @@
                             &times;
                         </button>
                         <span>{{ tag.name }}</span>
-                    </div>
                 </li>
                 {% endfor %}
                 <li class="text-xs">

@@ -1,7 +1,7 @@
 <div class="flex items-center">
     {% if upload.is_image %}
     <div class="relative" x-data="{ open: false }">
-        <div class="split-button split-button-ok">
+        <div class="split-button split-button-ok md:max-lg:split-button-md">
             <a class="split-button-action" href="{{ upload.download_url }}">
                 Download
             </a>
@@ -9,7 +9,7 @@
                     class="split-button-toggle"
                     aria-label="Toggle download options"
                     @click="open = !open">
-                <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+                <svg fill="none" stroke="currentColor" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
             </button>
         </div>
         <ul role="menu"

@@ -83,8 +83,9 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/common/uploads.py` created with four UI-layer helpers to eliminate repeated boilerplate across route handlers: `get_upload_or_404`, `get_upload_with_relations_or_404`, `get_upload_or_404_for_read`, `get_upload_or_404_for_update`.
 - DRY refactoring in `app/ui/uploads.py`: `_render_tag_input` and `_render_upload_component` private helpers eliminate repeated template context construction across multiple routes.
 - Tests: `TestUploadDescriptionPatchEndpoint` (6 tests: 404, owner update, clear, HTML-escape/XSS, non-owner 403) added to `tests/test_ui_uploads.py`; privacy toggle test suite complete.
+- CSS architecture refactored: component styles moved from `@layer components` to `@utility` rules for better Tailwind v4 compatibility and CSS nesting. Responsive `md:max-lg:` modifiers added to sidebar components (split buttons, tags, share button, private toggle, download button) to scale at medium breakpoints. Default Tailwind breakpoints restored (Bootstrap 4 overrides removed); custom `3xl`/`4xl`/`5xl` breakpoints added. View frame/sidebar layout uses `md:max-w-4/5 lg:max-w-3/4 xl:max-w-full` with sidebar `md:w-1/5 lg:w-1/4 xl:max-w-64`. Tag items now use hover-to-reveal delete button pattern. Breakpoint debug indicator added to base layout (gated behind `config.debug`). Global anchor `<a>` base styles intentionally removed for normalisation — will be re-addressed in UI polish plan before merge.
 - 846 tests passing.
-- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix.
+- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix, re-establish anchor base styles before merge.
 
 ### Target State
 - `/view/{id}/{filename}` endpoint renders upload detail page
@@ -593,8 +594,9 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/common/uploads.py` created with four UI-layer helpers to eliminate repeated boilerplate across route handlers: `get_upload_or_404`, `get_upload_with_relations_or_404`, `get_upload_or_404_for_read`, `get_upload_or_404_for_update`.
 - DRY refactoring in `app/ui/uploads.py`: `_render_tag_input` and `_render_upload_component` private helpers eliminate repeated template context construction across multiple routes.
 - Tests: `TestUploadDescriptionPatchEndpoint` (6 tests: 404, owner update, clear, HTML-escape/XSS, non-owner 403) added to `tests/test_ui_uploads.py`; privacy toggle test suite complete.
+- CSS architecture refactored: component styles moved from `@layer components` to `@utility` rules; responsive `md:max-lg:` modifiers added to sidebar components; tag hover-reveal UX; breakpoint debug indicator; default Tailwind breakpoints restored. See upload-view-page plan Overview section for full detail.
 - 846 tests passing.
-- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix.
+- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix, re-establish anchor base styles before merge.
 
 ---
 

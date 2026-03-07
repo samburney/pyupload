@@ -29,6 +29,18 @@
                     <a href="https://github.com/samburney/pyupload/issues" class="text-gray-900 font-semibold hover:underline">Report a Bug or Request a Feature</a>
                 </p>
             </div>
+            {% if config.debug %}
+            <div class="fixed bottom-4 right-4 z-50 flex items-center justify-center rounded-full bg-gray-800 p-3 font-mono text-xs text-white opacity-75 shadow-lg">
+                <span class="block sm:hidden">xs</span>
+                <span class="hidden sm:block md:hidden">sm</span>
+                <span class="hidden md:block lg:hidden">md</span>
+                <span class="hidden lg:block xl:hidden">lg</span>
+                <span class="hidden xl:block 2xl:hidden">xl</span>
+                <span class="hidden 2xl:block 3xl:hidden">2xl</span>
+                <span class="hidden 3xl:block 4xl:hidden">3xl</span>
+                <span class="hidden 4xl:block">4xl</span>
+            </div>
+            {% endif %}
         </footer>
     </body>
 </html>

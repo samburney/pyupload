@@ -33,6 +33,15 @@ Polish the user interface with improved navigation, responsive design refinement
 - Navbar still includes links to unimplemented pages (`/uploads`, `/search`, `/tags`, `/collections`) that should be fixed or removed until routes exist.
 - Breadcrumbs, footer versioning, and accessibility pass are still pending.
 
+### Review Snapshot (2026-03-07)
+- CSS architecture overhauled on `implement-upload-view-page` branch: all component styles (`button`, `split-button`, `menu`, `message`, `pagination`, `tag-item`) migrated from `@layer components` to individual `@utility` rules with CSS nesting. This establishes the styling foundation that the UI polish plan builds on.
+- Default Tailwind breakpoints restored (Bootstrap 4 overrides removed). Custom `3xl`, `4xl`, `5xl` breakpoints added for large displays.
+- Responsive `md:max-lg:` modifiers added to sidebar components (split buttons, tags, share button, toggle, download chevron) — partial progress on Step 3.
+- Breakpoint debug indicator added to `base.html.j2` footer (gated behind `config.debug`) — useful for Step 3 testing.
+- Tag items now use a hover-to-reveal delete button pattern (`tag-item`, `tag-remove` utilities).
+- Global anchor `<a>` base styles intentionally removed for normalisation; needs re-establishing before merge — relates to Step 9 (form styling) and general UI consistency.
+- All other steps remain open.
+
 ### Target State
 - Fully responsive navbar with backdrop and conditional user content
 - Three-tier authentication UI properly implemented

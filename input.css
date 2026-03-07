@@ -3,14 +3,9 @@
 @source "./app/ui/templates/**/*.{html,j2}";
 
 @theme {
-  /* Overriding default Tailwind breakpoints with Bootstrap 4 values */
-  --breakpoint-sm: 576px;
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 992px;
-  --breakpoint-xl: 1200px;
-  
-  /* Optional: Unset the default 2xl breakpoint if you want strict Bootstrap 4 limits */
-  --breakpoint-2xl: initial; 
+    --breakpoint-3xl: 112rem;
+    --breakpoint-4xl: 128rem;
+    --breakpoint-5xl: 144rem;
 }
 
 @layer base {
@@ -26,206 +21,12 @@
     font-size: var(--text-lg);
     @apply mb-2;
   }
-  a {
-    @apply text-blue-500 hover:text-blue-300;
-  }
-  a.button {
-    @apply text-white;
-  }
-  a.dropdown-button {
-    @apply text-white;
-  }
 }
 
 @layer components {
     /* Utility for hiding elements until Alpine.js is ready */
     [x-cloak] {
         display: none !important;
-    }
-
-    /* Buttons */
-    .button {
-        @apply bg-blue-500 border box-border border-blue-500 hover:bg-blue-300 hover:border-blue-300 text-white py-2 px-4 rounded cursor-pointer max-h-fit;
-    }
-    .button:disabled {
-        @apply bg-gray-400 border-gray-400 hover:bg-gray-400 cursor-not-allowed;
-    }
-    .button-sm {
-        @apply py-1 px-2 text-sm;
-    }
-    .button-xs {
-        @apply py-1 px-1 text-xs;
-    }
-    .button-alert {
-        @apply bg-red-500 hover:bg-red-300 border-red-500 hover:border-red-300;
-    }
-    .button-warning {
-        @apply bg-yellow-500 hover:bg-yellow-300 border-yellow-500 hover:border-yellow-300;
-    }
-    .button-ok {
-        @apply bg-green-500 hover:bg-green-300 border-green-500 hover:border-green-300;
-    }
-    .button-disabled {
-        @apply bg-gray-400 hover:bg-gray-400 cursor-not-allowed border-gray-400 hover:border-gray-400;
-    }
-    .button-outline {
-        @apply bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-50;
-    }
-
-
-    /* Menus */
-    .menu {
-        @apply absolute divide-y divide-gray-200 end-0 mt-0.5 z-50 w-auto overflow-hidden whitespace-nowrap rounded border border-gray-300 bg-white shadow-sm;
-    }
-
-    .menu-right {
-        @apply end-0;
-    }
-
-    .menu-left {
-        @apply start-0;
-        inset-inline-end: unset;
-    }
-
-    .menu li,
-    .menu-item {
-        @apply block px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900;
-    }
-
-    /* Split buttons */
-    .split-button {
-        @apply flex divide-x items-stretch shadow-md rounded-md max-h-fit;
-    }
-
-    .split-button-neutral {
-        @apply divide-gray-300 bg-gray-100 outline-1 outline-gray-300;
-    }
-
-    .split-button-ok {
-        @apply divide-green-400 bg-green-500 text-white outline-1 outline-green-500;
-    }
-
-    .split-button-dark {
-        @apply divide-gray-600 bg-gray-700 text-white outline-1 outline-gray-600;
-    }
-
-    .split-button-ghost {
-        @apply divide-transparent text-white;
-    }
-
-    .split-button > .split-button-action {
-        @apply px-4 py-2 rounded-l-md;
-    }
-
-    /* Non-interactive left-side label (no action on click) */
-    .split-button > .split-button-label {
-        @apply px-4 py-2 rounded-l-md cursor-default;
-    }
-
-    /* Narrow size modifier */
-    .split-button-sm > .split-button-action,
-    .split-button-sm > .split-button-label {
-        @apply px-2 py-2 rounded-l-md;
-    }
-
-    .split-button-sm > .split-button-toggle {
-        @apply px-1.5;
-    }
-
-    .split-button-neutral > .split-button-action {
-        @apply hover:bg-gray-200;
-    }
-
-    .split-button-ok > .split-button-action {
-        @apply hover:bg-green-400 text-white;
-    }
-
-    .split-button > .split-button-toggle {
-        @apply flex items-center px-2 rounded-r-md cursor-pointer;
-    }
-
-    .split-button-neutral > .split-button-toggle {
-        @apply hover:bg-gray-200;
-    }
-
-    .split-button-ok > .split-button-toggle {
-        @apply hover:bg-green-400;
-    }
-
-    .split-button-dark > .split-button-action {
-        @apply hover:bg-gray-600 text-white;
-    }
-
-    .split-button-dark > .split-button-toggle {
-        @apply hover:bg-gray-600;
-    }
-
-    .split-button-ghost > .split-button-action {
-        @apply text-white hover:text-gray-300;
-    }
-
-    .split-button-ghost > .split-button-toggle {
-        @apply text-white hover:text-gray-300;
-    }
-
-    .split-button > .split-button-toggle svg {
-        stroke-width: 1.5;
-    }
-
-    /* Bolder chevrons on dark/ghost variants to maintain visibility */
-    .split-button-dark > .split-button-toggle svg,
-    .split-button-ghost > .split-button-toggle svg,
-    .split-button-ok > .split-button-toggle svg {
-        stroke-width: 2.5;
-    }
-
-    /* Disabled states */
-    .split-button > .split-button-action:disabled,
-    .split-button > .split-button-toggle:disabled {
-        @apply cursor-not-allowed opacity-50;
-    }
-
-    /* Messages */
-    .message {
-        @apply my-2 p-2 border border-blue-500 bg-blue-100 rounded items-center;
-    }
-    .message-ok {
-        @apply border-green-500 bg-green-100;
-    }
-    .message-warning {
-        @apply border-yellow-500 bg-yellow-100;
-    }
-    .message-alert {
-        @apply border-red-500 bg-red-100;
-    }
-
-    /* Pagination */
-    .pagination {
-        @apply flex justify-center pt-2 pb-4;
-    }
-
-    .pagination .page-item {
-        @apply block size-8 rounded border border-gray-200 text-center text-sm/8 font-medium transition-colors hover:bg-gray-50;
-    }
-
-    .pagination .page-item-active {
-        @apply border-indigo-600 bg-indigo-600 hover:bg-indigo-600 text-white;
-    }
-
-    .pagination .page-item-active a {
-        @apply text-white;
-    }
-
-    .pagination .page-item-disabled {
-        @apply border-gray-200 bg-gray-200 hover:bg-gray-200 text-gray-400;
-    }
-
-    .pagination .page-item-disabled a {
-        @apply text-gray-400;
-    }
-
-    .pagination .next-previous-page {
-        @apply grid size-8 place-content-center;
     }
 
     /* Forms */
@@ -257,4 +58,259 @@
     .htmx-indicator.htmx-request {
         display: flex !important;
     }
+}
+
+/* Text */
+@utility text-2xs {
+    font-size: 0.625rem; /* 10px */
+}
+
+/* Buttons */
+@utility button {
+    @apply bg-blue-500 border box-border border-blue-500 hover:bg-blue-300 hover:border-blue-300 text-white py-2 px-4 rounded-md cursor-pointer max-h-fit shadow-md transition-colors;
+
+    &:disabled {
+        @apply bg-gray-400 border-gray-400 hover:bg-gray-400 cursor-not-allowed;
+    }
+}
+
+@utility button-sm {
+    @apply py-1 px-1 text-sm;
+}
+
+@utility button-md {
+    @apply px-1.5 py-1.5 text-sm;
+}
+
+@utility button-xs {
+    @apply py-1 px-1 text-xs;
+}
+
+@utility button-alert {
+    @apply bg-red-500 hover:bg-red-300 border-red-500 hover:border-red-300;
+}
+
+@utility button-warning {
+    @apply bg-yellow-500 hover:bg-yellow-300 border-yellow-500 hover:border-yellow-300;
+}
+
+@utility button-ok {
+    @apply bg-green-500 hover:bg-green-300 border-green-500 hover:border-green-300;
+}
+
+@utility button-disabled {
+    @apply bg-gray-400 hover:bg-gray-400 cursor-not-allowed border-gray-400 hover:border-gray-400;
+}
+
+@utility button-outline {
+    @apply bg-transparent border border-blue-500 text-blue-500 hover:bg-blue-50;
+}
+
+@utility button-neutral {
+    @apply divide-gray-300 bg-gray-100 border-gray-300 text-black hover:bg-gray-200 hover:border-gray-300;
+}
+
+/* Menus */
+@utility menu {
+    @apply absolute divide-y divide-gray-200 end-0 mt-0.5 z-50 w-auto overflow-hidden whitespace-nowrap rounded border border-gray-300 bg-white shadow-sm;
+
+    & li {
+        @apply block px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900;
+    }
+}
+
+@utility menu-right {
+    @apply end-0;
+}
+
+@utility menu-left {
+    @apply start-0;
+    inset-inline-end: unset;
+}
+
+@utility menu-item {
+    @apply block px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900;
+}
+
+/* Split buttons */
+@utility split-button {
+    @apply flex divide-x items-stretch shadow-md rounded-md max-h-fit transition-colors;
+
+    & > .split-button-action {
+        @apply px-4 py-2 rounded-l-md transition-colors;
+    }
+
+    & > .split-button-toggle {
+        @apply flex items-center px-2 rounded-r-md cursor-pointer transition-colors;
+
+        & svg {
+            stroke-width: 1.5;
+            @apply size-4;
+        }
+    }
+
+    /* Non-interactive left-side label (no action on click) */
+    & > .split-button-label {
+        @apply px-4 py-2 rounded-l-md cursor-default;
+    }
+
+    /* Disabled states */
+    & > .split-button-action:disabled,
+    & > .split-button-toggle:disabled {
+        @apply cursor-not-allowed opacity-50;
+    }
+}
+
+@utility split-button-neutral {
+    @apply divide-gray-300 bg-gray-100 outline-1 outline-gray-300;
+
+    & > .split-button-action {
+        @apply hover:bg-gray-200;
+    }
+
+    & > .split-button-toggle {
+        @apply hover:bg-gray-200;
+    }
+}
+
+@utility split-button-ok {
+    @apply divide-green-400 bg-green-500 text-white outline-1 outline-green-500;
+
+    & > .split-button-action {
+        @apply hover:bg-green-400 text-white;
+    }
+
+    & > .split-button-toggle {
+        @apply hover:bg-green-400;
+
+        /* Bolder chevrons on dark/ghost variants to maintain visibility */
+        & svg {
+            stroke-width: 2.5;
+        }
+    }
+}
+
+@utility split-button-dark {
+    @apply divide-gray-600 bg-gray-700 text-white outline-1 outline-gray-600;
+
+    & > .split-button-action {
+        @apply hover:bg-gray-600 text-white;
+    }
+
+    & > .split-button-toggle {
+        @apply hover:bg-gray-600;
+
+        /* Bolder chevrons on dark/ghost variants to maintain visibility */
+        & svg {
+            stroke-width: 2.5;
+        }
+    }
+}
+
+@utility split-button-ghost {
+    @apply divide-transparent text-white;
+
+    & > .split-button-action {
+        @apply text-white hover:text-gray-300;
+    }
+
+    & > .split-button-toggle {
+        @apply text-white hover:text-gray-300;
+
+        /* Bolder chevrons on dark/ghost variants to maintain visibility */
+        & svg {
+            stroke-width: 2.5;
+        }
+    }
+}
+
+/* Small size modifier */
+@utility split-button-sm {
+    & > .split-button-action,
+    & > .split-button-label {
+        @apply px-2 py-2;
+    }
+
+    & > .split-button-toggle {
+        @apply px-1.5;
+    }
+}
+
+/* Medium size modifier */
+@utility split-button-md {
+    & > .split-button-action,
+    & > .split-button-label {
+        @apply px-1.5 py-1.5 text-sm;
+    }
+
+    & > .split-button-toggle {
+        @apply px-1;
+        
+        & svg {
+            @apply size-3;
+        }
+    }
+}
+
+/* Messages */
+@utility message {
+    @apply my-2 p-2 border border-blue-500 bg-blue-100 rounded items-center;
+}
+
+@utility message-ok {
+    @apply border-green-500 bg-green-100;
+}
+
+@utility message-warning {
+    @apply border-yellow-500 bg-yellow-100;
+}
+
+@utility message-alert {
+    @apply border-red-500 bg-red-100;
+}
+
+/* Pagination */
+@utility pagination {
+    @apply flex justify-center pt-2 pb-4;
+}
+
+@utility page-item {
+    @apply block size-8 rounded border border-gray-200 text-center text-sm/8 font-medium transition-colors hover:bg-gray-50;
+}
+
+@utility page-item-active {
+    @apply border-indigo-600 bg-indigo-600 hover:bg-indigo-600 text-white;
+
+    & a {
+        @apply text-white;
+    }
+}
+
+@utility page-item-disabled {
+    @apply border-gray-200 bg-gray-200 hover:bg-gray-200 text-gray-400;
+
+    & a {
+        @apply text-gray-400;
+    }
+}
+
+@utility next-previous-page {
+    @apply grid size-8 place-content-center;
+}
+
+/* Tag input */
+@utility tag-item {
+    @apply text-xs px-1 py-0.5 border border-blue-500 bg-blue-50 shadow shadow-blue-300 rounded-sm uppercase transition-all hover:bg-blue-100 hover:border-blue-500 cursor-default;
+
+    &:hover .tag-remove {
+        @apply max-w-8 px-1 opacity-100 text-red-500;
+    }
+}
+
+@utility tag-remove {
+    @apply inline-block max-w-0 opacity-0 overflow-hidden px-0 text-gray-300 transition-all duration-150 hover:text-black hover:rounded-3xl hover:bg-red-300 cursor-pointer;
+}
+
+@utility tag-item-sm {
+    @apply text-2xs;
 }

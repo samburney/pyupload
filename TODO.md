@@ -3,12 +3,12 @@
 ## Current Release (v0.1) - Feature Parity with simplegallery
 
 ### Frontend Scaffolding
-- [ ] Refine mobile breakpoint styling
+- [ ] Refine mobile breakpoint styling *(partial: CSS component styles migrated to `@utility` rules; responsive `md:max-lg:` modifiers added to view-page sidebar components; default Tailwind breakpoints restored; breakpoint debug indicator added; global anchor base styles intentionally removed for normalisation — needs re-establishing before merge)*
 - [ ] Complete responsive navigation menu
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, direct-link sharing modal, inline tag editing, collection assignment UI, owner privacy toggle, description inline editing, and delete functionality (with confirmation modal) all implemented; broader view-page route tests remain)*
+- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, direct-link sharing modal, inline tag editing, collection assignment UI, owner privacy toggle, description inline editing, and delete functionality (with confirmation modal) all implemented; CSS architecture refactored to `@utility` rules with responsive `md:max-lg:` modifiers for sidebar components; broader view-page route tests and description max-length validation remain)*
   - [x] Display file metadata (size, dimensions, type, view count)
   - [x] Image rotation UI (owner only)
   - [x] Delete button for owners
