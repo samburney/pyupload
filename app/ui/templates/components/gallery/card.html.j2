@@ -6,7 +6,9 @@
     {%- set thumb_max_width = 640 %}
     {%- set thumb_max_height = (thumb_max_width / ar_decimal) | round(0, 'ceil') | int %}
     <a href="{{ upload.view_url }}" hx-get="{{ upload.view_url }}" hx-select=".modal-image" hx-target="body"
-        hx-swap="beforeend" hx-select-oob="#messages" hx-target-4*="#messages" x-data="{ loaded: false }"
+        hx-swap="beforeend" hx-select-oob="#messages" hx-target-4*="#messages"
+        hx-vals="js:{modal_width: calculateMaxImageSize({{ upload.image.width }}, {{ upload.image.height }}).width}"
+        x-data="{ loaded: false }"
         x-init="loaded = $el.querySelector('img')?.complete || false" class="relative"
         aria-label="{{ upload.image.width }}x{{ upload.image.height }} Open upload {{ upload.display_name }}">
         <div class="space-y-8 animate-pulse md:space-y-0 md:space-x-8 rtl:space-x-reverse md:flex md:items-center text-gray-500"

@@ -181,6 +181,7 @@ async def view_upload_page_get(
     id: int,
     filename: str,
     current_user: Annotated[User, Depends(get_current_user)],
+    modal_width: int | None = None,
 ) -> Response:
     """View an uploaded file."""
 
@@ -221,6 +222,7 @@ async def view_upload_page_get(
     }
 
     if is_modal:
+        context["modal_image_width"] = modal_width or 1920
         return templates.TemplateResponse(request, "uploads/view-modal.html.j2", context=context)
     else:
         return templates.TemplateResponse(request, "uploads/view.html.j2", context=context)

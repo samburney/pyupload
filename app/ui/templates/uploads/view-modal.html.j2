@@ -26,7 +26,7 @@
             {% include "components/core/image-placeholder.html.j2" %}
 
             <img class="rounded-none sm:rounded-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]"
-                 src="{{ upload.autoresize_url(1920) }}"
+                 src="{{ upload.autoresize_url(modal_image_width) }}"
                  alt="{{ upload.description or upload.originalname }}"
                  @load="loaded = true"
                  x-show="loaded"
