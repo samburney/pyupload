@@ -4,7 +4,7 @@
         <a href="{{ upload.url }}" target="_blank">
             <div class="relative" x-data="{loaded: false}" x-init="loaded = $el.querySelector('img')?.complete || false;">
                 {% set placeholder_container = "document.querySelector('main').querySelector('article')" %}
-                {% set placeholder_ignore_height = 'true' %}
+                {% set placeholder_ignore_height = True %}
                 <div id="view-frame-image"
                     hx-get="/uploads/{{ upload.id }}/image?context=frame"
                     hx-vals="js:{ width: htmx.find('#view-frame-image').parentElement.clientWidth, height: document.getElementById('view-frame-image').parentElement.clientHeight }"

@@ -249,14 +249,14 @@ async def get_upload_image_src_get(
         ignore_height_js = "false"
         img_class = "rounded-none sm:rounded-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]"
         placeholder_container = "window"
-        placeholder_sidebar = False
+        placeholder_ignore_height = False
     else:
         element_id = "view-frame-image"
         container_js = "document.querySelector('main').querySelector('article')"
         ignore_height_js = "true"
         img_class = ""
         placeholder_container = "document.querySelector('main').querySelector('article')"
-        placeholder_sidebar = True
+        placeholder_ignore_height = True
 
     response = templates.TemplateResponse(
         request,
@@ -271,7 +271,7 @@ async def get_upload_image_src_get(
             "img_class": img_class,
             "image_context": context,
             "placeholder_container": placeholder_container,
-            "placeholder_sidebar": placeholder_sidebar,
+            "placeholder_ignore_height": placeholder_ignore_height,
         },
     )
 

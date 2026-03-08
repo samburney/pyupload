@@ -1,5 +1,5 @@
 <div class="bg-gray-200 animate-pulse flex items-center justify-center rounded-none sm:rounded-md"
-    x-show="!loaded && ready" x-data="imagePlaceholder({{ upload.image.width }}, {{ upload.image.height }}, {{ placeholder_container|default('window') }}, {{ 'true' if placeholder_sidebar else 'false' }})"
+    x-show="!loaded && ready" x-data="imagePlaceholder({{ upload.image.width }}, {{ upload.image.height }}, {{ placeholder_container|default('window') }}, {{ 'true' if placeholder_ignore_height else 'false' }})"
     x-effect="if (ready) $dispatch('placeholder-ready')"
     x-cloak
     @resize.window="!loaded && calculateSize()"
