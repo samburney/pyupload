@@ -96,6 +96,15 @@ class TestUploadGetEndpoint:
         assert "/upload" in html
 
     @pytest.mark.asyncio
+    async def test_upload_page_includes_window_dimensions_script(self, client):
+        """Test that upload page includes the window-dimensions tracking script."""
+        response = await client.get("/upload")
+
+        assert response.status_code == 200
+        html = response.text
+        assert "/static/js/store-client-dimensions.js" in html
+
+    @pytest.mark.asyncio
     async def test_upload_page_renders_with_authenticated_user(self, client):
         """Test that authenticated user is passed to template."""
         # Get the page (auto-creates user)

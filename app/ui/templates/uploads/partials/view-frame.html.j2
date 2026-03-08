@@ -2,9 +2,13 @@
     {% if upload.is_image %}
     <div class="p-2 border border-gray-100 shadow-md shadow-gray-300 rounded-md">
         <a href="{{ upload.url }}" target="_blank">
-            <div class="relative" x-data="{loaded: false}" x-init="loaded = $el.querySelector('img')?.complete || false;">
-                {% set placeholder_container = "document.querySelector('main').querySelector('article')" %}
-                {% set placeholder_ignore_height = True %}
+            <div class="relative image-position-locator"
+                {%- if placeholder_image_width and placeholder_image_height %}
+                style="{{ 'width: ' + placeholder_image_width | string + 'px;' if placeholder_image_width else '' }} {{ 'height: ' + placeholder_image_height | string + 'px;' if placeholder_image_height else '' }}"
+                {%- endif %}
+                x-data="{loaded: false}" x-init="loaded = $el.querySelector('img')?.complete || false;">
+                {%- set placeholder_container = "document.querySelector('main').querySelector('article')" %}
+                {%- set placeholder_ignore_height = True %}
                 <div id="view-frame-image"
                     hx-get="/uploads/{{ upload.id }}/image?context=frame"
                     hx-vals="js:{ width: htmx.find('#view-frame-image').parentElement.clientWidth, height: document.getElementById('view-frame-image').parentElement.clientHeight }"

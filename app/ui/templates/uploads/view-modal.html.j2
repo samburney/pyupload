@@ -14,7 +14,7 @@
          x-transition.duration.150ms
          x-cloak
          @click.stop >
-        <div class="relative" x-data="{ loaded: false }" x-init="loaded = $el.querySelector('img')?.complete || false;">
+        <div class="relative image-position-locator" x-data="{ loaded: false }" x-init="loaded = $el.querySelector('img')?.complete || false;">
             <button class="absolute top-2 right-2 z-10 rounded-full bg-black/25 p-1 text-white hover:bg-black/50"
                 aria-label="Close upload preview"
                 @click="open = false">

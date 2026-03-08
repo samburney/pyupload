@@ -21,6 +21,13 @@ class Image(models.Model, TimestampMixin):
         table = "images"
 
     @property
+    def aspect_ratio(self) -> Optional[float]:
+        """Calculate the aspect ratio of the image."""
+        if self.width == 0:
+            return None
+        return self.height / self.width
+
+    @property
     def supports_processing(self) -> bool:
         """Whether this image supports additional processing (resizing, format conversion)."""
         if f".{self.type}" in IMAGE_PROCESSING_FORMATS:
@@ -42,6 +49,7 @@ class ImageSerializer(Serializer):
 
     # Computed properties
     supports_processing: bool
+    aspect_ratio: Optional[float] = None
 
 
 class ImageMetadata(BaseModel):

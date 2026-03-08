@@ -19,6 +19,18 @@ from app.models.images import Image
 class TestImageModel:
     """Test Image Tortoise ORM model."""
 
+    def test_aspect_ratio_returns_height_divided_by_width(self):
+        """aspect_ratio should compute height/width for valid dimensions."""
+        image = Image(width=1920, height=1080)
+
+        assert image.aspect_ratio == pytest.approx(1080 / 1920)
+
+    def test_aspect_ratio_returns_none_when_width_is_zero(self):
+        """aspect_ratio should avoid division by zero when width is zero."""
+        image = Image(width=0, height=1080)
+
+        assert image.aspect_ratio is None
+
     @pytest.mark.asyncio
     async def test_image_model_creation(self, db):
         """Test Image model creation succeeds."""

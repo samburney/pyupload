@@ -1,3 +1,5 @@
+import json
+
 from fastapi.templating import Jinja2Templates
 
 from app.lib.config import get_app_config
@@ -23,3 +25,4 @@ templates.env.filters['markdown'] = sanitised_markdown
 templates.env.filters['ago'] = time_ago
 templates.env.filters['humanize_bytes'] = humanize_bytes
 templates.env.filters['split_filename'] = split_filename
+templates.env.filters['parse_json'] = json.loads

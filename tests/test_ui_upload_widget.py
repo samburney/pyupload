@@ -39,8 +39,8 @@ class TestUploadWidgetRendering:
         
         html = response.text
         
-        # Should contain Alpine store initialization script
-        assert "Alpine.store('uploadWidget'" in html
+        # Store bootstrap now lives in external static JS helpers
+        assert '/static/js/alpinejs-helpers.js' in html
         assert "addFiles" in html
         assert "removeFile" in html
         assert "formatFileSize" in html
@@ -331,14 +331,15 @@ class TestAlpineStoreIntegration:
     @pytest.mark.asyncio
     async def test_store_initialized_in_widget(self, client):
         """Test that uploadWidget store is initialized."""
-        response = await client.get("/upload")
-        
-        html = response.text
-        
-        # Store should be initialized with required properties
-        assert "Alpine.store('uploadWidget'" in html
-        assert 'files: []' in html
-        assert 'dragActive: false' in html
+        response = await client.get("/static/js/alpinejs-helpers.js")
+
+        assert response.status_code == 200
+        js = response.text
+
+        # Store should be initialized with required properties in helper script
+        assert "Alpine.store('uploadWidget'" in js
+        assert 'files: []' in js
+        assert 'dragActive: false' in js
 
     @pytest.mark.asyncio
     async def test_store_accessible_from_form(self, client):
@@ -353,14 +354,15 @@ class TestAlpineStoreIntegration:
     @pytest.mark.asyncio
     async def test_store_has_file_management_methods(self, client):
         """Test that store has methods for file management."""
-        response = await client.get("/upload")
-        
-        html = response.text
-        
+        response = await client.get("/static/js/alpinejs-helpers.js")
+
+        assert response.status_code == 200
+        js = response.text
+
         # Should have file management methods
-        assert 'addFiles' in html
-        assert 'removeFile' in html
-        assert 'updateFileInput' in html
+        assert 'addFiles' in js
+        assert 'removeFile' in js
+        assert 'updateFileInput' in js
 
     @pytest.mark.asyncio
     async def test_store_has_helper_methods(self, client):

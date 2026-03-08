@@ -1,4 +1,5 @@
 import html
+import json
 
 from typing import Annotated
 from fastapi import APIRouter, Request, Depends, UploadFile, Form
@@ -19,7 +20,7 @@ from app.ui.common.errors import error_response_for_get, error_template_response
 from app.ui.common.templating import templates
 from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_for_update, get_upload_with_relations_or_404
 from app.ui.common.security import get_current_user, get_current_authenticated_user, get_or_create_authenticated_user
-from app.ui.common.session import flash_message
+from app.ui.common.session import flash_message, get_client_dimensions, BREAKPOINT_FRAME_PADDING, BREAKPOINT_SIDEBAR_WIDTHS
 
 
 config = get_app_config()
@@ -221,8 +222,24 @@ async def view_upload_page_get(
         "filtered_collections": filtered_collections,
     }
 
+    # Define placeholder image dimensions if we have client dimensions
+    client_dimensions = get_client_dimensions(request)
+    if client_dimensions is not None:
+        client_breakpoint = client_dimensions.get("breakpoint", None)
+        client_breakpoint_width = client_dimensions.get("breakpoint_width", None)
+        if client_breakpoint_width == 0: # xs breakpoint has variable size and a minimum of 0, so use actual client size
+            client_breakpoint_width = client_dimensions.get("width", None)
+
+        if upload.image and upload.image.aspect_ratio and client_breakpoint and client_breakpoint_width:
+            placeholder_image_width = (client_breakpoint_width - BREAKPOINT_FRAME_PADDING.get(str(client_breakpoint), 32)) - BREAKPOINT_SIDEBAR_WIDTHS.get(str(client_breakpoint), 0)
+            placeholder_image_height = int(placeholder_image_width * upload.image.aspect_ratio)
+
+            context["placeholder_image_width"] = placeholder_image_width
+            context["placeholder_image_height"] = placeholder_image_height
+
+    # Return page response
     if is_modal:
-        context["modal_image_width"] = modal_width or 1920
+        context["modal_image_width"] = int(modal_width or 1920)
         return templates.TemplateResponse(request, "uploads/view-modal.html.j2", context=context)
     else:
         return templates.TemplateResponse(request, "uploads/view.html.j2", context=context)
