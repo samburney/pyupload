@@ -25,13 +25,21 @@
 
             {% include "components/core/image-placeholder.html.j2" %}
 
-            <img class="rounded-none sm:rounded-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]"
-                 src="{{ upload.autoresize_url(modal_image_width) }}"
-                 alt="{{ upload.description or upload.originalname }}"
-                 @load="loaded = true"
-                 x-show="loaded"
-                 x-transition.opacity.duration.150ms
-                 x-cloak>
+            <div id="view-modal-image"
+                data-loaded-width="{{ modal_image_width }}"
+                hx-get="/uploads/{{ upload.id }}/image?context=modal"
+                hx-swap="outerHTML"
+                hx-vals="js:{...calculateMaxImageSize({{ upload.image.width }}, {{ upload.image.height }})}"
+                hx-trigger="resize from:window delay:200ms">
+                <img class="rounded-none sm:rounded-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]"
+                     src="{{ upload.autoresize_url(modal_image_width) }}"
+                     alt="{{ upload.description or upload.originalname }}"
+                     @load="loaded = true"
+                     x-show="loaded"
+                     x-transition.opacity.duration.150ms
+                     x-cloak>
+            </div>
+            <script>setupImageSwapHandlers('view-modal-image');</script>
 
             <p
                 class="absolute bottom-2 left-0 flex w-full justify-center text-xs sm:text-sm md:text-base font-medium bg-black/25 p-1">
