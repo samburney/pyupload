@@ -1,9 +1,11 @@
+import random
+
 from typing import Annotated
 from fastapi import APIRouter, Request, Depends
 from tortoise.expressions import Q
 
 from app.models.common.pagination import PaginationParams
-from app.models.uploads import Upload, UploadSerializer
+from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 
 from app.lib.auth import get_current_user_from_request
 
@@ -74,3 +76,52 @@ async def gallery_index_get(
     response.headers.update(get_cache_headers(etag=etag))
 
     return response
+
+
+@router.get('/random')
+async def gallery_random_get(
+    request: Request,
+    pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+):
+    """Render random gallery view"""        
+
+    current_user = await get_current_user_from_request(request)
+
+    # If user is logged, include their private uploads
+    # TODO: Make this a user configurable option
+    if current_user:
+        pagination_query = Q(private=False) | Q(user=current_user)
+    else:
+        pagination_query = Q(private=False)
+
+    # Update item pagination parameter
+    upload_ids = await Upload.filter(pagination_query).values_list("id", flat=True)
+    pagination.count = len(upload_ids)
+    
+    # Get random rows
+    row_count = min(pagination.page_size, pagination.count)
+    random_upload_ids = random.sample(upload_ids, row_count)
+
+    # Get uploads
+    upload_models = Upload.filter(id__in=random_upload_ids) \
+        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+    uploads = await UploadSerializer.from_queryset(upload_models)
+
+    # Define breadcrumbs
+    # TODO: Needs to be more automated...
+    breadcrumbs = [
+        {"url": "/gallery/random", "title": "Random"}
+    ]
+
+    # Template context
+    context = {
+        "current_user": current_user,
+        "uploads": uploads,
+        "pagination": pagination,
+        "breadcrumbs": breadcrumbs,
+    }
+    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+
+    return response
+
+

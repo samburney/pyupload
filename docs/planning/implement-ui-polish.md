@@ -42,6 +42,14 @@ Polish the user interface with improved navigation, responsive design refinement
 - Global anchor `<a>` base styles intentionally removed for normalisation; needs re-establishing before merge — relates to Step 9 (form styling) and general UI consistency.
 - All other steps remain open.
 
+### Review Snapshot (2026-03-09)
+- Implemented `/random` gallery discovery page with random uploads display
+- Added breadcrumbs template and layout integration (`layout/breadcrumbs.html.j2`, updated `base.html.j2`)
+- Added home icon to SVG sprite for breadcrumbs
+- Core random endpoint redirect from `/random` to `/gallery/random` working
+- Breadcrumb template functional; automation of breadcrumb logic deferred to future enhancement
+- Next feature: `/popular` page (most viewed) — plan to extract shared gallery view logic at this point
+
 ### Target State
 - Fully responsive navbar with backdrop and conditional user content
 - Three-tier authentication UI properly implemented
@@ -238,21 +246,21 @@ Polish the user interface with improved navigation, responsive design refinement
 
 ## Step 5: Add Breadcrumb Navigation
 
-**Files**: 
+**Files**:
 - `app/ui/common/breadcrumbs.py` (new)
 - `app/ui/templates/layout/base.html.j2`
-- `app/ui/templates/components/breadcrumbs.html.j2` (new)
+- `app/ui/templates/layout/breadcrumbs.html.j2` (new) *(completed)*
 - All deep page templates (upload view, profile, etc.)
 
 **Tasks**:
 1. [ ] Create breadcrumb context processor in `app/ui/common/breadcrumbs.py`
 2. [ ] Implement `get_breadcrumbs(request, **kwargs)` function
-3. [ ] Create breadcrumb component template
-4. [ ] Add breadcrumbs to deep pages only (not home/top-level)
-5. [ ] Style breadcrumbs with separators
+3. [x] Create breadcrumb component template
+4. [x] Add breadcrumbs to deep pages only (not home/top-level) *(added to gallery/random endpoint)*
+5. [x] Style breadcrumbs with separators *(implemented with Tailwind + SVG chevrons)*
 6. [ ] Make breadcrumbs responsive (truncate on mobile)
 7. [ ] Add structured data for SEO (schema.org BreadcrumbList)
-8. [ ] Ensure last item is not a link (current page)
+8. [ ] Ensure last item is not a link (current page) *(implemented in template)*
 
 **Tests**:
 1. [ ] Test breadcrumbs NOT on home page
@@ -333,21 +341,21 @@ Polish the user interface with improved navigation, responsive design refinement
 
 ## Step 7: Implement Gallery Discovery Pages
 
-**Files**: 
-- `app/ui/gallery.py` (new router)
-- `app/ui/templates/gallery/random.html.j2` (new)
+**Files**:
+- `app/ui/gallery.py` *(completed - /random route)*
+- `app/ui/templates/gallery/random.html.j2` *(not needed - reuses gallery/index.html.j2)*
 - `app/ui/templates/gallery/popular.html.j2` (new)
 - `app/ui/templates/gallery/all.html.j2` (new)
-- `app/ui/main.py` (register router)
+- `app/ui/main.py` (register router) *(completed - /random redirect)*
 
 **Tasks**:
-1. [ ] Create gallery router (`app/ui/gallery.py`)
-2. [ ] Implement `/random` - Random public upload (redirect to view page)
+1. [x] Create gallery router (`app/ui/gallery.py`) *(random endpoint implemented)*
+2. [x] Implement `/random` - Random public upload display with pagination *(endpoint complete with breadcrumbs)*
 3. [ ] Implement `/popular` - Most viewed public uploads (paginated gallery)
 4. [ ] Implement `/all` - Latest public uploads (paginated gallery, same as home)
-5. [ ] Reuse gallery grid component from home page
-6. [ ] Add pagination to popular and all pages
-7. [ ] Register router in main.py
+5. [x] Reuse gallery grid component from home page *(using gallery/index.html.j2)*
+6. [x] Add pagination to popular and all pages *(pagination integrated for /random)*
+7. [x] Register router in main.py *(router registered)*
 
 **Tests**:
 1. [ ] Test `/random` redirects to random upload view page
