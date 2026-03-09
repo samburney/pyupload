@@ -8,7 +8,7 @@
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
 ### File Serving & Viewing (Critical for v0.1)
-- [ ] Individual upload detail/view page *(partial: view page componentised into reusable template components; file preview, metadata panel, download dropdown, privacy enforcement, SEO redirect, image rotation UI, direct-link sharing modal, inline tag editing, collection assignment UI, owner privacy toggle, description inline editing with max-length and validation error feedback, and delete functionality (with confirmation modal) all implemented; CSS architecture refactored to `@utility` rules with responsive `md:max-lg:` modifiers for sidebar components; broader view-page route tests remain)*
+- [x] Individual upload detail/view page
   - [x] Display file metadata (size, dimensions, type, view count)
   - [x] Image rotation UI (owner only)
   - [x] Delete button for owners

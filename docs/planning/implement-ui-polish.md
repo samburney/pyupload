@@ -436,13 +436,14 @@ Polish the user interface with improved navigation, responsive design refinement
 - `app/ui/templates/components/form-field.html.j2` (new)
 
 **Tasks**:
-1. [ ] Create reusable form field component
-2. [ ] Add consistent styling to all form inputs
-3. [ ] Add validation error display
-4. [ ] Add success states for valid inputs
-5. [ ] Add focus states and transitions
-6. [ ] Add help text for complex fields
-7. [ ] Ensure forms are keyboard accessible
+1. [ ] Re-establish global anchor `<a>` base styles (removed during CSS refactor on `implement-upload-view-page` branch; affects links throughout the site)
+2. [ ] Create reusable form field component
+3. [ ] Add consistent styling to all form inputs
+4. [ ] Add validation error display
+5. [ ] Add success states for valid inputs
+6. [ ] Add focus states and transitions
+7. [ ] Add help text for complex fields
+8. [ ] Ensure forms are keyboard accessible
 
 **Tests**:
 1. [ ] Test form field component renders
@@ -478,14 +479,15 @@ Polish the user interface with improved navigation, responsive design refinement
 - `app/static/css/` (if needed)
 
 **Tasks**:
-1. [ ] Run accessibility audit (Lighthouse, axe)
-2. [ ] Fix all accessibility issues
-3. [ ] Ensure proper heading hierarchy
-4. [ ] Add skip to content link
-5. [ ] Ensure sufficient color contrast
-6. [ ] Test with keyboard only
-7. [ ] Test with screen reader
-8. [ ] Add focus visible styles
+1. [ ] Add Open Graph meta tags to upload view page (`og:title`, `og:image`, `og:url`, `og:description`)
+2. [ ] Run accessibility audit (Lighthouse, axe)
+3. [ ] Fix all accessibility issues
+4. [ ] Ensure proper heading hierarchy
+5. [ ] Add skip to content link
+6. [ ] Ensure sufficient color contrast
+7. [ ] Test with keyboard only
+8. [ ] Test with screen reader
+9. [ ] Add focus visible styles
 
 **Tests**:
 1. [ ] Test Lighthouse accessibility score (>90)
