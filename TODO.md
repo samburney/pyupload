@@ -7,19 +7,6 @@
 - [ ] Complete responsive navigation menu
 - [ ] Add conditional rendering for authenticated vs. anonymous users
 
-### File Serving & Viewing (Critical for v0.1)
-- [x] Individual upload detail/view page
-  - [x] Display file metadata (size, dimensions, type, view count)
-  - [x] Image rotation UI (owner only)
-  - [x] Delete button for owners
-  - [x] Inline tag editing (owner only)
-  - [x] Direct link sharing options
-  - [x] Inline editing for description/title (owner only) *(description doubles as title — `upload.display_name` returns `description` if set, else `originalname`)*
-  - [x] Privacy toggle (private/public) for owners
-
-### Image Processing
-- [x] Image rotation API endpoint (`POST /api/v1/images/{id}/rotate`) with metadata update and cache invalidation
-
 ### Gallery & Discovery Pages (v0.1)
 - [ ] Handle missing/broken image metadata in gallery with placeholder UX *(partial: `/get` now returns handled `422` image/HTML fallback responses with regression tests; gallery-card UX refinement still pending)*
 - [ ] Random uploads page (/random)
@@ -31,9 +18,6 @@
 - [ ] Privacy Policy page
 - [ ] Terms of Service page
 - [ ] Contact page
-
-### Access Control & Privacy
-- [x] Delete functionality for uploads (owners only; admin override tracked under Future Enhancements)
 
 ---
 
@@ -50,12 +34,10 @@
 - [ ] Collections navbar link and browsing page (/collections)
 - [ ] Collection management UI *(partial: collection assignment (add/remove) implemented via upload view page; collection creation possible via same UI; collection browsing, edit, and delete not yet implemented)*
   - [ ] Create/edit/delete collections *(partial: collection creation supported via upload view page)*
-  - [x] Add/remove uploads from collections
   - [ ] Collection browsing pages
 - [ ] Tag system UI *(partial: inline tag editing and read-only display on upload view page implemented; any authenticated user can tag any upload; tag browsing and standalone management pages remain)*
   - [ ] Tag browsing pages
   - [ ] Tag creation and management (standalone admin/browse pages)
-  - [x] Inline tag editing on upload view page (any authenticated user)
 
 ### Image Processing & Transformations
 - [ ] Expand processing support to all Pillow-compatible image formats
@@ -110,5 +92,3 @@
 - [ ] Replace `?modal=true` query parameter on `/view/{id}/{filename}` with HTMX response headers to consolidate modal and full-page view into a single endpoint.
 - [ ] Scheduler: delete files owned by abandoned users when marked private.
 - [ ] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`, `/tags`, `/collections`) until their pages are implemented.
-- [x] Refactor `app/lib/file_serving.py` to raise typed exceptions instead of returning responses directly, eliminating its `app/lib → app/ui` import of `error_response_for_get`.
-- [x] Refactor module dependencies for clean layer separation and no circular imports: `app/lib/file_io.py` created as pure I/O layer; `get_filename`, `get_file_instance`, `get_file_size`, `get_file_mime_type`, `delete_file` moved from `file_storage.py` to `file_io.py`.
