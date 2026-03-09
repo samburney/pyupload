@@ -13,7 +13,7 @@ Validates:
 - UserSerializer produces expected fields
 - ImageSerializer produces expected fields
 - PaginationParams properties (pages, page_data)
-- HomePaginationParams defaults
+- GalleryPaginationDefaultParams defaults
 - humanize_bytes helper
 """
 
@@ -27,7 +27,7 @@ from app.models.uploads import Upload, UploadSerializer
 from app.models.images import Image, ImageSerializer
 from app.models.users import UserSerializer
 from app.models.common.pagination import PaginationParams
-from app.ui.main import HomePaginationParams
+from app.ui.gallery import GalleryPaginationDefaultParams
 from app.lib.helpers import humanize_bytes
 
 
@@ -152,7 +152,7 @@ class TestHomeRoute:
         )
 
         # Mock current_user as owner
-        with patch("app.ui.main.get_current_user_from_request", return_value=owner):
+        with patch("app.ui.gallery.get_current_user_from_request", return_value=owner):
             response = await client.get("/")
 
         assert response.status_code == 200
@@ -180,7 +180,7 @@ class TestHomeRoute:
         assert response.status_code == 200
         assert response.headers.get("cache-control") == "private, max-age=60, must-revalidate"
         assert response.headers.get("vary") == "Cookie"
-        assert response.headers.get("etag", "").startswith('W/"home-gallery-')
+        assert response.headers.get("etag", "").startswith('W/"gallery-')
 
     @pytest.mark.anyio
     async def test_home_page_returns_304_when_if_none_match_matches(self, client):
@@ -947,31 +947,31 @@ class TestPaginationParams:
         assert params.count == 0
 
 
-class TestHomePaginationParams:
-    """Test HomePaginationParams overrides."""
+class TestGalleryPaginationDefaultParams:
+    """Test GalleryPaginationDefaultParams overrides."""
 
     def test_default_sort_by(self):
-        """Test HomePaginationParams defaults sort_by to created_at."""
-        params = HomePaginationParams()
+        """Test GalleryPaginationDefaultParams defaults sort_by to created_at."""
+        params = GalleryPaginationDefaultParams()
         assert params.sort_by == "created_at"
 
     def test_default_sort_order(self):
-        """Test HomePaginationParams defaults sort_order to desc."""
-        params = HomePaginationParams()
+        """Test GalleryPaginationDefaultParams defaults sort_order to desc."""
+        params = GalleryPaginationDefaultParams()
         assert params.sort_order == "desc"
 
     def test_default_page_size(self):
-        """Test HomePaginationParams defaults page_size to 24."""
-        params = HomePaginationParams()
+        """Test GalleryPaginationDefaultParams defaults page_size to 24."""
+        params = GalleryPaginationDefaultParams()
         assert params.page_size == 24
 
     def test_inherits_pagination_params(self):
-        """Test HomePaginationParams is a subclass of PaginationParams."""
-        assert issubclass(HomePaginationParams, PaginationParams)
+        """Test GalleryPaginationDefaultParams is a subclass of PaginationParams."""
+        assert issubclass(GalleryPaginationDefaultParams, PaginationParams)
 
     def test_pages_calculation(self):
-        """Test HomePaginationParams pages calculation with 24 page_size."""
-        params = HomePaginationParams(count=50)
+        """Test GalleryPaginationDefaultParams pages calculation with 24 page_size."""
+        params = GalleryPaginationDefaultParams(count=50)
         assert params.pages == 3  # ceil(50/24) = 3
 
 
