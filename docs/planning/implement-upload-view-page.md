@@ -28,7 +28,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Modal view variant exists via `?modal=true`
 - `/view/{id}` redirects to `/view/{id}/{cleanname}` with 301 (404 if upload not found); private files return 403 on this route (no user context, prevents information disclosure)
 - Privacy enforced on `/view/{id}/{filename}`: `validate_file_request` returns 403 for non-owner access to private uploads
-- Description inline editing in `upload-description.html.j2`: owner-only Alpine.js hover-to-edit overlay with `<textarea>`, save via `hx-patch="/uploads/{id}/description"`, Escape to cancel; non-owners see read-only `<p>`; max-length enforced by Tortoise `CharField(max_length=255)` with `ValidationError` caught at the route level and displayed inline via `parse_tortoise_validation_errors`
+- Description inline editing in `upload-description.html.j2`: owner-only Alpine.js hover-to-edit overlay with `<textarea>` (`x-ref="descriptionField"`), save via `hx-patch="/uploads/{id}/description"`, explicit cancel button and Escape key both reset via `defaultValue` and exit edit mode; non-owners see read-only `<p>`; max-length enforced by Tortoise `CharField(max_length=255)` with `ValidationError` caught at the route level and displayed inline via `parse_tortoise_validation_errors`
 - Delete functionality implemented (owner-only): confirmation modal, UI/API delete endpoints, model-level hard delete, and cache-aware file deletion helper
 - Inline tag editing (any authenticated user) and collection assignment (per-user) implemented on the view page
 - Integration tests exist for gallery-to-view and modal/responsive/accessibility flows; dedicated route-level matrix tests remain incomplete
@@ -321,7 +321,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 5. [x] Validate description (prevent injection attacks, max 255 chars) — `html.escape()` for XSS; Tortoise `CharField(max_length=255)` enforced on save with `ValidationError` caught and surfaced to user
 6. [x] Update upload.description in database
 7. [x] Return updated content to replace form
-8. [ ] Add cancel button to revert changes *(partial: Escape key exits edit mode; no explicit cancel button)*
+8. [x] Add cancel button to revert changes — explicit cancel button resets textarea via `$refs.descriptionField.defaultValue`; Escape key also resets and exits
 
 **Note**: There is no separate `title` field in the database. `upload.description` doubles as the title — `upload.display_name` returns `description` if set, else `originalname`. Editing the description field is the complete implementation of title/description inline editing.
 
@@ -339,7 +339,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - [x] Owner can edit description inline
 - [x] Non-owners cannot see edit controls
 - [x] Updates work without page reload
-- [x] Proper validation and error handling — XSS via `html.escape()`; max-length enforced via Tortoise `CharField(max_length=255)` with `ValidationError` caught and displayed inline; cancel via Escape key *(no explicit cancel button)*
+- [x] Proper validation and error handling — XSS via `html.escape()`; max-length enforced via Tortoise `CharField(max_length=255)` with `ValidationError` caught and displayed inline; explicit cancel button and Escape key both reset and exit
 - [ ] All tests passing *(partial: route-level CRUD and access control tests passing; template-level and edge-case tests remain)*
 
 **Implementation Notes**:
@@ -671,6 +671,6 @@ All core upload view page features are implemented and tested:
 
 ### What Remains
 - **Tests**: broader per-route view-page test matrix (Steps 1–5 route/template tests); max-length validation test for description (Step 5 test 5)
-- **Polish**: re-establish global anchor `<a>` base styles (removed during CSS refactor — tracked in Frontend Scaffolding); explicit cancel button for description edit (Step 5 task 8)
+- **Polish**: re-establish global anchor `<a>` base styles (removed during CSS refactor — tracked in Frontend Scaffolding)
 - **Step 8** (breadcrumb, Open Graph meta tags, full accessibility audit): not started
 - **Step 9** (full integration test suite): not started

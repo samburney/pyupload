@@ -1,25 +1,41 @@
 {% if current_user and upload.user.id == current_user.id %}
-<div id="upload-description" class="relative w-full max-h-fit"
+<div id="upload-description" class="flex flex-col w-full gap-2"
     x-data="{ showEditBtn: false, editMode: false }"
     @mouseenter="if (!editMode) { showEditBtn = true }"
     @mouseleave="if (!editMode) { showEditBtn = false }"
     @htmx:after-swap="if ($event.detail.xhr.status === 200) { editMode = false; }">
-    <p class="text-xs font-semibold wrap-break-word"
-        x-show="!editMode">
-        {{ upload.display_name | upper | replace("_", " ") }}
-    </p>
-    <div class="flex gap-2 w-full max-h-fit items-center justify-between">
-        <textarea name="description"
-            class="w-full max-h-fit field-sizing-content m-0 p-0.5 text-xs font-semibold whitespace-normal overflow-auto bg-transparent border-0 resize-none
-                focus:outline-2 focus:outline-offset-2 focus:outline-blue-500 focus:ring-0 {{ 'border-b border-b-red-500' if validation_errors and validation_errors.description else '' }}"
+    <div class="relative">
+        <p class="text-xs font-semibold wrap-break-word"
+            x-show="!editMode">
+            {{ upload.display_name | upper | replace("_", " ") }}
+        </p>
+        <div class="flex gap-2 w-full items-center justify-between">
+            <textarea name="description"
+                class="w-full field-sizing-content m-0 p-0.5 text-xs font-semibold whitespace-normal overflow-auto bg-transparent border-0 resize-none
+                    focus:outline-2 focus:outline-offset-2 focus:outline-blue-500 focus:ring-0 {{ 'border-b border-b-red-500' if validation_errors and validation_errors.description else '' }}"
+                x-ref="descriptionField"
+                x-cloak
+                x-show="editMode"
+                @focus="editMode = true"
+                @keyup.escape="editMode = false; showEditBtn = false; $el.blur(); $refs.descriptionField.value = $refs.descriptionField.defaultValue;"
+                :class="editMode ? 'bg-white p-1 border border-gray-500 shadow-md ring-0' : ''">
+                {{- upload.display_name -}}
+            </textarea>
+        </div>
+        <div class="absolute bg-white/75 top-0 left-0 flex w-full h-full items-center justify-center shadow-md rounded-sm"
+            x-show="showEditBtn"
             x-cloak
-            x-show="editMode"
-            @focus="editMode = true"
-            @keyup.escape="editMode = false; showEditBtn = false; $el.blur()"
-            :class="editMode ? 'bg-white p-1 border border-gray-500 shadow-md ring-0' : ''">
-            {{- upload.display_name -}}
-        </textarea>
-        <button type="button" class="min-w-fit max-h-fit p-1 rounded-sm shadow-sm bg-blue-500"
+            @click="showEditBtn = false; editMode = true; $focus.focus($refs.descriptionField);">
+            <button type="button" class="size-4 fill-black">
+                <svg viewBox="0 0 24 24">
+                    <use href="#material-symbols-outlined-edit-box"></use>
+                </svg>
+                <span class="sr-only">Edit description</span>
+            </button>
+        </div>
+    </div>
+    <div class="flex w-full justify-end gap-1">
+        <button type="button" class="p-1 rounded-sm shadow-sm bg-blue-500 hover:bg-blue-300"
             x-cloak
             x-show="editMode"
             hx-include="textarea[name=description]"
@@ -32,16 +48,13 @@
                 <use href="#material-symbols-outlined-save"></use>
             </svg>
         </button>
-    </div>
-    <div class="absolute bg-white/75 top-0 left-0 flex w-full h-full items-center justify-center shadow-md rounded-sm"
-        x-show="showEditBtn"
-        x-cloak
-        @click="showEditBtn = false; editMode = true; $focus.focus($el.parentElement.querySelector('textarea[name=description]'))">
-        <button type="button" class="size-4 fill-black">
-            <svg viewBox="0 0 24 24">
-                <use href="#material-symbols-outlined-edit-box"></use>
+        <button type="button" class="p-1 rounded-sm shadow-sm bg-red-500 hover:bg-red-300"
+            x-cloak
+            x-show="editMode"
+            @click="showEditBtn = false; editMode = false; $refs.descriptionField.value = $refs.descriptionField.defaultValue;">
+            <svg class="size-4 fill-white" viewBox="0 0 24 24">
+                <use href="#material-symbols-outlined-cancel"></use>
             </svg>
-            <span class="sr-only">Edit description</span>
         </button>
     </div>
     {% if validation_errors %}
