@@ -27,7 +27,7 @@ async def post_rotate_image(
     """API endpoint to rotate an image by a specified angle."""
 
     if angle not in [90, 180, 270]:
-        return error_response_for_get(
+        return await error_response_for_get(
             error_title="Invalid Rotation Angle",
             error_message="Rotation angle must be one of the following: 90, 180, 270 degrees.",
             status_code=400,
@@ -36,7 +36,7 @@ async def post_rotate_image(
 
     upload = await Upload.get_or_none(id=id).prefetch_related("user", "images")
     if upload is None:
-        return error_response_for_get(
+        return await error_response_for_get(
             error_title="File Not Found",
             error_message="The requested file does not exist.",
             status_code=404,

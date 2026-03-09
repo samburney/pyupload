@@ -137,7 +137,7 @@ async def get_upload_get(
 
     upload = await Upload.get_or_none(id=id)
     if upload is None:
-        return error_response_for_get(
+        return await error_response_for_get(
             error_title="Error 404: File not found",
             error_message=f"The requested file, {filename} could not be found on this server.",
             filename=filename,
@@ -314,7 +314,7 @@ async def delete_upload_delete(
 
     upload = await Upload.get_or_none(id=id).prefetch_related("user")
     if upload is None:
-        return error_response_for_get(
+        return await error_response_for_get(
             error_title="Error 404: File not found",
             error_message="The file you are trying to delete does not exist.",
             filename="",
@@ -390,7 +390,7 @@ async def upload_add_tag_post(
         await Tag.add_or_create_for_upload(upload_model, tag_name)
 
     except ValueError as e:
-        return error_template_response(request, [str(e)], status_code=400)
+        return await error_template_response(request, [str(e)], status_code=400)
 
     return await _render_tag_input(request, current_user, upload_model, status_code=201)
 
@@ -412,7 +412,7 @@ async def upload_remove_tag_delete(
         await Tag.remove_tag_from_upload(upload_model, tag_name)
 
     except ValueError as e:
-        return error_template_response(request, [str(e)], status_code=400)
+        return await error_template_response(request, [str(e)], status_code=400)
 
     return await _render_tag_input(request, current_user, upload_model, status_code=200)
 
@@ -464,7 +464,7 @@ async def upload_add_collection_post(
         )
 
     except ValueError as e:
-        return error_template_response(request, [str(e)], status_code=400)
+        return await error_template_response(request, [str(e)], status_code=400)
 
     # Serialize upload for template
     await upload_model.fetch_relations()  # Refresh related models

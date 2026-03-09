@@ -48,7 +48,7 @@ async def login_for_access_token(
     )
     if not user:
         error_messages = ["Invalid username or password"]
-        return error_template_response(request, error_messages, status_code=401)
+        return await error_template_response(request, error_messages, status_code=401)
 
     # Set response status and cookies
     response = Response(status_code=200)

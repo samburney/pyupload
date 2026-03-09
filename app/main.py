@@ -90,14 +90,14 @@ app.include_router(ui.users.router, include_in_schema=False)
 
 
 # Exception handlers
-def _route_error_response(request: Request, error_title: str, error_message: str, status_code: int) -> Response:
+async def _route_error_response(request: Request, error_title: str, error_message: str, status_code: int) -> Response:
     """Route error responses to JSON, image error, or HTML based on the request path."""
     if request.url.path.startswith("/api/"):
         return JSONResponse(status_code=status_code, content={"detail": error_message})
 
     if request.url.path.startswith(("/get/", "/download/")):
         filename = Path(request.url.path).name
-        return error_response_for_get(
+        return await error_response_for_get(
             filename=filename,
             error_title=error_title,
             error_message=error_message,
@@ -105,7 +105,7 @@ def _route_error_response(request: Request, error_title: str, error_message: str
             request=request,
         )
 
-    return error_template_response(request, [error_message], status_code=status_code)
+    return await error_template_response(request, [error_message], status_code=status_code)
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -117,7 +117,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
         # Render HTML error pages for common error codes on UI routes
         if exc.status_code in (404, 405):
-            return error_template_response(request=request, status_code=exc.status_code, title=f"Error: {exc.status_code}", error_messages=[str(exc.detail)])
+            return await error_template_response(request=request, status_code=exc.status_code, title=f"Error: {exc.status_code}", error_messages=[str(exc.detail)])
 
     # Return default response for everything else
     return JSONResponse(
@@ -145,11 +145,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     # For /get/ and /download/ the error may be rendered inside an image — single message only
     if request.url.path.startswith(("/get/", "/download/")):
         error_message = exc.errors()[0]['msg'] if exc.errors() else "An unknown error occurred while processing your request."
-        return _route_error_response(request, "Error 422: Unprocessable Content", error_message, 422)
+        return await _route_error_response(request, "Error 422: Unprocessable Content", error_message, 422)
 
     # For all other UI paths, surface all validation messages
     error_messages = [e['msg'] for e in exc.errors()] if exc.errors() else ["An unknown error occurred while processing your request."]
-    return error_template_response(request, error_messages, status_code=422)
+    return await error_template_response(request, error_messages, status_code=422)
 
 
 @app.exception_handler(LoginRequiredException)
@@ -165,27 +165,27 @@ async def login_required_exception_handler(request: Request, exc: LoginRequiredE
 
 @app.exception_handler(NotAuthorisedError)
 async def not_authorised_exception_handler(request: Request, exc: NotAuthorisedError):
-    return _route_error_response(request, "Error 403: Unauthorized", str(exc), 403)
+    return await _route_error_response(request, "Error 403: Unauthorized", str(exc), 403)
 
 
 @app.exception_handler(FileNotFoundError)
 async def file_not_found_exception_handler(request: Request, exc: FileNotFoundError):
-    return _route_error_response(request, "Error 404: Not Found", str(exc), 404)
+    return await _route_error_response(request, "Error 404: Not Found", str(exc), 404)
 
 
 @app.exception_handler(ImageInvalidError)
 async def image_invalid_exception_handler(request: Request, exc: ImageInvalidError):
-    return _route_error_response(request, "Error 422: Unprocessable Content", str(exc), 422)
+    return await _route_error_response(request, "Error 422: Unprocessable Content", str(exc), 422)
 
 
 @app.exception_handler(ImageProcessingError)
 async def image_processing_exception_handler(request: Request, exc: ImageProcessingError):
-    return _route_error_response(request, "Error 422: Unprocessable Content", str(exc), 422)
+    return await _route_error_response(request, "Error 422: Unprocessable Content", str(exc), 422)
 
 
 @app.exception_handler(ValueError)
 async def value_error_exception_handler(request: Request, exc: ValueError):
-    return _route_error_response(request, "Error 400: Bad Request", str(exc), 400)
+    return await _route_error_response(request, "Error 400: Bad Request", str(exc), 400)
 
 
 # Run the application server
