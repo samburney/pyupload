@@ -1,0 +1,23 @@
+{% if breadcrumbs and breadcrumbs | length %}
+<nav aria-label="Breadcrumb">
+  <ol class="flex overflow-hidden rounded border border-gray-50 shadow-sm bg-white text-sm text-gray-700">
+    <li>
+      <a href="/" class="block h-10 bg-gray-100 px-4 leading-10 transition-colors hover:text-gray-900 content-center">
+        <svg class="size-6 fill-gray-700 hover:fill-gray-900" viewBox="0 0 24 24">
+            <use href="#material-symbols-outlined-home"></use>
+        </svg>
+      </a>
+    </li>
+    {% for breadcrumb in breadcrumbs %}
+    <li class="relative flex items-center">
+      <span class="absolute inset-y-0 -start-px h-10 w-4 bg-gray-100 [clip-path:polygon(0_0,0%_100%,100%_50%)] rtl:rotate-180">
+      </span>
+
+      <a href="{{ breadcrumb.url }}" class="block h-10 pr-4 pl-6 leading-10 transition-colors hover:text-gray-900">
+        {{ breadcrumb.title }}
+      </a>
+    </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}
