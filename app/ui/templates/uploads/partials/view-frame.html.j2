@@ -11,7 +11,7 @@
                 {%- set placeholder_ignore_height = True %}
                 <div id="view-frame-image"
                     hx-get="/uploads/{{ upload.id }}/image?context=frame"
-                    hx-vals="js:{ width: htmx.find('#view-frame-image').parentElement.clientWidth, height: document.getElementById('view-frame-image').parentElement.clientHeight }"
+                    hx-vals="js:{ ...calculateMaxImageSize({{ upload.image.width }}, {{ upload.image.height }}, document.querySelector('main').querySelector('article'), true) }"
                     hx-trigger="load"
                     hx-swap="outerHTML">
                     {% include "components/core/image-placeholder.html.j2" %}
@@ -24,7 +24,6 @@
             </div>
         </a>
     </div>
-    <script>setupImageSwapHandlers('view-frame-image');</script>
     {% else %}
     <a class="block border border-dashed text-gray-600 hover:text-gray-400 border-gray-600 hover:border-gray-400 rounded-md object-cover w-16 h-16 mx-auto"
         aria-label="Download {{ upload.display_name }}"
