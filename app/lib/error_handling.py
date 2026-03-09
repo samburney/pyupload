@@ -3,6 +3,7 @@ import textwrap
 from typing import IO
 from tempfile import SpooledTemporaryFile
 from PIL import Image as Pillow, ImageDraw, ImageText, ImageFont
+from tortoise.exceptions import ValidationError
 from fastapi.responses import Response, StreamingResponse
 
 from app.lib.helpers import IMAGE_CONVERSION_DST_FORMATS, split_filename
@@ -115,3 +116,24 @@ def get_error_image_response(error_title: str, error_message: str, filename: str
     response.headers["Cache-Control"] = f"public, max-age=60"
 
     return response
+
+
+def parse_tortoise_validation_errors(e: ValidationError) -> dict:
+    errors = {}
+    unparsed_errors = []
+    for error in e.args:
+        # Tortoise ValidationError take the form `<field_name>: <error_message>`
+        if isinstance(error, str) and ": " in error:
+            field_name, error_message = error.split(": ", 1)
+            errors[field_name] = error_message
+        else:
+            unparsed_errors.append(str(error))
+
+    # If unparsed errors were found, raise a new exception with the unparsed errors included in the message
+    if unparsed_errors:
+        raise ValidationError(
+            'Some validation error(s) could not be parsed',
+            tuple(unparsed_errors),
+        )
+
+    return errors

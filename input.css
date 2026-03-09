@@ -54,6 +54,10 @@
         @apply size-5 rounded border-gray-300 shadow-sm;
     }
 
+    .validation-error {
+        @apply text-red-500 text-xs mt-1;
+    }
+
     /* HTMX */
     .htmx-indicator.htmx-request {
         display: flex !important;

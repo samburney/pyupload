@@ -2,12 +2,13 @@ import html
 import json
 
 from typing import Annotated
+from tortoise.exceptions import ValidationError
 from fastapi import APIRouter, Request, Depends, UploadFile, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.lib.config import get_app_config
 from app.lib.helpers import make_clean_tag
-from app.lib.error_handling import NotAuthorisedError
+from app.lib.error_handling import NotAuthorisedError, parse_tortoise_validation_errors
 from app.lib.upload_handler import handle_uploaded_files
 from app.lib.file_serving import serve_file, validate_file_request
 
@@ -38,14 +39,23 @@ async def _render_tag_input(request: Request, current_user: User, upload_model: 
     )
 
 
-async def _render_upload_component(request: Request, current_user: User, upload_model: Upload, template: str) -> Response:
+async def _render_upload_component(request: Request, current_user: User, upload_model: Upload, template: str, context: dict | None = None, status_code=200) -> Response:
     await upload_model.fetch_relations()
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
     filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
+
+    # Extend default context if specified
+    if context is None:
+        context = dict()
+
+    # Add default context variables
+    context.update({"current_user": current_user, "upload": upload, "filtered_collections": filtered_collections})
+
     return templates.TemplateResponse(
         request,
         template,
-        context={"current_user": current_user, "upload": upload, "filtered_collections": filtered_collections},
+        context=context,
+        status_code=status_code,
     )
 
 
@@ -575,7 +585,18 @@ async def toggle_upload_description_patch(
 
     upload_model = await get_upload_or_404_for_update(id, current_user)
 
-    upload_model.description = html.escape(description).strip()
-    await upload_model.save()
+    validation_errors = {}
+    try:
+        upload_model.description = html.escape(description).strip()
+        await upload_model.save()
+    except ValidationError as e:
+        validation_errors = parse_tortoise_validation_errors(e)
 
-    return await _render_upload_component(request, current_user, upload_model, "components/upload/description.html.j2")
+    return await _render_upload_component(
+        request,
+        current_user,
+        upload_model,
+        "components/upload/description.html.j2",
+        context={"validation_errors": validation_errors},
+        status_code=400 if validation_errors else 200,
+    )

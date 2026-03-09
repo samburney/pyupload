@@ -2,15 +2,16 @@
 <div id="upload-description" class="relative w-full max-h-fit"
     x-data="{ showEditBtn: false, editMode: false }"
     @mouseenter="if (!editMode) { showEditBtn = true }"
-    @mouseleave="if (!editMode) { showEditBtn = false }">
-    <p class="text-xs font-semibold"
+    @mouseleave="if (!editMode) { showEditBtn = false }"
+    @htmx:after-swap="if ($event.detail.xhr.status === 200) { editMode = false; }">
+    <p class="text-xs font-semibold wrap-break-word"
         x-show="!editMode">
         {{ upload.display_name | upper | replace("_", " ") }}
     </p>
     <div class="flex gap-2 w-full max-h-fit items-center justify-between">
         <textarea name="description"
             class="w-full max-h-fit field-sizing-content m-0 p-0.5 text-xs font-semibold whitespace-normal overflow-auto bg-transparent border-0 resize-none
-                focus:outline-2 focus:outline-offset-2 focus:outline-blue-500 focus:ring-0"
+                focus:outline-2 focus:outline-offset-2 focus:outline-blue-500 focus:ring-0 {{ 'border-b border-b-red-500' if validation_errors and validation_errors.description else '' }}"
             x-cloak
             x-show="editMode"
             @focus="editMode = true"
@@ -23,8 +24,10 @@
             x-show="editMode"
             hx-include="textarea[name=description]"
             hx-patch="/uploads/{{ upload.id }}/description"
+            hx-select="#upload-description > *"
             hx-target="#upload-description"
-            hx-swap="outerHTML">
+            hx-target-400="#upload-description"
+            hx-swap="innerHTML">
             <svg class="size-4 fill-white" viewBox="0 0 24 24">
                 <use href="#material-symbols-outlined-save"></use>
             </svg>
@@ -41,9 +44,12 @@
             <span class="sr-only">Edit description</span>
         </button>
     </div>
+    {% if validation_errors %}
+    <div class="validation-error wrap-break-word">{{ validation_errors.description | default(None) }}</div>
+    {% endif %}
 </div>
 {% else %}
-<p class="text-xs font-semibold">
+<p class="text-xs font-semibold wrap-break-word">
     {{ upload.display_name | upper | replace("_", " ") }}
 </p>
 {% endif %}

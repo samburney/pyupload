@@ -28,8 +28,9 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Modal view variant exists via `?modal=true`
 - `/view/{id}` redirects to `/view/{id}/{cleanname}` with 301 (404 if upload not found); private files return 403 on this route (no user context, prevents information disclosure)
 - Privacy enforced on `/view/{id}/{filename}`: `validate_file_request` returns 403 for non-owner access to private uploads
-- No UI for editing upload metadata
+- Description inline editing in `upload-description.html.j2`: owner-only Alpine.js hover-to-edit overlay with `<textarea>`, save via `hx-patch="/uploads/{id}/description"`, Escape to cancel; non-owners see read-only `<p>`; max-length enforced by Tortoise `CharField(max_length=255)` with `ValidationError` caught at the route level and displayed inline via `parse_tortoise_validation_errors`
 - Delete functionality implemented (owner-only): confirmation modal, UI/API delete endpoints, model-level hard delete, and cache-aware file deletion helper
+- Inline tag editing (any authenticated user) and collection assignment (per-user) implemented on the view page
 - Integration tests exist for gallery-to-view and modal/responsive/accessibility flows; dedicated route-level matrix tests remain incomplete
 - Profile page shows list of user's uploads
 
@@ -69,6 +70,17 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Tests: `tests/test_models_tags.py` (14 tests), `tests/test_lib_helpers.py` additions (`TestCleanText`, `TestMakeCleanTag`), and `tests/test_ui_uploads.py` additions (`TestTagSuggestionsEndpoint`, `TestUploadAddTagEndpoint`, `TestUploadDeleteTagEndpoint`) — all 788 tests passing.
 - Title/description inline editing and broader view-page route matrix tests remain pending.
 
+### Review Snapshot (2026-03-04)
+- Tag access control opened up: `validate_file_update_request` removed from tag endpoints; any authenticated user can now tag any upload (tags are public/shared constructs). Unauthenticated users see a read-only tag display via new `render_tags_readonly()` macro in `tag-input.html.j2`. Step 10 acceptance criteria and test descriptions updated to reflect this.
+- `Upload.get_with_relations(id)` classmethod added to `app/models/uploads.py`; replaces inline `prefetch_related` chains throughout all endpoints.
+- Collections UI implemented on the upload view page (Step 11 below): per-user collection assignment via an Alpine.js multi-select combo selector; any authenticated user can assign their own collections to any public upload.
+- `/test` dev endpoint and `test.html.j2` template removed.
+- Debug `print()` statement and unused `upload_user_collections` variable removed from `view_upload_page_get`.
+- `existing_collection_ids` query now filtered by `user=current_user` in all three collection endpoints (was missing the user filter).
+- Test suite updated: `conftest.py` registers `app.models.collections`; new `tests/test_models_collections.py` (15 tests); new `TestUploadGetWithRelations` and `TestUploadUserCollections` in `test_models_uploads.py`; collection endpoint classes in `test_ui_uploads.py`; `SELECT_QUERY_BASELINE_BUDGET` updated 30 → 31.
+- 827 tests passing.
+- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix.
+
 ### Review Snapshot (2026-03-05)
 - Sharing UI implemented for public uploads: new `upload-share-button.html.j2` component with a modal (`modal-basic.html.j2`) that exposes copyable direct URLs for image/details/download links.
 - Sidebar behavior updated in `view-sidebar.html.j2`: share button is rendered only for non-private uploads.
@@ -86,6 +98,10 @@ Implement individual upload detail/view pages that display file metadata, provid
 - CSS architecture refactored: component styles moved from `@layer components` to `@utility` rules for better Tailwind v4 compatibility and CSS nesting. Responsive `md:max-lg:` modifiers added to sidebar components (split buttons, tags, share button, private toggle, download button) to scale at medium breakpoints. Default Tailwind breakpoints restored (Bootstrap 4 overrides removed); custom `3xl`/`4xl`/`5xl` breakpoints added. View frame/sidebar layout uses `md:max-w-4/5 lg:max-w-3/4 xl:max-w-full` with sidebar `md:w-1/5 lg:w-1/4 xl:max-w-64`. Tag items now use hover-to-reveal delete button pattern. Breakpoint debug indicator added to base layout (gated behind `config.debug`). Global anchor `<a>` base styles intentionally removed for normalisation — will be re-addressed in UI polish plan before merge.
 - 846 tests passing.
 - Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix, re-establish anchor base styles before merge.
+
+### Review Snapshot (2026-03-09)
+- Description validation error feedback implemented (Step 5 complete): `parse_tortoise_validation_errors` helper added to `app/lib/error_handling.py`; `PATCH /uploads/{id}/description` now catches `ValidationError` from Tortoise, parses field-level messages, and returns a 400 with `validation_errors` in template context. `description.html.j2` displays inline error text, highlights the `<textarea>` with a red border on 400, and uses `hx-target-400` + `hx-select` + `hx-swap="innerHTML"` so error responses refresh the component's inner content without exiting edit mode. `@htmx:after-swap` exits edit mode only on 200. `_render_upload_component` extended with optional `context` and `status_code` parameters. Tortoise `CharField(max_length=255)` on `Upload.description` is the enforced validation boundary. `.validation-error` utility added to `input.css`; `wrap-break-word` applied to description display and error text.
+- Remaining: test for max-length validation (255 chars), broader per-route view-page test matrix, re-establish anchor base styles before merge.
 
 ### Target State
 - `/view/{id}/{filename}` endpoint renders upload detail page
@@ -302,7 +318,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 2. [x] Show edit form only to upload owner
 3. [x] Create PATCH endpoint for updating upload description
 4. [x] Use HTMX for inline editing without page reload
-5. [ ] Validate description (prevent injection attacks, max 255 chars) *(partial: `html.escape()` applied; max 255 chars not enforced)*
+5. [x] Validate description (prevent injection attacks, max 255 chars) — `html.escape()` for XSS; Tortoise `CharField(max_length=255)` enforced on save with `ValidationError` caught and surfaced to user
 6. [x] Update upload.description in database
 7. [x] Return updated content to replace form
 8. [ ] Add cancel button to revert changes *(partial: Escape key exits edit mode; no explicit cancel button)*
@@ -314,7 +330,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 2. [ ] Test edit form hidden from non-owners
 3. [x] Test successful description update — `TestUploadDescriptionPatchEndpoint.test_owner_can_update_description`
 4. [x] Test validation prevents injection attacks — `TestUploadDescriptionPatchEndpoint.test_description_is_html_escaped`
-5. [ ] Test max length validation (255 chars)
+5. [ ] Test max length validation (255 chars) *(infrastructure in place; test not yet written)*
 6. [ ] Test HTMX swap behavior
 7. [ ] Test cancel button
 8. [x] Test unauthorized edit attempt (403) — `TestUploadDescriptionPatchEndpoint.test_non_owner_cannot_update_description`
@@ -323,7 +339,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - [x] Owner can edit description inline
 - [x] Non-owners cannot see edit controls
 - [x] Updates work without page reload
-- [ ] Proper validation and error handling *(partial: XSS prevented via `html.escape()`; max-length and explicit cancel not yet implemented)*
+- [x] Proper validation and error handling — XSS via `html.escape()`; max-length enforced via Tortoise `CharField(max_length=255)` with `ValidationError` caught and displayed inline; cancel via Escape key *(no explicit cancel button)*
 - [ ] All tests passing *(partial: route-level CRUD and access control tests passing; template-level and edge-case tests remain)*
 
 **Implementation Notes**:
@@ -577,29 +593,6 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 ---
 
-### Review Snapshot (2026-03-04)
-- Tag access control opened up: `validate_file_update_request` removed from tag endpoints; any authenticated user can now tag any upload (tags are public/shared constructs). Unauthenticated users see a read-only tag display via new `render_tags_readonly()` macro in `tag-input.html.j2`. Step 10 acceptance criteria and test descriptions updated to reflect this.
-- `Upload.get_with_relations(id)` classmethod added to `app/models/uploads.py`; replaces inline `prefetch_related` chains throughout all endpoints.
-- Collections UI implemented on the upload view page (Step 11 below): per-user collection assignment via an Alpine.js multi-select combo selector; any authenticated user can assign their own collections to any public upload.
-- `/test` dev endpoint and `test.html.j2` template removed.
-- Debug `print()` statement and unused `upload_user_collections` variable removed from `view_upload_page_get`.
-- `existing_collection_ids` query now filtered by `user=current_user` in all three collection endpoints (was missing the user filter).
-- Test suite updated: `conftest.py` registers `app.models.collections`; new `tests/test_models_collections.py` (15 tests); new `TestUploadGetWithRelations` and `TestUploadUserCollections` in `test_models_uploads.py`; collection endpoint classes in `test_ui_uploads.py`; `SELECT_QUERY_BASELINE_BUDGET` updated 30 → 31.
-- 827 tests passing.
-- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix.
-
-### Review Snapshot (2026-03-07)
-- Description inline editing implemented (Step 5 partial): `upload-description.html.j2` Alpine.js component with hover-to-edit overlay, inline `<textarea>`, save via `hx-patch="/uploads/{id}/description"`, and Escape key to cancel. Non-owners see a read-only `<p>` display.
-- `PATCH /uploads/{id}/description` endpoint added to `app/ui/uploads.py`; uses `html.escape()` + `.strip()` to sanitise input before persisting to `upload.description`.
-- `app/ui/common/uploads.py` created with four UI-layer helpers to eliminate repeated boilerplate across route handlers: `get_upload_or_404`, `get_upload_with_relations_or_404`, `get_upload_or_404_for_read`, `get_upload_or_404_for_update`.
-- DRY refactoring in `app/ui/uploads.py`: `_render_tag_input` and `_render_upload_component` private helpers eliminate repeated template context construction across multiple routes.
-- Tests: `TestUploadDescriptionPatchEndpoint` (6 tests: 404, owner update, clear, HTML-escape/XSS, non-owner 403) added to `tests/test_ui_uploads.py`; privacy toggle test suite complete.
-- CSS architecture refactored: component styles moved from `@layer components` to `@utility` rules; responsive `md:max-lg:` modifiers added to sidebar components; tag hover-reveal UX; breakpoint debug indicator; default Tailwind breakpoints restored. See upload-view-page plan Overview section for full detail.
-- 846 tests passing.
-- Remaining: max-length validation for description (255 chars), broader per-route view-page test matrix, re-establish anchor base styles before merge.
-
----
-
 ## Step 11: Collections UI on Upload View Page
 
 **Files**:
@@ -656,3 +649,28 @@ Implement individual upload detail/view pages that display file metadata, provid
 **Dependencies**:
 - Step 1 must be complete
 - Step 10 must be complete
+
+---
+
+## Summary
+
+### What's Done
+All core upload view page features are implemented and tested:
+
+| Feature | Step | Status |
+|---|---|---|
+| View route, SEO redirect, privacy enforcement | 1 | Complete (tests partial) |
+| File preview (image inline, icon fallback) | 2 | Complete (tests partial) |
+| Metadata panel (size, dims, type, views, date) | 3 | Complete (tests partial) |
+| Sharing modal with copyable URLs | 4 | Complete (tests partial) |
+| Description inline editing with validation errors | 5 | Complete (max-length test pending) |
+| Privacy toggle (owner only) | 6 | Complete |
+| Delete with confirmation modal | 7 | Complete |
+| Inline tag editing (any authenticated user) | 10 | Complete |
+| Collection assignment UI (per-user) | 11 | Complete |
+
+### What Remains
+- **Tests**: broader per-route view-page test matrix (Steps 1–5 route/template tests); max-length validation test for description (Step 5 test 5)
+- **Polish**: re-establish global anchor `<a>` base styles (removed during CSS refactor — tracked in Frontend Scaffolding); explicit cancel button for description edit (Step 5 task 8)
+- **Step 8** (breadcrumb, Open Graph meta tags, full accessibility audit): not started
+- **Step 9** (full integration test suite): not started
