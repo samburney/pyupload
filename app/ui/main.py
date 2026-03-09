@@ -1,6 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.lib.config import get_app_config
 
@@ -19,6 +19,15 @@ async def index_get(
     """Render the main index page."""
     
     return await gallery_index_get(request, pagination)
+
+
+@router.get("/random", response_class=RedirectResponse)
+async def random_get(
+    request: Request
+):
+    """Redirect to gallery random page"""
+
+    return RedirectResponse('/gallery/random', status_code=302)
 
 
 @router.post("/update-window-dimensions")
