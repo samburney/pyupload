@@ -20,6 +20,57 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 
+    // Handle selecting uploads on multi-upload pages
+    Alpine.data('handleSelectedUploads', () => ({
+        allSelected: false,
+        selectedIds: [],
+        pulse: false,
+
+        // selectedCount Getter for immediate updates
+        get selectedCount() {
+            return this.selectedIds.length;
+        },
+
+        // x-data init
+        init() {
+            // This watcher triggers every time an ID is added or removed
+            this.$watch('selectedIds', () => {
+                if (this.selectedCount >= 1) {
+                    this.triggerPulse();
+                }
+            });
+        },
+
+        // Pulse the selected count when it changes to draw attention to it
+        triggerPulse() {
+            this.pulse = true;
+            // 200ms matches a standard 'fast' CSS transition
+            setTimeout(() => {
+                this.pulse = false;
+            }, 200);
+        },
+
+        // Clear current selections
+        clearSelection() {
+            this.selectedIds = [];
+            this.allSelected = false;
+        },
+
+        // Toggle a selection by ID
+        toggleSelected(id) {
+            const idStr = id.toString();
+
+            // Validate ID list and remove if found
+            if (this.selectedIds.includes(idStr)) {
+                this.selectedIds = this.selectedIds.filter(i => i !== idStr);
+            }
+            // Otherwise, add to ID to the list
+            else {
+                this.selectedIds.push(idStr);
+            }
+        }
+    }))
+
     // Upload widget store
     Alpine.store('uploadWidget', {
         files: [],

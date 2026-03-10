@@ -1,6 +1,12 @@
-<div class="rounded-lg p-3 mb-4 border border-gray-100 shadow-sm shadow-gray-300
+<div class="relative group/card rounded-lg p-3 mb-4 border border-gray-100 shadow-sm shadow-gray-300
             h-min break-inside-avoid-column flex-col justify-center transition-all
-            duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101">
+            duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101
+            has-checked:outline-3 has-checked:outline-blue-500"
+    @click.capture="if (selectedCount > 0 && !$event.target.closest('input[type=checkbox]')) {
+            $event.preventDefault();
+            $event.stopPropagation();
+            toggleSelected($el.querySelector('input[type=checkbox]').value);
+        }">
     {% if upload.image %}
     {%- set ar_decimal = (upload.image.width / upload.image.height) | round(3) %}
     {%- set thumb_max_width = 640 %}
@@ -111,4 +117,11 @@
             </div>
         </dl>
     </div>
+    {% if current_user and current_user.id == upload.user.id %}
+    <input name="selected_upload_ids" value="{{ upload.id }}" type="checkbox"
+        class="absolute top-6 left-6 bg-transparent rounded-full invisible 
+            checked:bg-blue-500 checked:visible
+            group-hover/card:visible"
+        x-model="selectedIds" />
+    {% endif %}
 </div>
