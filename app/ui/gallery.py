@@ -120,7 +120,7 @@ async def gallery_random_get(
         "pagination": pagination,
         "breadcrumbs": breadcrumbs,
     }
-    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+    response = templates.TemplateResponse(request, "gallery/random.html.j2", context=context)
 
     return response
 
