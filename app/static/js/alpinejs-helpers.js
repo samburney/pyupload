@@ -23,22 +23,14 @@ document.addEventListener('alpine:init', () => {
     // Handle selecting uploads on multi-upload pages
     Alpine.data('handleSelectedUploads', () => ({
         superSelected: false,
+        allVisibleSelected: false,
         selectedIds: [],
+        previousSelectedIds: [],
         pulse: false,
 
         // selectedCount Getter for immediate updates
         get selectedCount() {
             return this.selectedIds.length;
-        },
-
-        // x-data init
-        init() {
-            // This watcher triggers every time an ID is added or removed
-            this.$watch('selectedIds', () => {
-                if (this.selectedCount >= 1) {
-                    this.triggerPulse();
-                }
-            });
         },
 
         // Pulse the selected count when it changes to draw attention to it
@@ -70,22 +62,58 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // Handle selectAll() button; currently just calls `selectAllVisible()`
-        selectAll() {
-            this.selectAllVisible();
-        },
-
         // Select all visible
-        selectAllVisible() {
+        toggleSelectAllVisible() {
             // Query the DOM for all checkboxes
             const allCheckboxes = Array.from(document.querySelectorAll('input[name="selected_upload_ids"]'));
             const visibleIds = allCheckboxes.map(cb => cb.value);
             
-            // Merge with selectedIds
-            const combined = new Set([...this.selectedIds, ...visibleIds]);
+            // If we haven't selected all visible, do that now
+            if (!this.allVisibleSelected) {
+                // Save current selection
+                this.previousSelectedIds = [...this.selectedIds];
 
-            // Apply new merged list
-            this.selectedIds = Array.from(combined);
+                // Merge with selectedIds
+                const combined = new Set([...this.selectedIds, ...visibleIds]);
+
+                // Apply new merged list
+                this.selectedIds = Array.from(combined);
+            }
+
+            // Otherwise, restore previous selections
+            else {
+                this.selectedIds = [...this.previousSelectedIds];
+                this.previousSelectedIds = [];
+            }
+        },
+
+        // Determine if every visible check box is checked
+        updateAllVisibleSelected() {
+                const visibleCheckboxes = Array.from(document.querySelectorAll('input[name="selected_upload_ids"]'));
+                this.allVisibleSelected = visibleCheckboxes.length && visibleCheckboxes.every(cb => this.selectedIds.includes(cb.value));
+        },
+
+        // x-data init
+        init() {
+            // Watch every time an upload id is added or removed
+            this.$watch('selectedIds', () => {
+                // Trigger pulse effect
+                if (this.selectedCount >= 1) {
+                    this.triggerPulse();
+                }
+
+                // Force refresh of allVisibleSelected
+                this.updateAllVisibleSelected();
+            });
+
+            // Watch for HTMX swaps
+            document.addEventListener('htmx:afterSwap', () => {
+                // Force refresh of allVisibleSelected
+                this.updateAllVisibleSelected();
+            });
+
+            // Update once on first init to catch items selected when the page was rendered
+            this.updateAllVisibleSelected();
         }
     }))
 
