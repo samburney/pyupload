@@ -22,7 +22,7 @@ document.addEventListener('alpine:init', () => {
 
     // Handle selecting uploads on multi-upload pages
     Alpine.data('handleSelectedUploads', () => ({
-        allSelected: false,
+        superSelected: false,
         selectedIds: [],
         pulse: false,
 
@@ -53,7 +53,7 @@ document.addEventListener('alpine:init', () => {
         // Clear current selections
         clearSelection() {
             this.selectedIds = [];
-            this.allSelected = false;
+            this.superSelected = false;
         },
 
         // Toggle a selection by ID
@@ -68,6 +68,24 @@ document.addEventListener('alpine:init', () => {
             else {
                 this.selectedIds.push(idStr);
             }
+        },
+
+        // Handle selectAll() button; currently just calls `selectAllVisible()`
+        selectAll() {
+            this.selectAllVisible();
+        },
+
+        // Select all visible
+        selectAllVisible() {
+            // Query the DOM for all checkboxes
+            const allCheckboxes = Array.from(document.querySelectorAll('input[name="selected_upload_ids"]'));
+            const visibleIds = allCheckboxes.map(cb => cb.value);
+            
+            // Merge with selectedIds
+            const combined = new Set([...this.selectedIds, ...visibleIds]);
+
+            // Apply new merged list
+            this.selectedIds = Array.from(combined);
         }
     }))
 
