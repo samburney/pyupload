@@ -27,6 +27,7 @@ class GalleryPaginationDefaultParams(PaginationParams):
     sort_by: str = "created_at"
     sort_order: str = "desc"
     page_size: int = 24
+    writable_count: int | None = None
 
 
 @router.get('/')
@@ -41,15 +42,19 @@ async def gallery_index_get(
     # If user is logged, include their private uploads
     # TODO: Make this a user configurable option
     if current_user:
-        query = Q(private=False) | Q(user=current_user)
+        pagination_query = Q(private=False) | Q(user=current_user)
     else:
-        query = Q(private=False)
+        pagination_query = Q(private=False)
 
     # Update item pagination parameter
-    pagination.count = await Upload.filter(query).count()
+    pagination.count = await Upload.filter(pagination_query).count()
+
+    # Get count of uploads owned by the current user, if any
+    if current_user:
+        pagination.writable_count = await Upload.filter(pagination_query).filter(user_id=current_user.id).count()
 
     # Get uploads
-    uploads_models = Upload.paginate(**pagination.page_data(), query=query) \
+    uploads_models = Upload.paginate(**pagination.page_data(), query=pagination_query) \
         .prefetch_related("user", "images", "tags", "collections")
     uploads = await UploadSerializer.from_queryset(uploads_models)
 
@@ -97,7 +102,11 @@ async def gallery_random_get(
     # Update item pagination parameter
     upload_ids = await Upload.filter(pagination_query).values_list("id", flat=True)
     pagination.count = len(upload_ids)
-    
+
+    # Get count of uploads owned by the current user, if any
+    if current_user:
+        pagination.writable_count = await Upload.filter(pagination_query).filter(user_id=current_user.id).count()
+
     # Get random rows
     row_count = min(pagination.page_size, pagination.count)
     random_upload_ids = random.sample(upload_ids, row_count)

@@ -61,6 +61,7 @@ class PaginationMixin(_ModelBase):
             qs = cls.filter(query)
         else:
             qs = cls.filter(*args, **kwargs)
+
         return qs.offset(offset).limit(limit).order_by(order)
 
     @classmethod

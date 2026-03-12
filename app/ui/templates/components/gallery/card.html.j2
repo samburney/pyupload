@@ -122,6 +122,15 @@
         class="absolute top-6 left-6 bg-transparent rounded-full invisible 
             checked:bg-blue-500 checked:visible
             group-hover/card:visible"
-        x-model="selectedIds" />
+        x-model="selectedIds"
+        @change="if (superSelected) { 
+            if ($el.checked) { 
+                deselectedIds = deselectedIds.filter(id => id !== $el.value) 
+            } else { 
+                if (!deselectedIds.includes($el.value)) {
+                    deselectedIds.push($el.value) 
+                }
+            } 
+        }" />
     {% endif %}
 </div>
