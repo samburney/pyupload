@@ -25,12 +25,25 @@ document.addEventListener('alpine:init', () => {
         superSelected: false,
         allVisibleSelected: false,
         selectedIds: [],
+        deselectedIds: [],
         previousSelectedIds: [],
+        preSuperSelectedIds: [],
         pulse: false,
+        writableCount: 0,
+
+        // Get list of visible upload checkboxes
+        get visibleCheckboxes() {
+            return Array.from(document.querySelectorAll('input[name="selected_upload_ids"]'));
+        },
 
         // selectedCount Getter for immediate updates
         get selectedCount() {
-            return this.selectedIds.length;
+            if (!this.superSelected) {
+                return this.selectedIds.length;
+            }
+            else {
+                return this.writableCount - this.deselectedIds.length;
+            }
         },
 
         // Pulse the selected count when it changes to draw attention to it
@@ -44,8 +57,12 @@ document.addEventListener('alpine:init', () => {
 
         // Clear current selections
         clearSelection() {
-            this.selectedIds = [];
             this.superSelected = false;
+            this.allVisibleSelected = false;
+            this.selectedIds = [];
+            this.deselectedIds = [];
+            this.previousSelectedIds = [];
+            this.preSuperSelectedIds = [];
         },
 
         // Toggle a selection by ID
@@ -55,29 +72,48 @@ document.addEventListener('alpine:init', () => {
             // Validate ID list and remove if found
             if (this.selectedIds.includes(idStr)) {
                 this.selectedIds = this.selectedIds.filter(i => i !== idStr);
+
+                // Add to deselected ID list
+                this.deselectedIds.push(idStr);
             }
             // Otherwise, add to ID to the list
             else {
                 this.selectedIds.push(idStr);
+
+                // Remove from deselected ID list if present
+                if (this.deselectedIds.includes(idStr)) {
+                    this.deselectedIds = this.deselectedIds.filter(i => i !== idStr);
+                }
             }
+        },
+
+        // Select all checkboxes in the DOM
+        selectAllVisible(filter=[]) {
+            // Query the DOM for all checkboxes
+            const visibleIds = this.visibleCheckboxes.map(cb => cb.value);
+            const filteredVisibleIds = visibleIds.filter(id => !filter.includes(id))
+            
+            // Merge with selectedIds
+            const combined = new Set([...this.selectedIds, ...filteredVisibleIds]);
+
+            // Apply new merged list
+            this.selectedIds = Array.from(combined);
         },
 
         // Select all visible
         toggleSelectAllVisible() {
-            // Query the DOM for all checkboxes
-            const allCheckboxes = Array.from(document.querySelectorAll('input[name="selected_upload_ids"]'));
-            const visibleIds = allCheckboxes.map(cb => cb.value);
-            
             // If we haven't selected all visible, do that now
             if (!this.allVisibleSelected) {
+                const visibleIds = this.visibleCheckboxes.map(cb => cb.value);
+
                 // Save current selection
                 this.previousSelectedIds = [...this.selectedIds];
 
-                // Merge with selectedIds
-                const combined = new Set([...this.selectedIds, ...visibleIds]);
+                // Remove any visible uploads from deselectedIds array
+                this.deselectedIds = this.deselectedIds.filter(id => !visibleIds.includes(id));
 
-                // Apply new merged list
-                this.selectedIds = Array.from(combined);
+                // Select all visible uploads
+                this.selectAllVisible();
             }
 
             // Otherwise, restore previous selections
@@ -89,8 +125,24 @@ document.addEventListener('alpine:init', () => {
 
         // Determine if every visible check box is checked
         updateAllVisibleSelected() {
-                const visibleCheckboxes = Array.from(document.querySelectorAll('input[name="selected_upload_ids"]'));
-                this.allVisibleSelected = visibleCheckboxes.length && visibleCheckboxes.every(cb => this.selectedIds.includes(cb.value));
+                this.allVisibleSelected = this.visibleCheckboxes.length && this.visibleCheckboxes.every(cb => this.selectedIds.includes(cb.value));
+        },
+
+        // Enable Super Select mode (Select all possible items including non-visible)
+        enableSuperSelect() {
+            // Save current item selection
+            this.preSuperSelectedIds = [...this.selectedIds];
+
+            this.superSelected = true;
+        },
+
+        // Disable Super Select mode and restore original selections
+        disableSuperSelect () {
+            // Restore original item selection
+            this.selectedIds = [...this.preSuperSelectedIds];
+            this.deselectedIds = [];
+
+            this.superSelected = false;
         },
 
         // x-data init
@@ -108,6 +160,11 @@ document.addEventListener('alpine:init', () => {
 
             // Watch for HTMX swaps
             document.addEventListener('htmx:afterSwap', () => {
+                // If superSelect enabled, immediately select all visible
+                if (this.superSelected) {
+                    this.selectAllVisible(this.deselectedIds);
+                }
+
                 // Force refresh of allVisibleSelected
                 this.updateAllVisibleSelected();
             });
