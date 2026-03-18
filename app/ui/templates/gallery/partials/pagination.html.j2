@@ -5,8 +5,8 @@
             {% if pagination.page > 1 %}
             <a href="?page={{ pagination.page - 1 }}" aria-label="Previous page" class="page-item next-previous-page justify-items-center"
                 hx-get="?page={{ pagination.page - 1 }}"
-                hx-target="#upload-grid"
-                hx-select="#upload-grid"
+                hx-target="#gallery-grid"
+                hx-select="#gallery-grid"
                 hx-swap="outerHTML show:window:top"
                 hx-select-oob="#messages,#pagination"
                 hx-push-url="true">
@@ -32,8 +32,8 @@
         {% else %}
             <a href="?page={{ page }}" class="page-item"
                 hx-get="?page={{ page }}"
-                hx-target="#upload-grid"
-                hx-select="#upload-grid"
+                hx-target="#gallery-grid"
+                hx-select="#gallery-grid"
                 hx-swap="outerHTML show:window:top"
                 hx-select-oob="#messages,#pagination"
                 hx-push-url="true">
@@ -47,8 +47,8 @@
             {% if pagination.page < pagination.pages %}
             <a href="?page={{ pagination.page + 1 }}" aria-label="Next page" class="page-item next-previous-page justify-items-center"
                 hx-get="?page={{ pagination.page + 1 }}"
-                hx-target="#upload-grid"
-                hx-select="#upload-grid"
+                hx-target="#gallery-grid"
+                hx-select="#gallery-grid"
                 hx-swap="outerHTML show:window:top"
                 hx-select-oob="#messages,#pagination"
                 hx-push-url="true">

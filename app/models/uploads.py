@@ -249,6 +249,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     private: int
     image: ImageSerializer | None = None
     user_collections: Optional[list[CollectionSerializer]] = None
+    filtered_collections: Optional[list[CollectionSerializer]] = None
 
     @classmethod
     async def resolve_image(cls, instance: Upload, context: ContextType) -> ImageSerializer | None:
@@ -273,6 +274,17 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
         if user_collections:
             return user_collections
         return []
+    
+    @classmethod
+    async def resolve_filtered_collections(cls, instance: Upload, context: ContextType) -> Optional[list[CollectionSerializer]]:
+        """Return collections owned by user that are not already linked to upload."""
+        user = context.get("user")
+        if user is None:
+            return None
+
+        filtered_collections = await Collection.get_filtered_for_upload(instance, user)
+
+        return await asyncio.gather(*[CollectionSerializer.from_tortoise_orm(c) for c in filtered_collections])
 
     # Computed fields
     display_name: str

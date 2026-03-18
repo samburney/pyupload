@@ -1,13 +1,15 @@
 import random
 
-from typing import Annotated
-from fastapi import APIRouter, Request, Depends
+from typing import Annotated, Optional
+from fastapi import APIRouter, Request, Depends, Form
+from fastapi.responses import Response
 from tortoise.expressions import Q
 
 from app.models.common.pagination import PaginationParams
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
+from app.models.users import User
 
-from app.lib.auth import get_current_user_from_request
+from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
 
 from app.ui.common.templating import templates
 from app.ui.common.etag import (
@@ -30,7 +32,19 @@ class GalleryPaginationDefaultParams(PaginationParams):
     writable_count: int | None = None
 
 
+def default_query_filter(current_user: Optional[User] = None) -> Q:
+    # If user is logged, include their private uploads
+    # TODO: Make this a user configurable option
+    if current_user:
+        query_filter = Q(private=False) | Q(user=current_user)
+    else:
+        query_filter = Q(private=False)
+
+    return query_filter
+
+
 @router.get('/')
+@router.get('/index')
 async def gallery_index_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
@@ -38,13 +52,7 @@ async def gallery_index_get(
     """Render main gallery view"""
 
     current_user = await get_current_user_from_request(request)
-
-    # If user is logged, include their private uploads
-    # TODO: Make this a user configurable option
-    if current_user:
-        pagination_query = Q(private=False) | Q(user=current_user)
-    else:
-        pagination_query = Q(private=False)
+    pagination_query = default_query_filter(current_user)
 
     # Update item pagination parameter
     pagination.count = await Upload.filter(pagination_query).count()
@@ -55,7 +63,7 @@ async def gallery_index_get(
 
     # Get uploads
     uploads_models = Upload.paginate(**pagination.page_data(), query=pagination_query) \
-        .prefetch_related("user", "images", "tags", "collections")
+        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
     uploads = await UploadSerializer.from_queryset(uploads_models)
 
     # Template context
@@ -83,6 +91,41 @@ async def gallery_index_get(
     return response
 
 
+@router.post('/index')
+async def gallery_index_post(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    super_selected: Annotated[bool, Form()] = False,
+    selected_ids: Annotated[list[int], Form()] = [],
+    deselected_ids: Annotated[list[int], Form()] = [],
+) -> Response:
+    """Render partial page updates when selected items are updated"""
+
+    # Get Upload models for selected items
+    # If Super Select mode is enable, get all and exclude deselected items.
+    if super_selected:
+        upload_models = Upload.filter(user=current_user, id__not_in=deselected_ids) \
+            .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+    # Otherwise, only get selected items.
+    else:
+        upload_models = Upload.filter(user=current_user, id__in=selected_ids) \
+            .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+    uploads = await UploadSerializer.from_queryset(upload_models, context={"user": current_user})
+
+    # Template context
+    context = {
+        "current_user": current_user,
+        "selected_uploads": uploads,
+    }
+    response = templates.TemplateResponse(
+        request,
+        "gallery/partials/sidebar.html.j2",
+        context=context
+    )
+
+    return response
+
+
 @router.get('/random')
 async def gallery_random_get(
     request: Request,
@@ -91,13 +134,7 @@ async def gallery_random_get(
     """Render random gallery view"""        
 
     current_user = await get_current_user_from_request(request)
-
-    # If user is logged, include their private uploads
-    # TODO: Make this a user configurable option
-    if current_user:
-        pagination_query = Q(private=False) | Q(user=current_user)
-    else:
-        pagination_query = Q(private=False)
+    pagination_query = default_query_filter(current_user)
 
     # Update item pagination parameter
     upload_ids = await Upload.filter(pagination_query).values_list("id", flat=True)

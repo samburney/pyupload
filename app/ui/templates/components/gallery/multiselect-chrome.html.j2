@@ -1,0 +1,6 @@
+{% macro render_multiselect_chrome() %}
+<div x-data="handleSelectedUploads">
+    {% include "components/gallery/multiselect-control.html.j2" %}
+    {{ caller() }}
+</div>
+{% endmacro %}

@@ -1,51 +1,46 @@
-{% macro render_multiselect_control() %}
-<div x-data="handleSelectedUploads">
-    <div class="grid transition-[grid-template-rows]"
-        :class="selectedCount > 0 || superSelected ? 'grid-rows-[1fr] mb-2' : 'grid-rows-[0fr] mb-0'">
-        <div class="overflow-hidden">
-            <div id="uploads-selected-bar"
-                class="flex w-full items-center py-2 px-4 mb-2 gap-2 border border-blue-300 rounded-md shadow-md shadow-blue-100 justify-between transition-all duration-200"
-                x-cloak
-                x-transition
-                x-show="selectedCount > 0 || superSelected"
-                x-init="writableCount = {{ pagination.writable_count if pagination else 0 }};"
-                :class="pulse ? 'shadow-lg bg-blue-100' : 'shadow-md bg-white'">
-                <div class="text-lg block">
-                    <span x-text="selectedCount"></span>
-                    <span>Selected</span>
-                    <span class="hover:underline"
-                        x-show="selectedIds.length > 0 && allVisibleSelected && !superSelected"
-                        x-cloak>
-                        (<a href="#"
-                            @click="enableSuperSelect();">Select all {{ pagination.writable_count }} uploads?</a>)
-                    </span>
-                    <span class="hover:underline"
-                        x-show="superSelected"
-                        x-cloak>
-                        (<a href="#"
-                            @click="disableSuperSelect();">Undo select all</a>)
-                    </span>
-                </div>
-                <div class="flex gap-2">
-                    <button class="p-2 rounded-sm hover:fill-gray-700 hover:shadow-md hover:cursor-pointer hover:outline hover:outline-red-200"
-                        title="Deselect all"
-                        @click="clearSelection()">
-                        <svg class="size-6">
-                            <use href="#material-symbols-outlined-remove-done"></use>
-                        </svg>
-                    </button>
-                    <button class="p-2 rounded-sm hover:fill-gray-700 hover:shadow-md hover:cursor-pointer hover:outline hover:outline-blue-200"
-                        title="Select All"
-                        @click="toggleSelectAllVisible()"
-                        :class="allVisibleSelected ? 'bg-blue-300 shadow-md' : 'bg-inherit shadow-none'">
-                        <svg class="size-6">
-                            <use href="#material-symbols-outlined-done-all"></use>
-                        </svg>
-                    </button>
-                </div>
+<div class="grid transition-[grid-template-rows]"
+    :class="selectedCount > 0 || superSelected ? 'grid-rows-[1fr] mb-2' : 'grid-rows-[0fr] mb-0'">
+    <div class="overflow-hidden">
+        <div id="uploads-selected-bar"
+            class="flex w-full items-center py-2 px-4 mb-2 gap-2 border border-blue-300 rounded-md shadow-md shadow-blue-100 justify-between transition-all duration-200"
+            x-cloak
+            x-transition
+            x-show="selectedCount > 0 || superSelected"
+            x-init="writableCount = {{ pagination.writable_count if pagination else 0 }};"
+            :class="pulse ? 'shadow-lg bg-blue-100' : 'shadow-md bg-white'">
+            <div class="text-lg block">
+                <span x-text="selectedCount"></span>
+                <span>Selected</span>
+                <span class="hover:underline"
+                    x-show="selectedIds.length > 0 && allVisibleSelected && !superSelected"
+                    x-cloak>
+                    (<a href="#"
+                        @click="enableSuperSelect();">Select all {{ pagination.writable_count }} uploads?</a>)
+                </span>
+                <span class="hover:underline"
+                    x-show="superSelected"
+                    x-cloak>
+                    (<a href="#"
+                        @click="disableSuperSelect();">Undo select all</a>)
+                </span>
+            </div>
+            <div class="flex gap-2">
+                <button class="p-2 rounded-sm hover:fill-gray-700 hover:shadow-md hover:cursor-pointer hover:outline hover:outline-red-200"
+                    title="Deselect all"
+                    @click="clearSelection()">
+                    <svg class="size-6">
+                        <use href="#material-symbols-outlined-remove-done"></use>
+                    </svg>
+                </button>
+                <button class="p-2 rounded-sm hover:fill-gray-700 hover:shadow-md hover:cursor-pointer hover:outline hover:outline-blue-200"
+                    title="Select All"
+                    @click="toggleSelectAllVisible()"
+                    :class="allVisibleSelected ? 'bg-blue-300 shadow-md' : 'bg-inherit shadow-none'">
+                    <svg class="size-6">
+                        <use href="#material-symbols-outlined-done-all"></use>
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
-    {{ caller() }}
 </div>
-{% endmacro %}
