@@ -42,7 +42,7 @@ async def _render_tag_input(request: Request, current_user: User, upload_model: 
 async def _render_upload_component(request: Request, current_user: User, upload_model: Upload, template: str, context: dict | None = None, status_code=200) -> Response:
     await upload_model.fetch_relations()
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
-    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
+    filtered_collections = upload.filtered_collections
 
     # Extend default context if specified
     if context is None:
@@ -222,14 +222,11 @@ async def view_upload_page_get(
     # Serialize upload for template
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
-    # Get collections with filter applied, excluding those already linked to the upload
-    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
-
     # Template context
     context = {
         "current_user": current_user,
         "upload": upload,
-        "filtered_collections": filtered_collections,
+        "filtered_collections": upload.filtered_collections,
     }
 
     # Define placeholder image dimensions if we have client dimensions
@@ -470,9 +467,6 @@ async def upload_add_collection_post(
     await upload_model.fetch_relations()  # Refresh related models
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
-    # Get collections with filter applied, excluding those already linked to the upload
-    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
-
     # Build response
     response = templates.TemplateResponse(
         request,
@@ -480,7 +474,7 @@ async def upload_add_collection_post(
         context={
             "current_user": current_user,
             "upload": upload,
-            "filtered_collections": filtered_collections,
+            "filtered_collections": upload.filtered_collections,
         },
         status_code=201,
     )
@@ -540,9 +534,6 @@ async def update_upload_collections_patch(
     await upload_model.fetch_relations()  # Refresh related models
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
-    # Get collections with filter applied, excluding those already linked to the upload
-    filtered_collections = await Collection.get_filtered_for_upload(upload_model, current_user)
-
     # Build response
     response = templates.TemplateResponse(
         request,
@@ -550,7 +541,7 @@ async def update_upload_collections_patch(
         context={
             "current_user": current_user,
             "upload": upload,
-            "filtered_collections": filtered_collections,
+            "filtered_collections": upload.filtered_collections,
         },
         status_code=202,
     )
@@ -572,7 +563,7 @@ async def toggle_upload_private_patch(
     upload_model.private = upload_private
     await upload_model.save()
 
-    return await _render_upload_component(request, current_user, upload_model, "uploads/partials/view-sidebar.html.j2")
+    return await _render_upload_component(request, current_user, upload_model, "components/upload/sidebar.html.j2")
 
 @router.patch("/uploads/{id}/description", response_class=Response)
 async def toggle_upload_description_patch(

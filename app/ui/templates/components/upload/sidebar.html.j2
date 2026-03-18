@@ -1,0 +1,11 @@
+<div id="upload-sidebar"
+    class="flex flex-col w-full gap-2">
+    <div class="flex w-full items-center justify-center md:gap-1 lg:gap-2">
+        {% include "components/upload/download-button.html.j2" %}
+        {% if not upload.is_private %}
+        {% include "components/upload/share-button.html.j2" %}
+        {% endif %}
+    </div>
+    {% include "components/upload/details.html.j2" %}
+    {% include "components/upload/actions.html.j2" %}
+</div>

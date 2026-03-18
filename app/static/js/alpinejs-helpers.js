@@ -145,6 +145,25 @@ document.addEventListener('alpine:init', () => {
             this.superSelected = false;
         },
 
+        // Trigger HTMX swaps
+        triggerServerUpdate() {
+            let URI = window.location.pathname;
+
+            // `/` renders `/gallery/`
+            if (URI == '/') URI = '/gallery/index'
+
+            htmx.ajax('POST', URI, {
+                values: {
+                    super_selected: this.superSelected,
+                    selected_ids: this.selectedIds,
+                    deselected_ids: this.deselectedIds,
+                },
+                target: "#gallery-sidebar",
+                select: "#gallery-sidebar",
+                swap: "outerHTML"
+            });
+        },
+
         // x-data init
         init() {
             // Watch every time an upload id is added or removed
@@ -152,17 +171,24 @@ document.addEventListener('alpine:init', () => {
                 // Trigger pulse effect
                 if (this.selectedCount >= 1) {
                     this.triggerPulse();
+
+                    // Trigger server update
+                    this.triggerServerUpdate();
                 }
 
                 // Force refresh of allVisibleSelected
                 this.updateAllVisibleSelected();
+
             });
 
             // Watch for HTMX swaps
-            document.addEventListener('htmx:afterSwap', () => {
-                // If superSelect enabled, immediately select all visible
-                if (this.superSelected) {
-                    this.selectAllVisible(this.deselectedIds);
+            document.addEventListener('htmx:afterSwap', (event) => {
+                // Pagination events
+                if (event.target.id == 'gallery-grid') {
+                    // If superSelect enabled, immediately select all visible
+                    if (this.superSelected) {
+                        this.selectAllVisible(this.deselectedIds);
+                    }
                 }
 
                 // Force refresh of allVisibleSelected
