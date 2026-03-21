@@ -9,8 +9,15 @@
         {%- include("/gallery/partials/grid.html.j2") %}
         {%- include("/gallery/partials/pagination.html.j2") %}
     </div>
-    <div class="flex-none w-0 opacity-0 ml-0 overflow-hidden transition-[width] ease-in-out"
-        :class="selectedCount > 0 ? 'opacity-100 ml-2 w-40 lg:ml-4 lg:w-64' : ''">
+    <div class="flex-none w-0 opacity-0 ml-0 transition-[width,opacity,margin] ease-in-out"
+        :class="{
+            'opacity-100 ml-2 w-40 lg:ml-4 lg:w-64': selectedCount > 0,
+            'overflow-hidden': animating,
+            'overflow-visible': !animating && selectedCount > 0
+        }"
+        x-data="{ animating: false }"
+        @transitionstart="animating = true"
+        @transitionend="animating = false">
         <div class="w-40 lg:w-64">
             {%- include("/gallery/partials/sidebar.html.j2") %}
         </div>
