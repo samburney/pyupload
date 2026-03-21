@@ -1,7 +1,7 @@
 <div class="flex items-center">
     {% if upload.is_image %}
     <div class="relative" x-data="{ open: false }">
-        <div class="split-button split-button-ok md:max-lg:split-button-md">
+        <div class="split-button split-button-ok max-lg:split-button-md">
             <a class="split-button-action" href="{{ upload.download_url }}">
                 Download
             </a>

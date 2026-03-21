@@ -27,7 +27,7 @@
         <div class="relative hover:bg-gray-200 p-2">
             <ul class="peer flex flex-wrap gap-1 items-center">
                 {% for tag in upload.tags %}
-                <li class="tag-item md:max-lg:tag-item-sm" @click.stop>
+                <li class="tag-item max-lg:tag-item-sm" @click.stop>
                         <button class="tag-remove" type="button"
                                 hx-delete="/uploads/{{ upload.id }}/tag"
                                 hx-vals='{"tag_name": "{{ tag.name }}"}'

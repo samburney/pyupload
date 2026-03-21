@@ -1,9 +1,9 @@
 {% from "components/core/modal-basic.html.j2" import render_modal with context %}
 <div class="flex items-center"
     x-data="{ open: false }">
-    <button class="button md:max-h-8.5 lg:max-h-fit md:px-1.5 lg:px-2 m-0 rounded-md flex items-center"
+    <button class="button max-h-8.5 px-1.5 lg:max-h-fit lg:px-2 m-0 rounded-md flex items-center"
         @click="open = true">
-        <svg class="md:size-3.5 lg:size-5.5 fill-white" aria-hidden="true"><use href="#material-symbols-outlined-share"></use></svg>
+        <svg class="size-3.5 lg:size-5.5 fill-white" aria-hidden="true"><use href="#material-symbols-outlined-share"></use></svg>
     </button>
     {% call render_modal(title='Share upload') %}
     <p class="-mt-4">{{ upload.description }}{{ upload.dot_ext }}</p>
