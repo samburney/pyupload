@@ -4,7 +4,7 @@
              hx-patch="/uploads/{{ upload.id }}/private"
              hx-target="#upload-sidebar"
              hx-swap="outerHTML">
-      <span class="absolute inset-y-0 start-0 m-1 md:size-4 lg:size-6 rounded-full bg-white transition-[inset-inline-start] peer-checked:start-6"></span>
+      <span class="absolute inset-y-0 start-0 m-1 size-4 lg:size-6 rounded-full bg-white transition-[inset-inline-start] peer-checked:start-6"></span>
     </label>
     <span class="text-sm lg:text-base">
         {{ 'Private' if upload.is_private else 'Public' }}

@@ -4,15 +4,16 @@
 
 {%- block content %}
 {% call render_multiselect_chrome() %}
-<div class="flex flex-row gap-4">
-    <div class="w-full grow items-center justify-start"
-        :class="selectedCount > 0 ? 'md:max-w-4/5 lg:max-w-3/4 xl:max-w-full' : 'w-full'">
+<div class="flex flex-row grow">
+    <div class="grow min-w-0">
         {%- include("/gallery/partials/grid.html.j2") %}
         {%- include("/gallery/partials/pagination.html.j2") %}
     </div>
-    <div class="hidden"
-        :class="selectedCount > 0 ? 'md:flex flex-col gap-4 md:w-1/5 lg:w-1/4 xl:max-w-64' : 'hidden'">
-        {%- include("/gallery/partials/sidebar.html.j2") %}
+    <div class="flex-none w-0 opacity-0 ml-0 overflow-hidden transition-[width] ease-in-out"
+        :class="selectedCount > 0 ? 'opacity-100 ml-2 w-40 lg:ml-4 lg:w-64' : ''">
+        <div class="w-40 lg:w-64">
+            {%- include("/gallery/partials/sidebar.html.j2") %}
+        </div>
     </div>
 </div>
 {% endcall %}
