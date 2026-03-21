@@ -49,10 +49,10 @@ document.addEventListener('alpine:init', () => {
         // Pulse the selected count when it changes to draw attention to it
         triggerPulse() {
             this.pulse = true;
-            // 200ms matches a standard 'fast' CSS transition
+
             setTimeout(() => {
                 this.pulse = false;
-            }, 200);
+            }, 200);  // 200ms matches a standard 'fast' CSS transition
         },
 
         // Clear current selections
@@ -134,34 +134,22 @@ document.addEventListener('alpine:init', () => {
             this.preSuperSelectedIds = [...this.selectedIds];
 
             this.superSelected = true;
+            this.triggerServerUpdate();
         },
 
         // Disable Super Select mode and restore original selections
-        disableSuperSelect () {
-            // Restore original item selection
-            this.selectedIds = [...this.preSuperSelectedIds];
+        disableSuperSelect() {
+            this.superSelected = false;
             this.deselectedIds = [];
 
-            this.superSelected = false;
+            // Restore original item selection
+            // Also causes this.triggerServerUpdate() to be called
+            this.selectedIds = [...this.preSuperSelectedIds];
         },
 
         // Trigger HTMX swaps
         triggerServerUpdate() {
-            let URI = window.location.pathname;
-
-            // `/` renders `/gallery/`
-            if (URI == '/') URI = '/gallery/index'
-
-            htmx.ajax('POST', URI, {
-                values: {
-                    super_selected: this.superSelected,
-                    selected_ids: this.selectedIds,
-                    deselected_ids: this.deselectedIds,
-                },
-                target: "#gallery-sidebar",
-                select: "#gallery-sidebar",
-                swap: "outerHTML"
-            });
+            htmx.trigger('#sidebar-request-trigger', 'update-sidebar');
         },
 
         // x-data init
@@ -172,13 +160,17 @@ document.addEventListener('alpine:init', () => {
                 if (this.selectedCount >= 1) {
                     this.triggerPulse();
 
-                    // Trigger server update
+                    // Trigger server update, which will update sidebar content
                     this.triggerServerUpdate();
+                }
+
+                // Remove contents of sidebar
+                else {
+                    document.getElementById("gallery-sidebar").innerHTML = "";
                 }
 
                 // Force refresh of allVisibleSelected
                 this.updateAllVisibleSelected();
-
             });
 
             // Watch for HTMX swaps

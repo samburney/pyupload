@@ -1,5 +1,23 @@
 {% macro render_multiselect_chrome() %}
 <div x-data="handleSelectedUploads">
+    <div id="sidebar-request-trigger"
+        hx-post="{{ request.path if request.path != '/' else '/gallery/index' }}"
+        hx-trigger="update-sidebar from:body delay:200ms"
+        hx-target="#gallery-sidebar"
+        hx-select="#gallery-sidebar"
+        hx-swap="outerHTML"
+        hx-sync="this:replace"
+        hx-indicator="#upload-sidebar-placeholder"
+        hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+        class="hidden">
+        <input type="hidden" name="super_selected" :value="superSelected">
+        <template x-for="id in selectedIds" :key="'selected-' + id">
+            <input type="hidden" name="selected_ids" :value="id">
+        </template>
+        <template x-for="id in deselectedIds" :key="'deselected-' + id">
+            <input type="hidden" name="deselected_ids" :value="id">
+        </template>
+    </div>
     {% include "components/gallery/multiselect-control.html.j2" %}
     {{ caller() }}
 </div>
