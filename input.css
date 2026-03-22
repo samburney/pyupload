@@ -84,10 +84,13 @@
     #sidebar-loading-indicator {
         opacity: 0;
         transition: opacity 50ms ease-in-out;
+        pointer-events: none;
     }
 
     .htmx-request #sidebar-loading-indicator {
         opacity: 1;
+        pointer-events: auto;
+        cursor: wait;
     }
 
     .sidebar-loaded .htmx-request #gallery-sidebar #upload-sidebar,
