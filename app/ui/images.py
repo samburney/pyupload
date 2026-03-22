@@ -4,13 +4,13 @@ from fastapi.responses import HTMLResponse
 
 from app.lib.file_serving import validate_file_update_request
 
-from app.ui.common.security import get_current_authenticated_user
-from app.ui.common.session import flash_message
-
-from app.models.uploads import Upload
+from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 
+from app.ui.common.security import get_current_authenticated_user
+from app.ui.common.session import flash_message
 from app.ui.common.errors import error_response_for_get
+from app.ui.common.templating import templates
 from app.ui.uploads import view_upload_page_get
 
 
@@ -34,8 +34,8 @@ async def post_rotate_image(
             request=request,
         )
 
-    upload = await Upload.get_or_none(id=id).prefetch_related("user", "images")
-    if upload is None:
+    upload_model = await Upload.get_with_relations(id=id)
+    if upload_model is None:
         return await error_response_for_get(
             error_title="File Not Found",
             error_message="The requested file does not exist.",
@@ -44,16 +44,37 @@ async def post_rotate_image(
         )
 
     # Validate user access to this file
-    validate_file_update_request(upload, user=current_user)
+    validate_file_update_request(upload_model, user=current_user)
 
     # Rotate the image
-    await upload.rotate_image(angle)
-
-    # Return new instance of view page
+    await upload_model.rotate_image(angle)
     flash_message(request, f"Image rotated {angle} degrees successfully.")
-    return await view_upload_page_get(
+
+    # Serialise upload model
+    upload = await UploadSerializer.from_tortoise_orm(upload_model)
+    
+    # Return rendered template depending on the HX-Target in the Request
+    hx_target: str | None = request.headers.get('hx-target', None)
+    context = {
+        "current_user": current_user,
+        "upload": upload,
+    }
+
+    # If hx-target is a gallery card
+    if hx_target is not None and hx_target.startswith('gallery-card-'):
+        response = templates.TemplateResponse(
+            request=request,
+            name="components/gallery/card.html.j2",
+            context=context,
+        )
+        return response
+
+    # Fallback to an upload view-frame
+    response = await view_upload_page_get(
         request=request,
         id=upload.id,
         filename=upload.filename,
         current_user=current_user,
     )
+
+    return response

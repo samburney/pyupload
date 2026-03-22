@@ -4,12 +4,9 @@
 {% if selected_uploads | length == 1 %}
     {% set upload = selected_uploads | first %}
     {% set filtered_collections = upload.filtered_collections %}
-    {% include "components/upload/sidebar.html.j2" %}
+    {%- include "components/upload/sidebar.html.j2" %}
 {% else %}
-    <div id="gallery-multiselect-sidebar"
-        class="flex w-full md:gap-1 lg:gap-2 justify-center">
-        {%- include "components/gallery/download-button.html.j2" %}
-    </div>
+    {%- include "components/gallery/multiselect-sidebar.html.j2" %}
 {% endif %}
 </aside>
 {% else %}

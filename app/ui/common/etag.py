@@ -1,4 +1,6 @@
 import hashlib
+import json
+
 from fastapi import Request
 from fastapi.responses import Response
 
@@ -8,6 +10,7 @@ from app.models.common.pagination import PaginationParams
 
 def get_paginated_gallery_etag(
     *,
+    request: Request,
     uploads: list[UploadSerializer],
     pagination: PaginationParams,
     user_id: int | None,
@@ -27,9 +30,17 @@ def get_paginated_gallery_etag(
         str(pagination.count),
     ]
 
+    # Include this page's upload updated_at timestamps
     for upload in uploads:
         updated_at = upload.updated_at.isoformat() if upload.updated_at else ""
+        if upload.image is not None:
+            updated_at = max(upload.updated_at.isoformat(), upload.image.updated_at.isoformat())
         signature_parts.append(f"{upload.id}:{updated_at}")
+
+    # Include messages in request header
+    flashes = request.session.get("_flashes", [])
+    if len(flashes) > 0:
+        signature_parts.append(json.dumps(flashes))
 
     digest = hashlib.sha1("|".join(signature_parts).encode("utf-8")).hexdigest()
     return f'W/"{etag_prefix}-{digest}"'

@@ -59,8 +59,13 @@
     }
 
     /* HTMX */
+    .htmx-request .htmx-indicator,
     .htmx-indicator.htmx-request {
         display: flex !important;
+    }
+
+    .group\/card.htmx-request img {
+        opacity: 0.25;
     }
 
     /* Gallery sidebar loading styles */

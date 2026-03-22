@@ -1,0 +1,18 @@
+{% from "components/core/image-rotate-select.html.j2" import render_image_rotate_select with context  %}
+{% call render_image_rotate_select() %}
+{% for rd in (('Rotate 90° Clockwise', 90), ('Rotate 180°', 180), ('Rotate 90° Counter-clockwise', 270),) %}
+<li role="menuitem">
+    <button hx-post="/images/{{ upload.id }}/rotate/{{ rd[1] }}"
+            hx-target="#gallery-card-{{upload.id}}"
+            hx-select="#gallery-card-{{upload.id}}"
+            hx-swap="outerHTML"
+            hx-select-oob="#messages,#upload-details"
+            hx-target-4*="#messages"
+            hx-disabled-elt="#rotate-toggle-{{ upload.id }}"
+            hx-indicator="#gallery-card-{{upload.id}}"
+            class="w-full text-left cursor-pointer">
+        {{ rd[0] }}
+    </button>
+</li>
+{% endfor %}
+{% endcall %}

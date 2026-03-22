@@ -5,7 +5,7 @@ from tortoise_serializer import Serializer
 
 from app.lib.helpers import IMAGE_FORMATS, IMAGE_PROCESSING_FORMATS, IMAGE_CONVERSION_DST_FORMATS, IMAGE_SHORT_DIMENSIONS
 
-from app.models.common.base import TimestampMixin
+from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 
 
 class Image(models.Model, TimestampMixin):
@@ -35,7 +35,7 @@ class Image(models.Model, TimestampMixin):
         return False
 
 
-class ImageSerializer(Serializer):
+class ImageSerializer(Serializer, SerializerTimestampMixin):
     """Serializer for the Image model."""
 
     # Model fields

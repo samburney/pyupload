@@ -1,3 +1,4 @@
+{% macro render_image_rotate_select() %}
 <div class="relative input w-full" x-data="{ open: false }">
     <div class="w-full min-w-0">
         <div class="split-button split-button-neutral max-lg:split-button-md w-full max-w-full">
@@ -17,21 +18,8 @@
             x-cloak
             @click="open = false"
             @click.outside="open = false">
-            {% for rd in (('Rotate 90° Clockwise', 90), ('Rotate 180°', 180), ('Rotate 90° Counter-clockwise', 270),) %}
-            <li role="menuitem">
-                <button hx-post="/images/{{ upload.id }}/rotate/{{ rd[1] }}"
-                        hx-target="#view-frame-image"
-                        hx-select="#view-frame-image"
-                        hx-swap="outerHTML"
-                        hx-select-oob="#messages,#upload-details"
-                        hx-target-4*="#messages"
-                        hx-disabled-elt="#rotate-toggle-{{ upload.id }}"
-                        hx-indicator="#loading-indicator"
-                        class="w-full text-left cursor-pointer">
-                    {{ rd[0] }}
-                </button>
-            </li>
-            {% endfor %}
+            {{ caller() }}
         </ul>
     </div>
 </div>
+{% endmacro %}
