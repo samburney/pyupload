@@ -18,8 +18,8 @@
             'sidebar-not-loaded': !sidebarLoaded
         }"
         x-data="{ animating: false }"
-        @transitionstart="animating = true"
-        @transitionend="animating = false">
+        @transitionstart.self="animating = true"
+        @transitionend.self="animating = false">
         <div id="sidebar-content"
             class="relative flex w-40 lg:w-64">
             {%- include("/components/upload/sidebar-placeholder.html.j2") %}
