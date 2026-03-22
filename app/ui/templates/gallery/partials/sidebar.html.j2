@@ -1,12 +1,13 @@
 {% if selected_uploads and selected_uploads | length > 0 %}
 <aside id="gallery-sidebar"
-    class="sidebar-not-loaded flex flex-col w-full items-center md:gap-1 lg:gap-2">
+    class="sidebar-not-loaded flex w-full">
 {% if selected_uploads | length == 1 %}
     {% set upload = selected_uploads | first %}
     {% set filtered_collections = upload.filtered_collections %}
     {% include "components/upload/sidebar.html.j2" %}
 {% else %}
-    <div id="gallery-multiselect-sidebar">
+    <div id="gallery-multiselect-sidebar"
+        class="flex w-full md:gap-1 lg:gap-2 justify-center">
         {%- include "components/gallery/download-button.html.j2" %}
     </div>
 {% endif %}
