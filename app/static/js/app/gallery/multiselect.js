@@ -37,15 +37,25 @@ document.addEventListener('alpine:init', () => {
             }, 200);  // 200ms matches a standard 'fast' CSS transition
         },
 
-        // Clear current selections
-        clearSelection() {
+        // Reset everything to defaults when nothing is selected
+        resetSelection() {
+            // Reset state to defaults
             this.superSelected = false;
             this.allVisibleSelected = false;
-            this.selectedIds = [];
             this.deselectedIds = [];
             this.previousSelectedIds = [];
             this.preSuperSelectedIds = [];
             this.sidebarLoaded = false;
+
+            // Reset sidebar element to defaults
+            htmx.find("#gallery-sidebar").innerHTML = "";
+            htmx.find("#gallery-sidebar").classList.add('sidebar-not-loaded');
+        },
+
+        // Clear current selections
+        clearSelection() {
+            this.selectedIds = [];
+            this.resetSelection();
         },
 
         // Toggle a selection by ID
@@ -149,8 +159,7 @@ document.addEventListener('alpine:init', () => {
 
                 // Remove contents of sidebar
                 else {
-                    document.getElementById("gallery-sidebar").innerHTML = "";
-                    this.sidebarLoaded = false;
+                    this.resetSelection();
                 }
 
                 // Force refresh of allVisibleSelected
