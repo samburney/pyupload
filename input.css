@@ -78,7 +78,31 @@
     }
 
     #gallery-sidebar.sidebar-not-loaded {
-        animation: fadeIn 300ms ease-in-out;
+        animation: fadeIn 150ms ease-in-out;
+    }
+
+    #sidebar-loading-indicator {
+        opacity: 0;
+        transition: opacity 50ms ease-in-out;
+    }
+
+    .htmx-request #sidebar-loading-indicator {
+        opacity: 1;
+    }
+
+    .sidebar-loaded .htmx-request #gallery-sidebar #upload-sidebar,
+    .sidebar-loaded .htmx-request #gallery-sidebar #gallery-multiselect-sidebar {
+        opacity: 0.25;
+    }
+
+    .sidebar-loaded #gallery-sidebar #upload-sidebar,
+    .sidebar-loaded #gallery-sidebar #gallery-multiselect-sidebar {
+        transition: opacity 150ms ease-in-out;
+    }
+
+    .sidebar-loaded #gallery-sidebar.htmx-swapping #upload-sidebar,
+    .sidebar-loaded #gallery-sidebar.htmx-added #upload-sidebar{
+        opacity: 0;
     }
 }
 

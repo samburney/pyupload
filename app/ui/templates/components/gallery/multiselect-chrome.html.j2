@@ -5,9 +5,9 @@
         hx-trigger="update-sidebar from:body delay:200ms"
         hx-target="#gallery-sidebar"
         hx-select="#gallery-sidebar"
-        hx-swap="outerHTML"
+        hx-swap="outerHTML swap:150ms settle:150ms"
         hx-sync="this:replace"
-        hx-indicator="#upload-sidebar-placeholder"
+        hx-indicator="#sidebar-content"
         hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
         class="hidden">
         <input type="hidden" name="super_selected" :value="superSelected">
