@@ -13,17 +13,15 @@
         :class="{
             'opacity-100 ml-2 w-40 lg:ml-4 lg:w-64': selectedCount > 0,
             'overflow-hidden': animating,
-            'overflow-visible': !animating && selectedCount > 0
+            'overflow-visible': !animating && selectedCount > 0,
+            'sidebar-loaded': sidebarLoaded,
+            'sidebar-not-loaded': !sidebarLoaded
         }"
         x-data="{ animating: false }"
         @transitionstart="animating = true"
         @transitionend="animating = false">
         <div id="sidebar-content"
-            class="relative w-40 lg:w-64"
-            :class="{
-                'is-single-select': selectedCount <= 1,
-                'is-multi-select': selectedCount > 1
-            }">
+            class="relative w-40 lg:w-64">
             {%- include("/components/upload/sidebar-placeholder.html.j2") %}
             <div class="absolute top-0 left-0">
                 {%- include("/gallery/partials/sidebar.html.j2") %}

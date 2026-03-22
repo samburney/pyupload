@@ -1,5 +1,6 @@
 <div id="upload-sidebar-placeholder"
-    class="htmx-indicator flex flex-col gap-4">
+    class="flex flex-col gap-4"
+    :class="{ 'htmx-indicator': !sidebarLoaded }">
     <div class="flex flex-row justify-center gap-2">
         <div class="h-10 w-35 bg-green-200 animate-pulse rounded-lg"></div>
         <div class="h-10 w-10 bg-blue-200 animate-pulse rounded-lg"></div>
