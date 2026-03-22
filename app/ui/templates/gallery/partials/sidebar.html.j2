@@ -1,5 +1,6 @@
 {% if selected_uploads and selected_uploads | length > 0 %}
-<aside id="gallery-sidebar" class="flex flex-col w-full items-center md:gap-1 lg:gap-2">
+<aside id="gallery-sidebar"
+    class="sidebar-not-loaded flex flex-col w-full items-center md:gap-1 lg:gap-2">
 {% if selected_uploads | length == 1 %}
     {% set upload = selected_uploads | first %}
     {% set filtered_collections = upload.filtered_collections %}
@@ -11,5 +12,5 @@
 {% endif %}
 </aside>
 {% else %}
-<aside id="gallery-sidebar"></aside>
+<aside id="gallery-sidebar" class="sidebar-not-loaded"></aside>
 {% endif %}
