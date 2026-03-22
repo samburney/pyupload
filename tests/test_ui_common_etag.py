@@ -1,5 +1,6 @@
 """Tests for ETag and cache header utilities."""
 import pytest
+from unittest.mock import Mock
 from fastapi import Request
 from fastapi.testclient import TestClient
 from fastapi.responses import Response
@@ -13,15 +14,23 @@ from app.ui.common.etag import (
 )
 
 
+@pytest.fixture
+def mock_request():
+    request = Mock(spec=Request)
+    request.session = {}
+    return request
+
+
 class TestGetPaginatedGalleryEtag:
     """Tests for get_paginated_gallery_etag function."""
 
-    def test_returns_weak_etag_string(self):
+    def test_returns_weak_etag_string(self, mock_request):
         """ETag should be a weak ETag formatted string."""
         uploads = []
         pagination = PaginationParams(page=1, page_size=24, count=0)
 
         etag = get_paginated_gallery_etag(
+            request=mock_request,
             uploads=uploads,
             pagination=pagination,
             user_id=None,
@@ -31,12 +40,13 @@ class TestGetPaginatedGalleryEtag:
         assert etag.startswith('W/"')
         assert etag.endswith('"')
 
-    def test_etag_includes_prefix(self):
+    def test_etag_includes_prefix(self, mock_request):
         """ETag should include the specified prefix."""
         uploads = []
         pagination = PaginationParams(page=1, page_size=24, count=0)
 
         etag = get_paginated_gallery_etag(
+            request=mock_request,
             uploads=uploads,
             pagination=pagination,
             user_id=None,
@@ -45,12 +55,13 @@ class TestGetPaginatedGalleryEtag:
 
         assert 'gallery-' in etag
 
-    def test_etag_custom_prefix(self):
+    def test_etag_custom_prefix(self, mock_request):
         """ETag should use custom prefix if provided."""
         uploads = []
         pagination = PaginationParams(page=1, page_size=24, count=0)
 
         etag = get_paginated_gallery_etag(
+            request=mock_request,
             uploads=uploads,
             pagination=pagination,
             user_id=None,
@@ -59,30 +70,32 @@ class TestGetPaginatedGalleryEtag:
 
         assert 'custom-' in etag
 
-    def test_etag_changes_with_user(self):
+    def test_etag_changes_with_user(self, mock_request):
         """ETag should change when user context changes."""
         uploads = []
         pagination = PaginationParams(page=1, page_size=24, count=0)
 
         etag_user1 = get_paginated_gallery_etag(
-            uploads=uploads, pagination=pagination, user_id=1
+            request=mock_request, uploads=uploads, pagination=pagination, user_id=1
         )
         etag_user2 = get_paginated_gallery_etag(
-            uploads=uploads, pagination=pagination, user_id=2
+            request=mock_request, uploads=uploads, pagination=pagination, user_id=2
         )
 
         assert etag_user1 != etag_user2
 
-    def test_etag_changes_with_pagination(self):
+    def test_etag_changes_with_pagination(self, mock_request):
         """ETag should change when pagination changes."""
         uploads = []
 
         etag_page1 = get_paginated_gallery_etag(
+            request=mock_request,
             uploads=uploads,
             pagination=PaginationParams(page=1, page_size=24, count=100),
             user_id=None,
         )
         etag_page2 = get_paginated_gallery_etag(
+            request=mock_request,
             uploads=uploads,
             pagination=PaginationParams(page=2, page_size=24, count=100),
             user_id=None,
@@ -90,39 +103,53 @@ class TestGetPaginatedGalleryEtag:
 
         assert etag_page1 != etag_page2
 
-    def test_etag_stable_same_inputs(self):
+    def test_etag_stable_same_inputs(self, mock_request):
         """ETag should be stable for identical inputs."""
         uploads = []
         pagination = PaginationParams(page=1, page_size=24, count=0)
 
         etag1 = get_paginated_gallery_etag(
-            uploads=uploads, pagination=pagination, user_id=None
+            request=mock_request, uploads=uploads, pagination=pagination, user_id=None
         )
         etag2 = get_paginated_gallery_etag(
-            uploads=uploads, pagination=pagination, user_id=None
+            request=mock_request, uploads=uploads, pagination=pagination, user_id=None
         )
 
         assert etag1 == etag2
 
-    def test_etag_includes_upload_ids(self):
+    def test_etag_includes_upload_ids(self, mock_request):
         """ETag should include upload IDs in signature."""
-        from unittest.mock import Mock
-
         pagination = PaginationParams(page=1, page_size=24, count=2)
 
-        # Create mock uploads with id and updated_at
         upload1 = Mock()
         upload1.id = 1
         upload1.updated_at = None
+        upload1.image = None
 
         etag_with_upload = get_paginated_gallery_etag(
-            uploads=[upload1], pagination=pagination, user_id=None
+            request=mock_request, uploads=[upload1], pagination=pagination, user_id=None
         )
         etag_without_upload = get_paginated_gallery_etag(
-            uploads=[], pagination=pagination, user_id=None
+            request=mock_request, uploads=[], pagination=pagination, user_id=None
         )
 
         assert etag_with_upload != etag_without_upload
+
+    def test_etag_changes_with_flashes(self, mock_request):
+        """ETag should change when session flash messages are present."""
+        uploads = []
+        pagination = PaginationParams(page=1, page_size=24, count=0)
+
+        etag_no_flashes = get_paginated_gallery_etag(
+            request=mock_request, uploads=uploads, pagination=pagination, user_id=None
+        )
+
+        mock_request.session["_flashes"] = [["info", "Something happened"]]
+        etag_with_flashes = get_paginated_gallery_etag(
+            request=mock_request, uploads=uploads, pagination=pagination, user_id=None
+        )
+
+        assert etag_no_flashes != etag_with_flashes
 
 
 class TestGetCacheHeaders:
@@ -169,7 +196,6 @@ class TestCheckEtagAndReturn304IfMatch:
 
     def test_returns_none_without_if_none_match_header(self):
         """Should return None if If-None-Match header is not present."""
-        # Create a mock request without If-None-Match header
         from fastapi import FastAPI
         from httpx import AsyncClient
 

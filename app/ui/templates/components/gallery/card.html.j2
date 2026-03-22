@@ -1,4 +1,9 @@
-<div class="relative group/card rounded-lg p-3 mb-4 border border-gray-100 shadow-sm shadow-gray-300
+{% if request.headers.get('hx-target', None) and request.headers.get('hx-target').startswith('gallery-card-') %}
+{% include "components/core/messages.html.j2" %}
+{% include "components/upload/details.html.j2" %}
+{% endif %}
+<div id="gallery-card-{{ upload.id }}"
+    class="relative group/card rounded-lg p-3 mb-4 border border-gray-100 shadow-sm shadow-gray-300
             h-min break-inside-avoid-column flex-col justify-center transition-all
             duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101
             has-checked:outline-3 has-checked:outline-blue-500"
@@ -7,16 +12,21 @@
             $event.stopPropagation();
             toggleSelected($el.querySelector('input[type=checkbox]').value);
         }">
-    {% if upload.image %}
+    {%- if upload.image %}
     {%- set ar_decimal = (upload.image.width / upload.image.height) | round(3) %}
     {%- set thumb_max_width = 640 %}
     {%- set thumb_max_height = (thumb_max_width / ar_decimal) | round(0, 'ceil') | int %}
-    <a href="{{ upload.view_url }}" hx-get="{{ upload.view_url }}" hx-select=".modal-image" hx-target="body"
-        hx-swap="beforeend" hx-select-oob="#messages" hx-target-4*="#messages"
+    <a href="{{ upload.view_url }}"
+        aria-label="{{ upload.image.width }}x{{ upload.image.height }} Open upload {{ upload.display_name }}"
+        hx-get="{{ upload.view_url }}"
+        hx-select=".modal-image"
+        hx-target="body"
+        hx-swap="beforeend"
+        hx-select-oob="#messages"
+        hx-target-4*="#messages"
         hx-vals="js:{modal_width: calculateMaxImageSize({{ upload.image.width }}, {{ upload.image.height }}).width}"
         x-data="{ loaded: false }"
-        x-init="loaded = $el.querySelector('img')?.complete || false" class="relative"
-        aria-label="{{ upload.image.width }}x{{ upload.image.height }} Open upload {{ upload.display_name }}">
+        x-init="loaded = $el.querySelector('img')?.complete || false" class="relative">
         <div class="space-y-8 animate-pulse md:space-y-0 md:space-x-8 rtl:space-x-reverse md:flex md:items-center text-gray-500"
             x-show="!loaded">
             <div class="flex items-center justify-center w-full bg-neutral-quaternary rounded-base bg-gray-200 rounded-md"
@@ -27,13 +37,17 @@
             </div>
         </div>
         <img class="h-min w-full rounded-md transition-normal duration-150 hover:brightness-80"
-             alt="{{ upload.display_name }}"
-             src="{{ upload.autoresize_url(thumb_max_width) }}"
-             x-show="loaded"
-             x-transition.opacity.duration.150ms
-             x-cloak
-             @load="loaded = true">
-        {% if upload.image %}
+            alt="{{ upload.display_name }}"
+            src="{{ upload.autoresize_url(thumb_max_width) }}?t={{ upload.updated_at.timestamp() | int }}"
+            x-show="loaded"
+            x-transition.opacity.duration.150ms
+            x-cloak
+            @load="loaded = true">
+        <div class="absolute hidden top-0 left-0 w-full h-full items-center justify-center htmx-indicator">
+            <svg class="size-12 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+                <use href="#icon-loading-spinner"></use>
+            </svg>
+        </div>
         <div class="absolute bottom-0 right-0 flex flex-row w-full">
             <div
                 class="flex flex-row grow gap-2 mb-2 items-center text-gray-100 bg-linear-to-r from-black/0 from-60% to-black/30 pr-2 py-0.5">
@@ -47,7 +61,6 @@
                 </div>
             </div>
         </div>
-        {% endif %}
     </a>
     {% else %}
     <a class="block border border-dashed text-gray-600 hover:text-gray-400 border-gray-600 hover:border-gray-400 rounded-md object-cover w-16 h-16 mx-auto"

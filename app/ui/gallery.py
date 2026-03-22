@@ -74,6 +74,7 @@ async def gallery_index_get(
     }
 
     etag = get_paginated_gallery_etag(
+        request=request,
         uploads=uploads,
         pagination=pagination,
         user_id=current_user.id if current_user else None,
