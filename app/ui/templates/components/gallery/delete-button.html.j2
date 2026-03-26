@@ -1,0 +1,28 @@
+{% from "components/core/modal-dialog.html.j2" import render_dialog %}
+<div x-data="{ open: false }"
+    class="w-full">
+    <button @click="open = true"
+            type="button"
+            class="px-4 py-2 w-full button button-neutral max-lg:button-md border-red-100 hover:text-red-600 hover:bg-red-200 hover:border-red-500">
+        Delete
+    </button>
+    {% call render_dialog(title="Confirm delete", content="Are you sure you wish to permanently delete the selected upload(s)?", id="upload-delete-modal") %}
+    <button id="upload-delete-button" type="button"
+        class="button button-alert"
+        @close-modal="open = false; clearSelection();"
+        hx-trigger="click"
+        hx-delete="{{ request.url_for('gallery_selected_delete') }}"
+        hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+        hx-target="#gallery-grid"
+        hx-swap="outerHTML"
+        hx-select="#gallery-grid,#messages"
+        hx-target-4*="#messages">
+        Delete
+    </button>
+    <button @click="open = false"
+            type="button"
+            class="button button-outline">
+        Cancel
+    </button>
+    {% endcall %}
+</div>

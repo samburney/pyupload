@@ -327,7 +327,7 @@ async def delete_upload_delete(
     await upload.delete()
 
     # Redirect to homepage with success message
-    flash_message(request, "File deleted successfully.")
+    flash_message(request, "Upload deleted successfully.")
     return Response(status_code=204, headers={"HX-Redirect": "/profile"})
 
 
