@@ -19,7 +19,11 @@
                     {%- include "components/upload/image-rotate-select.html.j2" %}
                 {%- endif %}
             {%- endif %}
-            {%- include "components/upload/delete-button.html.j2" %}
+            {%- if request.url.path == '/' or request.url.path.startswith('/gallery') %}
+                {%- include "components/gallery/delete-button.html.j2" %}
+            {%- else %}
+                {%- include "components/upload/delete-button.html.j2" %}
+            {%- endif %}
             {%- include "components/upload/private-toggle.html.j2" %}
         </div>
     {%- endif %}

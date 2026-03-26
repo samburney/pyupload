@@ -24,6 +24,7 @@
         },
     }"
     x-init="updateMessageCounts();"
+    hx-swap-oob="outerHTML:#messages"
     >
     {%- if info_messages is defined and info_messages | length > 0 %}
     <ul

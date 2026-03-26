@@ -1,16 +1,21 @@
 import random
+import json
 
 from typing import Annotated, Optional
-from fastapi import APIRouter, Request, Depends, Form
+from fastapi import APIRouter, Request, Depends, Form, Query
 from fastapi.responses import Response
+from fastapi.exceptions import HTTPException
 from tortoise.expressions import Q
+from tortoise.queryset import QuerySet
 
 from app.models.common.pagination import PaginationParams
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
 
+from app.lib.config import logger
 from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
 
+from app.ui.common.session import flash_message
 from app.ui.common.templating import templates
 from app.ui.common.etag import (
     get_paginated_gallery_etag,
@@ -32,7 +37,7 @@ class GalleryPaginationDefaultParams(PaginationParams):
     writable_count: int | None = None
 
 
-def default_query_filter(current_user: Optional[User] = None) -> Q:
+def _default_query_filter(current_user: Optional[User] = None) -> Q:
     # If user is logged, include their private uploads
     # TODO: Make this a user configurable option
     if current_user:
@@ -41,6 +46,30 @@ def default_query_filter(current_user: Optional[User] = None) -> Q:
         query_filter = Q(private=False)
 
     return query_filter
+
+
+def _build_writable_upload_queryset(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> QuerySet[Upload]:
+    """Build a queryset for uploads owned by current_user, respecting super-select mode"""
+
+    if super_selected:
+        return Upload.filter(user=current_user, id__not_in=deselected_ids)
+    else:
+        return Upload.filter(user=current_user, id__in=selected_ids)
+
+
+async def _get_writable_selected_uploads(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[UploadSerializer]:
+    """Get serialized selected uploads owned by current_user"""
+
+    queryset = _build_writable_upload_queryset(current_user, selected_ids, super_selected, deselected_ids) \
+        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+
+    return await UploadSerializer.from_queryset(queryset, context={"user": current_user})
+
+
+async def _get_writable_selected_upload_models(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[Upload]:
+    """Get raw Upload model instances for selected uploads owned by current_user"""
+
+    return await _build_writable_upload_queryset(current_user, selected_ids, super_selected, deselected_ids)
 
 
 @router.get('/')
@@ -52,7 +81,7 @@ async def gallery_index_get(
     """Render main gallery view"""
 
     current_user = await get_current_user_from_request(request)
-    pagination_query = default_query_filter(current_user)
+    pagination_query = _default_query_filter(current_user)
 
     # Update item pagination parameter
     pagination.count = await Upload.filter(pagination_query).count()
@@ -92,8 +121,8 @@ async def gallery_index_get(
     return response
 
 
-@router.post('/index')
-async def gallery_index_post(
+@router.post('')
+async def gallery_handle_selected_upload_post(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     super_selected: Annotated[bool, Form()] = False,
@@ -102,27 +131,79 @@ async def gallery_index_post(
 ) -> Response:
     """Render partial page updates when selected items are updated"""
 
-    # Get Upload models for selected items
-    # If Super Select mode is enable, get all and exclude deselected items.
-    if super_selected:
-        upload_models = Upload.filter(user=current_user, id__not_in=deselected_ids) \
-            .prefetch_related(*UPLOAD_PREFETCH_MODELS)
-    # Otherwise, only get selected items.
-    else:
-        upload_models = Upload.filter(user=current_user, id__in=selected_ids) \
-            .prefetch_related(*UPLOAD_PREFETCH_MODELS)
-    uploads = await UploadSerializer.from_queryset(upload_models, context={"user": current_user})
+    # Get selected uploads
+    selected_uploads: list[UploadSerializer] = await _get_writable_selected_uploads(current_user, selected_ids, super_selected, deselected_ids)
 
     # Template context
     context = {
         "current_user": current_user,
-        "selected_uploads": uploads,
+        "selected_uploads": selected_uploads,
     }
     response = templates.TemplateResponse(
         request,
         "gallery/partials/sidebar.html.j2",
         context=context
     )
+
+    return response
+
+
+@router.delete('')
+async def gallery_selected_delete(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    super_selected: Annotated[bool, Query()] = False,
+    selected_ids: Annotated[list[int], Query()] = [],
+    deselected_ids: Annotated[list[int], Query()] = [],
+    ) -> Response:
+    """Delete selected items and redirect back to requesting page"""
+
+    # If this isn't a HTMX request, bail out now
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+
+    # Filter selected uploads to only those writable by the current_user
+    upload_models: list[Upload] = await _get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
+    if not upload_models:
+        flash_message(request, "You do not have permission to delete any of the selected uploads.", "error")
+        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
+
+    # Delete the selected uploads (use model instances to trigger custom delete with filesystem cleanup)
+    deleted_count = 0
+    try:
+        for upload_model in upload_models:
+            await upload_model.delete()
+            deleted_count += 1
+    except Exception as e:
+        logger.exception("Failed to delete uploads: %s", e)
+        flash_message(request, f"Deleted {deleted_count} of {len(upload_models)} upload{'s' if deleted_count != 1 else ''} before an error occurred. Please try again.", "error")
+        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=500)
+
+    # Determine redirect URL
+    redirect_url = request.headers.get('referer', None)
+    if not redirect_url:
+        redirect_url = request.url_for('index_get')
+
+    hx_location_dict: dict = {
+        "source": request.headers.get('hx-trigger'),
+        "path": redirect_url,
+        "target": "#gallery-grid",
+        "select": "#gallery-grid > *, #messages",
+    }
+    hx_location = json.dumps(hx_location_dict)
+
+    hx_trigger_dict = {
+        "close-modal": {"target": "#upload-delete-button"},
+    }
+    hx_trigger = json.dumps(hx_trigger_dict)
+
+    headers = {
+        "HX-Location": str(hx_location),
+        "HX-Trigger": str(hx_trigger)
+    }
+
+    flash_message(request, f"{deleted_count} upload{'s' if deleted_count != 1 else ''} deleted successfully.")
+    response = Response(status_code=204, headers=headers)
 
     return response
 
@@ -135,7 +216,7 @@ async def gallery_random_get(
     """Render random gallery view"""        
 
     current_user = await get_current_user_from_request(request)
-    pagination_query = default_query_filter(current_user)
+    pagination_query = _default_query_filter(current_user)
 
     # Update item pagination parameter
     upload_ids = await Upload.filter(pagination_query).values_list("id", flat=True)
