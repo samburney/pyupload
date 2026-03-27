@@ -11,7 +11,7 @@
         class="button button-alert"
         @close-modal="open = false; clearSelection();"
         hx-trigger="click"
-        hx-delete="{{ request.url_for('gallery_selected_delete') }}"
+        hx-post="{{ request.url_for('gallery_delete_selected_post') }}"
         hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
         hx-target="#gallery-grid"
         hx-swap="outerHTML"

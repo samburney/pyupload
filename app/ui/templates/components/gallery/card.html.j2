@@ -7,6 +7,7 @@
             h-min break-inside-avoid-column flex-col justify-center transition-all
             duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101
             has-checked:outline-3 has-checked:outline-blue-500"
+    @click.self="toggleSelected($el.querySelector('input[type=checkbox]').value);"
     @click.capture="if (selectedCount > 0 && !$event.target.closest('input[type=checkbox]')) {
             $event.preventDefault();
             $event.stopPropagation();
