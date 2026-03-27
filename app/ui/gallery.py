@@ -2,7 +2,7 @@ import random
 import json
 
 from typing import Annotated, Optional
-from fastapi import APIRouter, Request, Depends, Form, Query
+from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
 from tortoise.expressions import Q
@@ -148,15 +148,20 @@ async def gallery_handle_selected_upload_post(
     return response
 
 
-@router.delete('')
-async def gallery_selected_delete(
+@router.post('/delete')
+async def gallery_delete_selected_post(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    super_selected: Annotated[bool, Query()] = False,
-    selected_ids: Annotated[list[int], Query()] = [],
-    deselected_ids: Annotated[list[int], Query()] = [],
+    super_selected: Annotated[bool, Form()] = False,
+    selected_ids: Annotated[list[int], Form()] = [],
+    deselected_ids: Annotated[list[int], Form()] = [],
     ) -> Response:
-    """Delete selected items and redirect back to requesting page"""
+    """
+    Delete selected items and redirect back to requesting page
+    
+    We're using POST instead of DELETE to ensure we don't run out
+    query_string space with a large number of selections.
+    """
 
     # If this isn't a HTMX request, bail out now
     if not request.headers.get('hx-request', False):
