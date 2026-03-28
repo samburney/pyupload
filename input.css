@@ -196,7 +196,7 @@
     @apply flex divide-x items-stretch shadow-md rounded-md max-h-fit transition-colors;
 
     & > .split-button-action {
-        @apply px-4 py-2 rounded-l-md transition-colors;
+        @apply px-4 py-2 rounded-l-md transition-colors cursor-pointer;
     }
 
     & > .split-button-toggle {
@@ -241,6 +241,23 @@
 
     & > .split-button-toggle {
         @apply hover:bg-green-400;
+
+        /* Bolder chevrons on dark/ghost variants to maintain visibility */
+        & svg {
+            stroke-width: 2.5;
+        }
+    }
+}
+
+@utility split-button-alert {
+    @apply divide-red-400 bg-red-500 text-white outline-1 outline-red-500;
+
+    & > .split-button-action {
+        @apply hover:bg-red-400 text-white;
+    }
+
+    & > .split-button-toggle {
+        @apply hover:bg-red-400;
 
         /* Bolder chevrons on dark/ghost variants to maintain visibility */
         & svg {

@@ -183,9 +183,9 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
 
         return None
 
-    async def delete(self):
+    async def delete(self, using_db = None) -> None:
         """Delete the file from disk and its related database record."""
-        await super().delete()
+        await super().delete(using_db=using_db)
         await asyncio.to_thread(delete_file, self.filepath)
 
     def is_owner(self, user: User) -> bool:

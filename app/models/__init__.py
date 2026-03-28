@@ -9,6 +9,7 @@ config = get_app_config()
 
 MODEL_MODULES = [
     "app.models.collections",
+    "app.models.download_archives",
     "app.models.images",
     "app.models.refresh_tokens",
     "app.models.tags",

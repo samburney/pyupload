@@ -13,6 +13,18 @@ ENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(dotenv_path=ENV_PATH)
 
 
+def _resolve_storage_dir(env_var: str, default: str) -> Path:
+    """Resolve a storage directory path from an env var, creating it if it does not exist."""
+    path_str = os.getenv(env_var, default)
+    path = Path(path_str).resolve() if path_str.startswith("/") else (PROJECT_ROOT / path_str).resolve()
+    if not path.exists():
+        logging.getLogger(__name__).info(f"Creating storage directory at {path}")
+        path.mkdir(parents=True, exist_ok=True)
+    if not path.is_dir():
+        raise ValueError(f"{env_var} path '{path}' is not a directory.")
+    return path
+
+
 class AppConfig:
     """Application configuration loader."""
 
@@ -33,22 +45,18 @@ class AppConfig:
     app_site_name: str = os.getenv("APP_SITE_NAME", "Simple Upload")
 
     # File storage configuration
-    storage_path_str: str = os.getenv("STORAGE_PATH", "./data/files")
-    if storage_path_str.startswith("/"):
-        storage_path: Path = Path(storage_path_str).resolve()
-    else:
-        storage_path: Path = (PROJECT_ROOT / storage_path_str).resolve()
-    if not storage_path.exists():
-        logger.info(f"Creating storage directory at {storage_path}")
-        storage_path.mkdir(parents=True, exist_ok=True)
-    if not storage_path.is_dir():
-        raise ValueError(f"STORAGE_PATH {storage_path} is not a directory.")
-    
+    storage_path: Path = _resolve_storage_dir("STORAGE_PATH", "./data/files")
     storage_cache_retention_days: int = int(os.getenv("STORAGE_CACHE_RETENTION_DAYS", "30"))
-    
     storage_orphaned_max_age_hours: int = int(os.getenv("STORAGE_ORPHANED_MAX_AGE_HOURS", "24"))
     if storage_orphaned_max_age_hours < 0:
         raise ValueError("STORAGE_ORPHANED_MAX_AGE_HOURS must be a non-negative integer.")
+
+    # Archive configuration
+    archive_storage_path: Path = _resolve_storage_dir("ARCHIVE_STORAGE_PATH", str(storage_path / "archives"))
+    archive_max_age_hours: int = int(os.getenv("ARCHIVE_MAX_AGE_HOURS", "24"))
+    if archive_max_age_hours <= 0:
+        raise ValueError("ARCHIVE_MAX_AGE_HOURS must be a positive integer.")
+    archive_zstd_level: int = int(os.getenv("ARCHIVE_ZSTD_LEVEL", "3"))
 
     # Database configuration
     db_host = os.getenv("DB_HOST", "db")

@@ -132,11 +132,14 @@ def split_filename(filename: str) -> tuple[str, str]:
 def clean_text(text: str, replacement_char: str = '-') -> str:
     """Clean a text string by removing unsafe characters and normalizing whitespace."""
 
-    # Remove all characters except alphanumerics, and underscores
-    clean_text = re.sub(rf'[^{replacement_char}a-z0-9]', replacement_char, text.lower())
+    escaped = re.escape(replacement_char)
 
-    # Trim and remove duplicate underscores
-    clean_text = re.sub(rf'{replacement_char}{replacement_char}+', replacement_char, clean_text).strip(replacement_char)
+    # Remove all characters except alphanumerics and the replacement char
+    clean_text = re.sub(rf'[^{escaped}a-z0-9]', replacement_char, text.lower())
+
+    # Collapse consecutive replacement chars and trim from edges
+    if replacement_char:
+        clean_text = re.sub(rf'{escaped}{{2,}}', replacement_char, clean_text).strip(replacement_char)
 
     return clean_text
 

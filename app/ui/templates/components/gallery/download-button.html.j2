@@ -1,13 +1,21 @@
-<div class="flex items-center">
+{%- if request.headers.get('hx-request', None) and request.headers.get('hx-target', None) and request.session.get('_flashes', None) %}
+{%- include "components/core/messages.html.j2" %}
+{%- endif %}
+<div id="archive-download-button" class="flex items-center">
     <div class="relative" x-data="{ open: false }">
         <div class="split-button split-button-ok md:max-lg:split-button-md">
-            <a class="split-button-action text-center" href="#">
-                Download Bundle
-            </a>
+            <button class="split-button-action text-center"
+                hx-post="{{ request.url_for('request_uploads_archive_post', download_format='zip') }}"
+                hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+                hx-select="#archive-download-button > div"
+                hx-target="#archive-download-button"
+                hx-target-4*="#messages">
+                Download Archive
+            </button>
             <button type="button"
                     class="split-button-toggle"
                     aria-label="Toggle download options"
-                    @click="open = !open">
+                    @click="open = !open;">
                 <svg fill="none" stroke="currentColor" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
             </button>
         </div>
@@ -19,19 +27,44 @@
             @click="open = false"
             @click.outside="open = false">
             <li role="menuitem">
-                <a class="text-gray-700" href="#">
+                <button class="text-gray-700 cursor-pointer"
+                    hx-post="{{ request.url_for('request_uploads_archive_post', download_format='zip') }}"
+                    hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+                    hx-select="#archive-download-button > div"
+                    hx-target="#archive-download-button"
+                    hx-target-4*="#messages">
                     Download as ZIP
-                </a>
+                </button>
             </li>
             <li role="menuitem">
-                <a class="text-gray-700" href="#">
+                <button class="text-gray-700 cursor-pointer"
+                    hx-post="{{ request.url_for('request_uploads_archive_post', download_format='tar.gz') }}"
+                    hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+                    hx-select="#archive-download-button > div"
+                    hx-target="#archive-download-button"
+                    hx-target-4*="#messages">
                     Download as TAR.GZ
-                </a>
+                </button>
             </li>
             <li role="menuitem">
-                <a class="text-gray-700" href="#">
+                <button class="text-gray-700 cursor-pointer"
+                    hx-post="{{ request.url_for('request_uploads_archive_post', download_format='tar.bz2') }}"
+                    hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+                    hx-select="#archive-download-button > div"
+                    hx-target="#archive-download-button"
+                    hx-target-4*="#messages">
+                    Download as TAR.BZ2
+                </button>
+            </li>
+            <li role="menuitem">
+                <button class="text-gray-700 cursor-pointer"
+                    hx-post="{{ request.url_for('request_uploads_archive_post', download_format='tar.zstd') }}"
+                    hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+                    hx-select="#archive-download-button > div"
+                    hx-target="#archive-download-button"
+                    hx-target-4*="#messages">
                     Download as TAR.ZSTD
-                </a>
+                </button>
             </li>
         </ul>
     </div>

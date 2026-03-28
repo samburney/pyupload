@@ -9,11 +9,13 @@ from tortoise.expressions import Q
 from tortoise.queryset import QuerySet
 
 from app.models.common.pagination import PaginationParams
+from app.models.download_archives import DownloadArchive, ArchiveFormatsEnum
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
 
 from app.lib.config import logger
 from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
+from app.lib.helpers import make_unique_filename, clean_text
 
 from app.ui.common.session import flash_message
 from app.ui.common.templating import templates
@@ -210,6 +212,59 @@ async def gallery_delete_selected_post(
     flash_message(request, f"{deleted_count} upload{'s' if deleted_count != 1 else ''} deleted successfully.")
     response = Response(status_code=204, headers=headers)
 
+    return response
+
+
+@router.post('/request-archive/{download_format}', response_class=Response)
+async def request_uploads_archive_post(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    download_format: str,
+    super_selected: Annotated[bool, Form()] = False,
+    selected_ids: Annotated[list[int], Form()] = [],
+    deselected_ids: Annotated[list[int], Form()] = [],
+) -> Response:
+    """Request download archive of selected files"""
+
+    # If this isn't a HTMX request, bail out now
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+
+    # Validate requested format
+    try:
+        archive_format = ArchiveFormatsEnum(download_format)
+    except ValueError:
+        flash_message(request, f"An invalid archive format was requested: {download_format}", "error")
+        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=400)
+
+    # Filter selected uploads to only those writable by the current_user
+    upload_models: list[Upload] = await _get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
+    if not upload_models:
+        flash_message(request, "You do not have permission to download any of the selected uploads.", "error")
+        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
+
+    # Create new DownloadArchive model
+    upload_ids = [upload.id for upload in upload_models]
+    clean_username = clean_text(current_user.username)
+    unique_filename = make_unique_filename(f"archive_{clean_username}")
+    archive_filename = f"{unique_filename}.{archive_format.value}"
+
+    download_archive_data = {
+        "user": current_user,
+        "upload_ids": upload_ids,
+        "filename": archive_filename,
+        "format": archive_format,
+    }
+    download_archive_model = await DownloadArchive.create(**download_archive_data)
+
+    # Return new download button
+    flash_message(request, "Download archive has been queued.")
+    response = templates.TemplateResponse(request=request,
+                                          name="components/archive/download-button.html.j2",
+                                          context={
+                                              "download_archive": download_archive_model,
+                                          })
+    
     return response
 
 
