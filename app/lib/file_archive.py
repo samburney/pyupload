@@ -55,7 +55,7 @@ class FileArchive:
 
         # Check each uploads file path
         for upload in uploads:
-            upload_path = make_user_filepath(upload.user_id, upload.name).resolve() # type:ignore
+            upload_path = upload.filepath.resolve()
 
             # Ensure resolved upload file path is inside configured storage path
             if not upload_path.is_relative_to(config.storage_path):
@@ -85,8 +85,8 @@ class FileArchive:
 
         with ZipFile(self.archive_path, 'w') as archive_file:
             for upload in self.uploads:
-                upload_path = make_user_filepath(upload.user_id, upload.name) # type:ignore
-                upload_filename = upload.originalname
+                upload_path = upload.filepath.resolve()
+                upload_filename = upload.originalname_dot_ext
 
                 archive_file.write(filename=upload_path, arcname=upload_filename)
 
@@ -97,8 +97,8 @@ class FileArchive:
 
         with tarfile.open(name=self.archive_path, mode=mode) as archive_file:
             for upload in self.uploads:
-                upload_path = make_user_filepath(upload.user_id, upload.name) # type:ignore
-                upload_filename = upload.originalname
+                upload_path = upload.filepath.resolve()
+                upload_filename = upload.originalname_dot_ext
 
                 archive_file.add(name=upload_path, arcname=upload_filename)
 
@@ -130,8 +130,8 @@ class FileArchive:
             with compressor.stream_writer(archive_file) as stream_compressor:
                 with tarfile.open(fileobj=stream_compressor, mode='w|') as tarball:
                     for upload in self.uploads:
-                        upload_path = make_user_filepath(upload.user_id, upload.name) # type:ignore
-                        upload_filename = upload.originalname
+                        upload_path = upload.filepath.resolve()
+                        upload_filename = upload.originalname_dot_ext
 
                         tarball.add(name=upload_path, arcname=upload_filename)
 

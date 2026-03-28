@@ -1,6 +1,9 @@
+from typing import Optional
+
 from fastapi import HTTPException
 
 from tortoise.queryset import QuerySet
+from tortoise.expressions import Q
 
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
@@ -35,6 +38,40 @@ async def get_upload_or_404_for_update(id: int, user: User | None = None) -> Upl
     upload = await get_upload_or_404(id)
     validate_file_update_request(upload, user)
     return upload
+
+
+def default_readable_query_filter(current_user: Optional[User] = None) -> Q:
+    # If user is logged, include their private uploads
+    # TODO: Make this a user configurable option
+    if current_user:
+        query_filter = Q(private=False) | Q(user=current_user)
+    else:
+        query_filter = Q(private=False)
+
+    return query_filter
+
+
+def build_readable_upload_queryset(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> QuerySet[Upload]:
+    """Build a queryset for uploads owned by current_user, respecting super-select mode."""
+
+    readable_query_filter = default_readable_query_filter(current_user)
+
+    if super_selected:
+        return Upload.filter(readable_query_filter, id__not_in=deselected_ids)
+    else:
+        return Upload.filter(readable_query_filter, id__in=selected_ids)
+
+
+async def get_readable_selected_upload_models(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[Upload]:
+    """Get raw Upload model instances for selected uploads owned by current_user."""
+    return await build_readable_upload_queryset(current_user, selected_ids, super_selected, deselected_ids)
+
+
+async def get_readable_selected_uploads(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[UploadSerializer]:
+    """Get serialized selected uploads owned by current_user."""
+    queryset = build_readable_upload_queryset(current_user, selected_ids, super_selected, deselected_ids) \
+        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+    return await UploadSerializer.from_queryset(queryset, context={"user": current_user})
 
 
 def build_writable_upload_queryset(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> QuerySet[Upload]:

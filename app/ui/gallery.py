@@ -1,11 +1,10 @@
 import random
 import json
 
-from typing import Annotated, Optional
+from typing import Annotated
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
-from tortoise.expressions import Q
 
 from app.models.common.pagination import PaginationParams
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
@@ -16,7 +15,7 @@ from app.lib.auth import get_current_user_from_request, get_current_authenticate
 
 from app.ui.common.session import flash_message
 from app.ui.common.templating import templates
-from app.ui.common.uploads import get_writable_selected_upload_models, get_writable_selected_uploads
+from app.ui.common.uploads import default_readable_query_filter, get_writable_selected_upload_models, get_writable_selected_uploads
 from app.ui.common.etag import (
     get_paginated_gallery_etag,
     get_cache_headers,
@@ -37,28 +36,16 @@ class GalleryPaginationDefaultParams(PaginationParams):
     writable_count: int | None = None
 
 
-def _default_query_filter(current_user: Optional[User] = None) -> Q:
-    # If user is logged, include their private uploads
-    # TODO: Make this a user configurable option
-    if current_user:
-        query_filter = Q(private=False) | Q(user=current_user)
-    else:
-        query_filter = Q(private=False)
-
-    return query_filter
-
-
-
-@router.get('/')
-@router.get('/index')
+@router.get('/', response_class=Response)
+@router.get('/index', response_class=Response)
 async def gallery_index_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-):
+) -> Response:
     """Render main gallery view"""
 
     current_user = await get_current_user_from_request(request)
-    pagination_query = _default_query_filter(current_user)
+    pagination_query = default_readable_query_filter(current_user)
 
     # Update item pagination parameter
     pagination.count = await Upload.filter(pagination_query).count()
@@ -191,15 +178,15 @@ async def gallery_delete_selected_post(
 
 
 
-@router.get('/random')
+@router.get('/random', response_class=Response)
 async def gallery_random_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-):
+) -> Response:
     """Render random gallery view"""        
 
     current_user = await get_current_user_from_request(request)
-    pagination_query = _default_query_filter(current_user)
+    pagination_query = default_readable_query_filter(current_user)
 
     # Update item pagination parameter
     upload_ids = await Upload.filter(pagination_query).values_list("id", flat=True)

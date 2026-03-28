@@ -107,6 +107,10 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         return f".{self.ext}" if self.ext else ""
 
     @property
+    def originalname_dot_ext(self) -> str:
+        return self.originalname + self.dot_ext
+
+    @property
     def filepath(self) -> Path:
         filename = f'{self.name}{self.dot_ext}'
         return make_user_filepath(getattr(self, "user_id"), filename)
@@ -289,6 +293,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     # Computed fields
     display_name: str
     dot_ext: str
+    originalname_dot_ext: str
     filepath: Path
     filename: str
     url: str

@@ -8,11 +8,12 @@ from app.models.users import User
 from app.models.download_archives import DownloadArchive, ArchiveFormatsEnum
 
 from app.lib.helpers import make_unique_filename, clean_text
+from app.lib.scheduler import schedule_archive_job
 
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.session import flash_message
 from app.ui.common.templating import templates
-from app.ui.common.uploads import get_writable_selected_upload_models
+from app.ui.common.uploads import get_readable_selected_upload_models
 
 
 router = APIRouter(prefix="/archives", tags=["download_archives"])
@@ -75,8 +76,8 @@ async def request_uploads_archive_post(
         flash_message(request, f"An invalid archive format was requested: {download_format}", "error")
         return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=400)
 
-    # Filter selected uploads to only those writable by the current_user
-    upload_models: list[Upload] = await get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
+    # Filter selected uploads to only those readable by the current_user
+    upload_models: list[Upload] = await get_readable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
     if not upload_models:
         flash_message(request, "You do not have permission to download any of the selected uploads.", "error")
         return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
@@ -95,8 +96,11 @@ async def request_uploads_archive_post(
     }
     download_archive_model = await DownloadArchive.create(**download_archive_data)
 
+    # Add archive creating to scheduler queue
+    schedule_archive_job(download_archive_model.id)
+
     # Return new download button
-    flash_message(request, "Download archive has been queued.")
+    flash_message(request, "Download archive creation has been queued.")
     response = templates.TemplateResponse(
         request=request,
         name="components/archive/download-button.html.j2",

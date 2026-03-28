@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date, datetime, timezone
 
 from pathlib import Path
 from uuid import UUID
@@ -130,8 +131,11 @@ async def run_archive_job(download_archive_id: UUID) -> None:
         return
 
 
-def schedule_archive_job(download_archive_id: UUID, run_date: str ='now') -> None:
+def schedule_archive_job(download_archive_id: UUID, run_date: date | datetime | str = 'now') -> None:
     """Schedule upload archive creation"""
+
+    if run_date == 'now':
+        run_date = datetime.now(tz=timezone.utc)
 
     scheduler.add_job(func=run_archive_job, trigger='date', run_date=run_date, kwargs={"download_archive_id": download_archive_id})
 
