@@ -1,0 +1,58 @@
+{%- if request.headers.get('hx-request', None) and request.headers.get('hx-target', None) and request.session.get('_flashes', None) %}
+{%- include "components/core/messages.html.j2" %}
+{%- endif %}
+<div id="archive-download-button" class="flex items-center">
+    {% if download_archive is defined and download_archive.status != 'failed' %}
+    <div class="relative"
+        {%- if download_archive.status != 'ready'%}
+        hx-trigger="every 2s"
+        hx-get="{{ request.url_for('update_archive_status_get', download_archive_id=download_archive.id) }}"
+        hx-select="#archive-download-button > div"
+        hx-target="#archive-download-button"
+        hx-target-4*="#archive-download-button"
+        {%- endif %}
+        >
+        <div class="split-button split-button-neutral md:max-lg:split-button-md">
+            {%- if download_archive.status == 'pending' %}
+            <button style="cursor: wait;" class="split-button-action text-center">
+                Archive queued...
+            </button>
+            <button type="button"
+                class="flex items-center px-2 rounded-r-md cursor-pointer transition-colors hover:bg-red-300"
+                aria-label="Cancel queued download"
+                title="Cancel">
+                <svg class="size-6 stroke-[1.5]" fill="currentColor" aria-hidden="true">
+                    <use href="#material-symbols-outlined-cancel"></use>
+                </svg>
+            </button>
+            {%- elif download_archive.status == 'processing' %}
+            <button style="cursor: wait;" class="split-button-action text-center">
+                Archive processing...
+            </button>
+            <button type="button" style="cursor: wait;"
+                class="split-button-toggle"
+                aria-label="Toggle download options">
+                <svg class="size-6 stroke-[1.5] animate-spin" size="6" fill="currentColor" aria-hidden="true">
+                    <use href="#material-symbols-outlined-progress-activity"></use>
+                </svg>
+            </button>
+            {%- endif %}
+        </div>
+    </div>
+    {% else %}
+    <div>
+        <div class="split-button md:max-lg:split-button-md divide-red-400 bg-red-500 text-white outline-1 outline-red-500">
+            <button style="cursor: not-allowed;" class="split-button-action text-center">
+                An error ocurred
+            </button>
+            <button type="button"
+                class="flex items-center px-2 rounded-r-md cursor-not-allowed transition-colors"
+                aria-label="Archive creation failed">
+                <svg class="size-6 stroke-[1.5]" fill="currentColor" aria-hidden="true">
+                    <use href="#material-symbols-outlined-exclamation"></use>
+                </svg>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>

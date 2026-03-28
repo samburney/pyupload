@@ -199,6 +199,10 @@ document.addEventListener('alpine:init', () => {
 
             // Update once on first init to catch items selected when the page was rendered
             this.updateAllVisibleSelected();
+
+            // Temporary for dev use
+            this.selectedIds = ['338', '327'];
+            this.$nextTick(() => this.triggerServerUpdate());
         }
     }))
 });

@@ -1,6 +1,8 @@
+from asyncio import to_thread
 from datetime import datetime, timedelta
 from typing import BinaryIO
 from tempfile import SpooledTemporaryFile
+
 from fastapi import UploadFile
 
 from app.lib.helpers import (
@@ -237,6 +239,6 @@ async def cleanup_orphaned_files():
             if upload is None:
                 orphans_found += 1
                 logger.info(f"Orphaned file found: {file.relative_to(config.storage_path)}")
-                delete_file(file)
+                await to_thread(delete_file, file)
                 
     return orphans_found

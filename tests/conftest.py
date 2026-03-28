@@ -34,7 +34,7 @@ async def client(monkeypatch):
         """Initialize test database as async context manager to match production init_db."""
         await Tortoise.init(
             db_url="sqlite://:memory:",
-            modules={"models": ["app.models.users", "app.models.refresh_tokens", "app.models.uploads", "app.models.images", "app.models.tags", "app.models.collections"]}
+            modules={"models": ["app.models.users", "app.models.refresh_tokens", "app.models.uploads", "app.models.images", "app.models.tags", "app.models.collections", "app.models.download_archives"]}
         )
         await Tortoise.generate_schemas()
         try:
@@ -59,7 +59,7 @@ async def db():
     """Initialize in-memory SQLite database for unit tests."""
     await Tortoise.init(
         db_url="sqlite://:memory:",
-        modules={"models": ["app.models.users", "app.models.refresh_tokens", "app.models.uploads", "app.models.images", "app.models.tags", "app.models.collections"]}
+        modules={"models": ["app.models.users", "app.models.refresh_tokens", "app.models.uploads", "app.models.images", "app.models.tags", "app.models.collections", "app.models.download_archives"]}
     )
     await Tortoise.generate_schemas()
     yield

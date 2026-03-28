@@ -103,7 +103,79 @@ def test_invalid_storage_orphaned_max_age_hours(reset_config):
     """Test invalid orphaned max age"""
     env = REQUIRED_ENV.copy()
     env["STORAGE_ORPHANED_MAX_AGE_HOURS"] = "-1"
-    
+
     with patch.dict(os.environ, env, clear=True):
         with pytest.raises(ValueError, match="must be a non-negative integer"):
+            importlib.reload(app.lib.config)
+
+
+# --- Archive storage and TTL ---
+
+def test_archive_storage_path_default_derivation(reset_config, tmp_path):
+    """archive_storage_path defaults to storage_path/archives."""
+    storage = tmp_path / "files"
+    env = REQUIRED_ENV.copy()
+    env["STORAGE_PATH"] = str(storage)
+
+    with patch.dict(os.environ, env, clear=True):
+        importlib.reload(app.lib.config)
+        config = app.lib.config.AppConfig
+        assert config.archive_storage_path == storage / "archives"
+
+
+def test_archive_storage_path_auto_creation(reset_config, tmp_path):
+    """archive_storage_path is created on startup if it does not exist."""
+    storage = tmp_path / "files"
+    env = REQUIRED_ENV.copy()
+    env["STORAGE_PATH"] = str(storage)
+
+    with patch.dict(os.environ, env, clear=True):
+        importlib.reload(app.lib.config)
+        config = app.lib.config.AppConfig
+        assert config.archive_storage_path.exists()
+        assert config.archive_storage_path.is_dir()
+
+
+def test_archive_storage_path_custom_env(reset_config, tmp_path):
+    """ARCHIVE_STORAGE_PATH env var overrides the default derived path."""
+    custom = tmp_path / "custom_archives"
+    env = REQUIRED_ENV.copy()
+    env["ARCHIVE_STORAGE_PATH"] = str(custom)
+
+    with patch.dict(os.environ, env, clear=True):
+        importlib.reload(app.lib.config)
+        config = app.lib.config.AppConfig
+        assert config.archive_storage_path == custom
+        assert config.archive_storage_path.exists()
+
+
+def test_archive_max_age_hours_default(reset_config, tmp_path):
+    """archive_max_age_hours defaults to 24."""
+    env = REQUIRED_ENV.copy()
+    env["STORAGE_PATH"] = str(tmp_path / "files")
+
+    with patch.dict(os.environ, env, clear=True):
+        importlib.reload(app.lib.config)
+        assert app.lib.config.AppConfig.archive_max_age_hours == 24
+
+
+def test_archive_max_age_hours_custom(reset_config, tmp_path):
+    """ARCHIVE_MAX_AGE_HOURS env var is read correctly."""
+    env = REQUIRED_ENV.copy()
+    env["STORAGE_PATH"] = str(tmp_path / "files")
+    env["ARCHIVE_MAX_AGE_HOURS"] = "48"
+
+    with patch.dict(os.environ, env, clear=True):
+        importlib.reload(app.lib.config)
+        assert app.lib.config.AppConfig.archive_max_age_hours == 48
+
+
+def test_archive_max_age_hours_invalid(reset_config, tmp_path):
+    """ARCHIVE_MAX_AGE_HOURS must be a positive integer."""
+    env = REQUIRED_ENV.copy()
+    env["STORAGE_PATH"] = str(tmp_path / "files")
+    env["ARCHIVE_MAX_AGE_HOURS"] = "0"
+
+    with patch.dict(os.environ, env, clear=True):
+        with pytest.raises(ValueError, match="ARCHIVE_MAX_AGE_HOURS must be a positive integer"):
             importlib.reload(app.lib.config)
