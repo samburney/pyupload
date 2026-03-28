@@ -6,19 +6,17 @@ from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
 from tortoise.expressions import Q
-from tortoise.queryset import QuerySet
 
 from app.models.common.pagination import PaginationParams
-from app.models.download_archives import DownloadArchive, ArchiveFormatsEnum
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
 
 from app.lib.config import logger
 from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
-from app.lib.helpers import make_unique_filename, clean_text
 
 from app.ui.common.session import flash_message
 from app.ui.common.templating import templates
+from app.ui.common.uploads import get_writable_selected_upload_models, get_writable_selected_uploads
 from app.ui.common.etag import (
     get_paginated_gallery_etag,
     get_cache_headers,
@@ -49,29 +47,6 @@ def _default_query_filter(current_user: Optional[User] = None) -> Q:
 
     return query_filter
 
-
-def _build_writable_upload_queryset(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> QuerySet[Upload]:
-    """Build a queryset for uploads owned by current_user, respecting super-select mode"""
-
-    if super_selected:
-        return Upload.filter(user=current_user, id__not_in=deselected_ids)
-    else:
-        return Upload.filter(user=current_user, id__in=selected_ids)
-
-
-async def _get_writable_selected_uploads(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[UploadSerializer]:
-    """Get serialized selected uploads owned by current_user"""
-
-    queryset = _build_writable_upload_queryset(current_user, selected_ids, super_selected, deselected_ids) \
-        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
-
-    return await UploadSerializer.from_queryset(queryset, context={"user": current_user})
-
-
-async def _get_writable_selected_upload_models(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[Upload]:
-    """Get raw Upload model instances for selected uploads owned by current_user"""
-
-    return await _build_writable_upload_queryset(current_user, selected_ids, super_selected, deselected_ids)
 
 
 @router.get('/')
@@ -134,7 +109,7 @@ async def gallery_handle_selected_upload_post(
     """Render partial page updates when selected items are updated"""
 
     # Get selected uploads
-    selected_uploads: list[UploadSerializer] = await _get_writable_selected_uploads(current_user, selected_ids, super_selected, deselected_ids)
+    selected_uploads: list[UploadSerializer] = await get_writable_selected_uploads(current_user, selected_ids, super_selected, deselected_ids)
 
     # Template context
     context = {
@@ -170,7 +145,7 @@ async def gallery_delete_selected_post(
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
     # Filter selected uploads to only those writable by the current_user
-    upload_models: list[Upload] = await _get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
+    upload_models: list[Upload] = await get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
     if not upload_models:
         flash_message(request, "You do not have permission to delete any of the selected uploads.", "error")
         return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
@@ -214,58 +189,6 @@ async def gallery_delete_selected_post(
 
     return response
 
-
-@router.post('/request-archive/{download_format}', response_class=Response)
-async def request_uploads_archive_post(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    download_format: str,
-    super_selected: Annotated[bool, Form()] = False,
-    selected_ids: Annotated[list[int], Form()] = [],
-    deselected_ids: Annotated[list[int], Form()] = [],
-) -> Response:
-    """Request download archive of selected files"""
-
-    # If this isn't a HTMX request, bail out now
-    if not request.headers.get('hx-request', False):
-        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
-
-    # Validate requested format
-    try:
-        archive_format = ArchiveFormatsEnum(download_format)
-    except ValueError:
-        flash_message(request, f"An invalid archive format was requested: {download_format}", "error")
-        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=400)
-
-    # Filter selected uploads to only those writable by the current_user
-    upload_models: list[Upload] = await _get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
-    if not upload_models:
-        flash_message(request, "You do not have permission to download any of the selected uploads.", "error")
-        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
-
-    # Create new DownloadArchive model
-    upload_ids = [upload.id for upload in upload_models]
-    clean_username = clean_text(current_user.username)
-    unique_filename = make_unique_filename(f"archive_{clean_username}")
-    archive_filename = f"{unique_filename}.{archive_format.value}"
-
-    download_archive_data = {
-        "user": current_user,
-        "upload_ids": upload_ids,
-        "filename": archive_filename,
-        "format": archive_format,
-    }
-    download_archive_model = await DownloadArchive.create(**download_archive_data)
-
-    # Return new download button
-    flash_message(request, "Download archive has been queued.")
-    response = templates.TemplateResponse(request=request,
-                                          name="components/archive/download-button.html.j2",
-                                          context={
-                                              "download_archive": download_archive_model,
-                                          })
-    
-    return response
 
 
 @router.get('/random')
