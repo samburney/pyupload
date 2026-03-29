@@ -25,8 +25,7 @@ Allow users to select multiple uploads in the gallery and request a downloadable
 - Archives expire after a configurable TTL (default 24 h) and are cleaned up by a scheduler job
 
 ### Review Snapshot (2026-03-29)
-- Steps 1–4 and 6 complete; all tests green (41/41 in `test_ui_archives.py`, plus existing scheduler/model/archive-lib suites).
-- Step 5 (profile page) is the only remaining work.
+- All steps complete; all tests green (41/41 in `test_ui_archives.py`, plus existing scheduler/model/archive-lib suites).
 - Features added beyond original scope:
   - `POST /archives/{id}/cancel` route with `HX-Trigger` sidebar refresh
   - "Reuse existing archive if selection matches": `gallery_handle_selected_upload_post` queries non-expired archives for the current user + sorted `upload_ids` match and passes result to sidebar template
@@ -186,20 +185,28 @@ Allow users to select multiple uploads in the gallery and request a downloadable
 **Files**:
 - Profile page route (existing, in `app/ui/users.py`)
 - Profile page template (existing)
-- `app/ui/templates/archives/profile-list.html.j2` *(new)*
+- `app/ui/templates/archives/partials/profile-list.html.j2` *(new)*
 
 **Tasks**:
-1. [ ] Query the logged-in user's non-expired `DownloadArchive` records in the profile page route, ordered by `created_at` descending
-2. [ ] Add a "Downloads" section to the profile page template that renders the archive list partial; show status badge (`pending`, `ready`, `failed`) and a download link for `ready` archives; omit the section entirely if there are no records
+1. [x] Query the logged-in user's non-expired `DownloadArchive` records in the profile page route, ordered by `created_at` descending
+2. [x] Add a "Download Archives" section to the profile page template that renders the archive list partial; show status (`pending`, `processing`, `ready`, `failed`) and a download link for `ready` archives; omit the section entirely if there are no records
+
+**Implementation Notes**:
+- Partial template is at `archives/partials/profile-list.html.j2` (not `archives/profile-list.html.j2` as originally planned)
+- `file_size` and `expires_at` added as computed properties on `DownloadArchive` and exposed via `DownloadArchiveSerializer`
+- Table auto-polls every 2s via `hx-trigger` when any archive has `pending` or `processing` status; polling stops naturally once all archives reach a terminal state
+- `DELETE /archives/{id}` route added to handle both cancellation (pending/processing) and deletion (ready/failed) in a single endpoint; responds with `HX-Trigger: refresh-profile-download-archives-table` when called from the profile page
+- Failed archives are shown (not filtered) so users get feedback; they expire and disappear on the normal TTL schedule
+- `DOWNLOAD_ARCHIVE_PREFETCH_MODELS` constant added to mirror the existing `UPLOAD_PREFETCH_MODELS` pattern
 
 **Tests**:
-1. [ ] Profile page renders pending and ready archive entries correctly
-2. [ ] Profile page omits the section when no non-expired archives exist
-3. [ ] Profile page does not render expired archives
+1. [x] Profile page renders pending and ready archive entries correctly
+2. [x] Profile page omits the section when no non-expired archives exist
+3. [x] Profile page does not render expired archives
 
 **Acceptance Criteria**:
-- [ ] A user can return to their profile page to find and download a previously requested archive
-- [ ] Expired and failed archives do not appear
+- [x] A user can return to their profile page to find and download a previously requested archive
+- [x] Expired archives do not appear (filtered by `created_at__gte` expiry cutoff)
 
 **Dependencies**:
 - Step 4 must be complete (download route is linked from this page)

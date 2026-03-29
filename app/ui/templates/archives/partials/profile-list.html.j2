@@ -1,0 +1,87 @@
+{% if download_archives is defined and download_archives | length %}
+{% set needs_polling = download_archives | selectattr('status', 'in', ['pending', 'processing']) | list | length > 0 %}
+<table id="profile-download-archives-table"
+    hx-trigger="refresh-profile-download-archives-table from:body{{ ', every 2s' if needs_polling else '' }}"
+    hx-get="{{ url_for('profile_archive_list_get') }}"
+    hx-select="#profile-download-archives-table"
+    hx-target="#profile-download-archives-table"
+    hx-swap="outerHTML">
+    <thead>
+        <tr>
+            <th class="text-left">Filename</th>
+            <th class="text-left">Created</th>
+            <th class="text-left">Expires</th>
+            <th class="text-left">Size</th>
+            <th class="text-left">Status</th>
+            <th class="text-left">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {%- for download_archive in download_archives %}
+        <tr>
+            <td>
+                {% if download_archive.status == 'ready' %}
+                <a href="{{
+                        request.url_for(
+                            'download_archive_get',
+                            download_archive_id=download_archive.id,
+                            download_archive_filename=download_archive.filename
+                        )
+                    }}"
+                    class="hover:underline">
+                    {{ download_archive.filename }}
+                </a>
+                {% else %}
+                {{ download_archive.filename }}
+                {% endif %}
+            </td>
+            <td>{{ download_archive.created_at | ago }}</td>
+            <td>{{ download_archive.expires_at | ago }}</td>
+            <td>{{ download_archive.file_size | humanize_bytes if download_archive.file_size else "-" }}</td>
+            <td>{{ download_archive.status.value | capitalize }}</td>
+            <td class="flex">
+                {% if download_archive.status == 'ready' %}
+                <a href="{{
+                        request.url_for(
+                            'download_archive_get',
+                            download_archive_id=download_archive.id,
+                            download_archive_filename=download_archive.filename
+                        )
+                    }}"
+                    class="hover:underline">
+                    <svg class="size-6" fill="currentColor">
+                        <use href="#material-symbols-outlined-download"></use>
+                    </svg>
+                </a>
+                <button type="button"
+                    class="cursor-pointer"
+                    aria-label="Delete archive"
+                    title="Delete archive"
+                    hx-delete="{{ request.url_for('delete_archive_delete', download_archive_id=download_archive.id) }}"
+                    hx-swap="none">
+                    <svg class="size-6" fill="currentColor">
+                        <use href="#material-symbols-outlined-delete"></use>
+                    </svg>
+                </button>
+                {% else %}
+                <button type="button"
+                    class="cursor-pointer"
+                    aria-label="Cancel pending archive"
+                    title="Cancel pending archive"
+                    hx-delete="{{ request.url_for('delete_archive_delete', download_archive_id=download_archive.id) }}"
+                    hx-swap="none">
+                    <svg class="size-6" fill="currentColor">
+                        <use href="#material-symbols-outlined-cancel"></use>
+                    </svg>
+                </button>
+                {% endif %}
+            </td>
+        </tr>
+        {%- endfor %}
+    </tbody>
+</table>
+{% else %}
+<p id="profile-download-archives-table">
+    No download archives have been created.
+</p>
+{% endif %}

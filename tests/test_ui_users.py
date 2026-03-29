@@ -1,9 +1,14 @@
 
 import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+from app.lib.auth import create_access_token
+from app.lib.config import get_app_config
 from app.models.users import User
 from app.models.uploads import Upload
-from app.lib.auth import create_access_token
+from app.models.download_archives import DownloadArchive, ArchiveFormatsEnum, ArchiveStatusEnum
+
+config = get_app_config()
 
 class TestUserProfileEndpoint:
     """Test GET /profile endpoint."""
@@ -209,3 +214,75 @@ class TestUserProfileIntegration:
         # Just ensure the page renders without error with multiple items.
         assert html.count("Filename:") <= 10 # Default page size is 10
 
+
+async def _make_archive_for_user(user: User, status: ArchiveStatusEnum, suffix: str) -> DownloadArchive:
+    return await DownloadArchive.create(
+        user=user,
+        upload_ids=[],
+        format=ArchiveFormatsEnum.zip,
+        status=status,
+        filename=f"archive_{user.username}_20260101-000000_{suffix}.zip",
+    )
+
+
+class TestUserProfileArchives:
+    """Tests for the Download Archives section on the profile page."""
+
+    @pytest.mark.asyncio
+    async def test_shows_archive_section_with_pending_entry(self, client):
+        user = await User.create(username="arch_pending", email="arch_pending@test.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+        archive = await _make_archive_for_user(user, ArchiveStatusEnum.pending, "aa000001")
+
+        response = await client.get("/profile")
+        assert response.status_code == 200
+        html = response.text
+
+        assert "Download Archives" in html
+        assert archive.filename in html
+        assert "Pending" in html
+
+    @pytest.mark.asyncio
+    async def test_shows_archive_section_with_ready_entry_and_download_link(self, client):
+        user = await User.create(username="arch_ready", email="arch_ready@test.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+        archive = await _make_archive_for_user(user, ArchiveStatusEnum.ready, "aa000002")
+
+        response = await client.get("/profile")
+        assert response.status_code == 200
+        html = response.text
+
+        assert "Download Archives" in html
+        assert archive.filename in html
+        assert "/download/" in html
+
+    @pytest.mark.asyncio
+    async def test_omits_archive_section_when_no_archives(self, client):
+        user = await User.create(username="arch_none", email="arch_none@test.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.get("/profile")
+        assert response.status_code == 200
+        html = response.text
+
+        assert "Download Archives" not in html
+        assert "profile-download-archives-table" not in html
+
+    @pytest.mark.asyncio
+    async def test_does_not_show_expired_archives(self, client):
+        user = await User.create(username="arch_expired", email="arch_expired@test.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+        archive = await _make_archive_for_user(user, ArchiveStatusEnum.ready, "aa000003")
+        old_time = datetime.now(tz=timezone.utc) - timedelta(hours=config.archive_max_age_hours + 1)
+        await DownloadArchive.filter(id=archive.id).update(created_at=old_time)
+
+        response = await client.get("/profile")
+        assert response.status_code == 200
+        html = response.text
+
+        assert "Download Archives" not in html
+        assert archive.filename not in html
