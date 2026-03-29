@@ -12,11 +12,14 @@ from tortoise_serializer import ModelSerializer
 from app.lib.config import get_app_config
 from app.lib.file_io import delete_file
 
-from app.models.common.base import TimestampMixin
+from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 from app.models.users import UserSerializer
 
 
 config = get_app_config()
+
+# Related fields that are commonly prefetched together for DownloadArchiveSerializer
+DOWNLOAD_ARCHIVE_PREFETCH_MODELS = ("user",)
 
 
 class ArchiveStatusEnum(str, Enum):
@@ -83,7 +86,20 @@ class DownloadArchive(models.Model, TimestampMixin):
 
     @property
     def file_path(self) -> Path:
+        """Return Path of archive file"""
+
         return config.archive_storage_path / self.filename
+    
+    @property
+    def file_size(self) -> int | None:
+        """Return file size of archive file in bytes, if it exists"""
+
+        if self.status is ArchiveStatusEnum.ready and self.file_path.is_file():
+            return self.file_path.stat().st_size
+
+    @property
+    def expires_at(self) -> datetime:
+        return self.created_at + timedelta(hours=config.archive_max_age_hours)
 
     @classmethod
     async def cleanup_expired(cls) -> int:
@@ -106,7 +122,7 @@ class DownloadArchive(models.Model, TimestampMixin):
         return count
 
 
-class DownloadArchiveSerializer(ModelSerializer[DownloadArchive]):
+class DownloadArchiveSerializer(ModelSerializer[DownloadArchive], SerializerTimestampMixin):
     """Serializer for the DownloadArchive model."""
 
     # Model fields
@@ -119,3 +135,5 @@ class DownloadArchiveSerializer(ModelSerializer[DownloadArchive]):
 
     # Computed fields
     file_path: Path
+    file_size: int | None
+    expires_at: datetime

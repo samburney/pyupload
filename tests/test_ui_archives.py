@@ -4,7 +4,9 @@ Routes tested:
 - POST /archives/request/{download_format}
 - GET  /archives/{id}/status
 - POST /archives/{id}/cancel
+- DELETE /archives/{id}
 - GET  /archives/{id}/download[/{filename}]
+- GET  /archives/profile-list
 
 Also covers Step 6 frontend integration: gallery multiselect sidebar renders
 the correct download-button component depending on whether a matching archive
@@ -12,6 +14,7 @@ already exists (POST /gallery).
 """
 
 import uuid
+from datetime import datetime, timedelta, timezone
 import pytest
 import pytest_asyncio
 from unittest.mock import patch
@@ -638,3 +641,171 @@ class TestMultiselectSidebarRendering:
         )
         assert response.status_code == 200
         assert "/archives/request/" in response.text
+
+
+# ===========================================================================
+# DELETE /archives/{id}
+# ===========================================================================
+
+class TestDeleteArchiveDelete:
+
+    @pytest.mark.asyncio
+    async def test_requires_htmx_header(self, client):
+        owner = await _make_user("del_nohtmx")
+        upload = await _make_upload(owner, "e1")
+        archive = await _make_archive(owner, [upload])
+        client.cookies = _auth(owner)
+        response = await client.delete(f"/archives/{archive.id}")
+        assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_requires_authentication(self, client):
+        owner = await _make_user("del_noauth_owner")
+        upload = await _make_upload(owner, "e2")
+        archive = await _make_archive(owner, [upload])
+        response = await client.delete(f"/archives/{archive.id}", headers=_htmx())
+        assert response.status_code in (302, 303, 401)
+
+    @pytest.mark.asyncio
+    async def test_deletes_pending_archive(self, client):
+        owner = await _make_user("del_pending")
+        upload = await _make_upload(owner, "e3")
+        archive = await _make_archive(owner, [upload], status=ArchiveStatusEnum.pending)
+        archive_id = archive.id
+        client.cookies = _auth(owner)
+        response = await client.delete(f"/archives/{archive_id}", headers=_htmx())
+        assert response.status_code in (200, 204)
+        assert await DownloadArchive.get_or_none(id=archive_id) is None
+
+    @pytest.mark.asyncio
+    async def test_deletes_ready_archive(self, client):
+        owner = await _make_user("del_ready")
+        upload = await _make_upload(owner, "e4")
+        archive = await _make_archive(owner, [upload], status=ArchiveStatusEnum.ready, suffix="del00001")
+        archive_id = archive.id
+        client.cookies = _auth(owner)
+        response = await client.delete(f"/archives/{archive_id}", headers=_htmx())
+        assert response.status_code in (200, 204)
+        assert await DownloadArchive.get_or_none(id=archive_id) is None
+
+    @pytest.mark.asyncio
+    async def test_returns_hx_trigger_when_on_profile_page(self, client):
+        owner = await _make_user("del_profile_trigger")
+        upload = await _make_upload(owner, "e5")
+        archive = await _make_archive(owner, [upload])
+        client.cookies = _auth(owner)
+        response = await client.delete(
+            f"/archives/{archive.id}",
+            headers={**_htmx(), "HX-Current-URL": "http://test/profile"},
+        )
+        assert response.status_code == 200
+        assert "refresh-profile-download-archives-table" in response.headers.get("HX-Trigger", "")
+
+    @pytest.mark.asyncio
+    async def test_returns_204_when_not_on_profile_page(self, client):
+        owner = await _make_user("del_no_profile")
+        upload = await _make_upload(owner, "e6")
+        archive = await _make_archive(owner, [upload])
+        client.cookies = _auth(owner)
+        response = await client.delete(f"/archives/{archive.id}", headers=_htmx())
+        assert response.status_code == 204
+
+    @pytest.mark.asyncio
+    async def test_nonexistent_archive_returns_404(self, client):
+        owner = await _make_user("del_notfound")
+        client.cookies = _auth(owner)
+        response = await client.delete(f"/archives/{uuid.uuid4()}", headers=_htmx())
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_cannot_delete_another_users_archive(self, client):
+        owner = await _make_user("del_owner")
+        other = await _make_user("del_other")
+        upload = await _make_upload(owner, "e7")
+        archive = await _make_archive(owner, [upload])
+        client.cookies = _auth(other)
+        response = await client.delete(f"/archives/{archive.id}", headers=_htmx())
+        assert response.status_code == 404
+        assert await DownloadArchive.get_or_none(id=archive.id) is not None
+
+
+# ===========================================================================
+# GET /archives/profile-list
+# ===========================================================================
+
+class TestProfileArchiveListGet:
+
+    @pytest.mark.asyncio
+    async def test_requires_htmx_header(self, client):
+        owner = await _make_user("plist_nohtmx")
+        client.cookies = _auth(owner)
+        response = await client.get("/archives/profile-list")
+        assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_requires_authentication(self, client):
+        response = await client.get("/archives/profile-list", headers=_htmx())
+        assert response.status_code in (302, 303, 401)
+
+    @pytest.mark.asyncio
+    async def test_returns_html_with_archives(self, client):
+        owner = await _make_user("plist_html")
+        upload = await _make_upload(owner, "p1")
+        archive = await _make_archive(owner, [upload], status=ArchiveStatusEnum.pending, suffix="pl000001")
+        client.cookies = _auth(owner)
+        response = await client.get("/archives/profile-list", headers=_htmx())
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+        assert archive.filename in response.text
+
+    @pytest.mark.asyncio
+    async def test_excludes_expired_archives(self, client):
+        owner = await _make_user("plist_expired")
+        upload = await _make_upload(owner, "p2")
+        archive = await _make_archive(owner, [upload], suffix="pl000002")
+        old_time = datetime.now(tz=timezone.utc) - timedelta(hours=config.archive_max_age_hours + 1)
+        await DownloadArchive.filter(id=archive.id).update(created_at=old_time)
+        client.cookies = _auth(owner)
+        response = await client.get("/archives/profile-list", headers=_htmx())
+        assert response.status_code == 200
+        assert archive.filename not in response.text
+
+    @pytest.mark.asyncio
+    async def test_empty_state_when_no_archives(self, client):
+        owner = await _make_user("plist_empty")
+        client.cookies = _auth(owner)
+        response = await client.get("/archives/profile-list", headers=_htmx())
+        assert response.status_code == 200
+        assert "profile-download-archives-table" in response.text
+        assert "<table" not in response.text
+
+    @pytest.mark.asyncio
+    async def test_ready_archive_includes_download_link(self, client):
+        owner = await _make_user("plist_ready")
+        upload = await _make_upload(owner, "p3")
+        archive = await _make_archive(owner, [upload], status=ArchiveStatusEnum.ready, suffix="pl000003")
+        client.cookies = _auth(owner)
+        response = await client.get("/archives/profile-list", headers=_htmx())
+        assert response.status_code == 200
+        assert str(archive.id) in response.text
+        assert "/download/" in response.text
+
+    @pytest.mark.asyncio
+    async def test_polls_when_archives_in_progress(self, client):
+        """Table hx-trigger should include 'every 2s' when a pending archive exists."""
+        owner = await _make_user("plist_poll")
+        upload = await _make_upload(owner, "p4")
+        await _make_archive(owner, [upload], status=ArchiveStatusEnum.pending, suffix="pl000004")
+        client.cookies = _auth(owner)
+        response = await client.get("/archives/profile-list", headers=_htmx())
+        assert "every 2s" in response.text
+
+    @pytest.mark.asyncio
+    async def test_no_polling_when_all_archives_terminal(self, client):
+        """Table hx-trigger should not include 'every 2s' when all archives are terminal."""
+        owner = await _make_user("plist_nopoll")
+        upload = await _make_upload(owner, "p5")
+        await _make_archive(owner, [upload], status=ArchiveStatusEnum.ready, suffix="pl000005")
+        client.cookies = _auth(owner)
+        response = await client.get("/archives/profile-list", headers=_htmx())
+        assert "every 2s" not in response.text

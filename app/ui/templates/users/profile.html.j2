@@ -9,7 +9,11 @@
     <li><a href="/logout-all">Logout All Sessions</a></li>
 </ul>
 {% if uploads | length > 0 %}
-<p class="mt-4 mb-2"><strong>Uploads</strong></p>
+<h2 class="mt-4 mb-2">Uploads</h2>
 {% include "gallery/partials/grid.html.j2" %}
+{% endif %}
+{% if download_archives | length > 0 %}
+<h2 class="mt-4 mb-2">Download Archives</h2>
+{% include "archives/partials/profile-list.html.j2" %}
 {% endif %}
 {% endblock %}
