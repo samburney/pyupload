@@ -1,16 +1,19 @@
 import random
 import json
 
+from datetime import datetime, timezone, timedelta
 from typing import Annotated
+
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
 
 from app.models.common.pagination import PaginationParams
+from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
 
-from app.lib.config import logger
+from app.lib.config import get_app_config, logger
 from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
 
 from app.ui.common.session import flash_message
@@ -23,6 +26,7 @@ from app.ui.common.etag import (
 )
 
 
+config = get_app_config()
 router = APIRouter(prefix='/gallery', tags=['gallery'])
 
 
@@ -98,10 +102,28 @@ async def gallery_handle_selected_upload_post(
     # Get selected uploads
     selected_uploads: list[UploadSerializer] = await get_writable_selected_uploads(current_user, selected_ids, super_selected, deselected_ids)
 
+    # Match selected uploads against any existing DownloadArchives for this user
+    selected_upload_ids = sorted(upload.id for upload in selected_uploads)
+    download_archive = None
+    download_archive_expires_at = datetime.now(tz=timezone.utc) - timedelta(hours=config.archive_max_age_hours)
+    download_archive_models = await DownloadArchive.filter(user=current_user,
+                                                          created_at__gt=download_archive_expires_at,
+                                                          status__not=ArchiveStatusEnum.failed,
+                                                          upload_ids=selected_upload_ids
+                                                          ) \
+                                                    .order_by("-created_at") \
+                                                    .prefetch_related("user")
+    
+    # If there's multiple, just get the newest one
+    if len(download_archive_models):
+        download_archive_model = download_archive_models[0]
+        download_archive = await DownloadArchiveSerializer.from_tortoise_orm(download_archive_model)
+
     # Template context
     context = {
         "current_user": current_user,
         "selected_uploads": selected_uploads,
+        "download_archive": download_archive,
     }
     response = templates.TemplateResponse(
         request,

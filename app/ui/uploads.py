@@ -565,6 +565,7 @@ async def toggle_upload_private_patch(
 
     return await _render_upload_component(request, current_user, upload_model, "components/upload/sidebar.html.j2")
 
+
 @router.patch("/uploads/{id}/description", response_class=Response)
 async def toggle_upload_description_patch(
         request: Request,

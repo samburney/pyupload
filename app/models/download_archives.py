@@ -112,7 +112,7 @@ class DownloadArchiveSerializer(ModelSerializer[DownloadArchive]):
     # Model fields
     id: UUID
     user: UserSerializer
-    upload_ids: str
+    upload_ids: list[int]
     filename: str
     format: ArchiveFormatsEnum
     status: ArchiveStatusEnum
