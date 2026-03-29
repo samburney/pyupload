@@ -12,32 +12,48 @@
         hx-target-4*="#archive-download-button"
         {%- endif %}
         >
+        {%- if download_archive.status == 'pending' %}
         <div class="split-button split-button-neutral md:max-lg:split-button-md">
-            {%- if download_archive.status == 'pending' %}
             <button style="cursor: wait;" class="split-button-action text-center">
                 Archive queued...
             </button>
             <button type="button"
                 class="flex items-center px-2 rounded-r-md cursor-pointer transition-colors hover:bg-red-300"
                 aria-label="Cancel queued download"
-                title="Cancel">
+                title="Cancel queued download"
+                hx-post="{{ request.url_for('cancel_pending_archive_post', download_archive_id=download_archive.id) }}"
+                hx-swap="none">
                 <svg class="size-6 stroke-[1.5]" fill="currentColor" aria-hidden="true">
                     <use href="#material-symbols-outlined-cancel"></use>
                 </svg>
             </button>
-            {%- elif download_archive.status == 'processing' %}
+        </div>
+        {%- elif download_archive.status == 'processing' %}
+        <div class="split-button split-button-neutral md:max-lg:split-button-md">
             <button style="cursor: wait;" class="split-button-action text-center">
                 Archive processing...
             </button>
             <button type="button" style="cursor: wait;"
-                class="split-button-toggle"
-                aria-label="Toggle download options">
+                class="split-button-toggle">
                 <svg class="size-6 stroke-[1.5] animate-spin" size="6" fill="currentColor" aria-hidden="true">
                     <use href="#material-symbols-outlined-progress-activity"></use>
                 </svg>
             </button>
-            {%- endif %}
         </div>
+        {%- elif download_archive.status == 'ready' %}
+        <div class="split-button split-button-ok md:max-lg:split-button-md">
+            <a href="{{ request.url_for('download_archive_get', download_archive_id=download_archive.id, download_archive_filename=download_archive.filename) }}"
+                class="split-button-action text-center">
+                Download Archive
+            </a>
+            <a href="{{ request.url_for('download_archive_get', download_archive_id=download_archive.id, download_archive_filename=download_archive.filename) }}"
+                class="split-button-toggle">
+                <svg class="size-6 stroke-[1.5]" size="6" fill="currentColor" aria-hidden="true">
+                    <use href="#material-symbols-outlined-download"></use>
+                </svg>
+            </a>
+        </div>
+            {%- endif %}
     </div>
     {% else %}
     <div>

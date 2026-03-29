@@ -10,7 +10,7 @@
                 hx-select="#archive-download-button > div"
                 hx-target="#archive-download-button"
                 hx-target-4*="#messages">
-                Download Archive
+                Download {{ selected_uploads | count }} Items
             </button>
             <button type="button"
                     class="split-button-toggle"

@@ -80,7 +80,7 @@ async def create_upload_post(
     current_user: Annotated[User, Depends(get_or_create_authenticated_user)],
     request: Request,
     upload_files: list[UploadFile]
-):
+) -> Response:
     """Handle multiple uploaded files."""
 
     # Handle file uploads
@@ -114,7 +114,7 @@ async def create_upload_post(
 @router.get("/get/{id}", response_class=Response)
 async def get_upload_without_filename_get(
     id: int,
-):
+) -> Response:
     """Redirect to an SEO friendly GET URL if filename is omitted"""
 
     upload = await Upload.get_or_none(id=id)
@@ -132,7 +132,7 @@ async def get_upload_get(
     filename: str,
     current_user: Annotated[User, Depends(get_current_user)],
     download: bool | None = False,
-):
+) -> Response:
     """Get an uploaded file."""
 
     upload = await Upload.get_or_none(id=id)
@@ -157,7 +157,7 @@ async def download_upload_get(
     id: int,
     filename: str,
     current_user: Annotated[User, Depends(get_current_user)],
-):
+) -> Response:
     """Download an uploaded file."""
 
     return await get_upload_get(id=id, filename=filename, current_user=current_user, download=True)
@@ -166,7 +166,7 @@ async def download_upload_get(
 @router.get("/view/{id}", response_class=Response)
 async def view_upload_page_without_filename_get(
     id: int,
-):
+) -> Response:
     """Redirect to an SEO friendly GET URL if filename is omitted"""
 
     upload = await Upload.get_or_none(id=id)
@@ -337,7 +337,7 @@ async def get_tag_suggestions_post(
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     tag_name: Annotated[str, Form()] = "",
-):
+) -> Response:
     """Get tag suggestions for current upload, filtered by the current input value."""
 
     if tag_name == '':
@@ -420,7 +420,7 @@ async def get_collection_suggestions_post(
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     collection_name: Annotated[str, Form()] = "",
-):
+) -> Response:
     """Get collection suggestions for current upload, filtered by the current input value."""
 
     # Get upload from database
@@ -488,7 +488,7 @@ async def update_upload_collections_patch(
     id: int,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     collection_ids: Annotated[list[int], Form()] = [],
-):
+) -> Response:
 
     """Update the collections linked to an upload based on a list of collection IDs."""
     
@@ -555,7 +555,7 @@ async def toggle_upload_private_patch(
         id: int,
         current_user: Annotated[User, Depends(get_current_authenticated_user)],
         upload_private: Annotated[bool, Form()] = False,
-):
+) -> Response:
     """Update the private status of an upload."""
     
     upload_model = await get_upload_or_404_for_update(id, current_user)
@@ -571,7 +571,7 @@ async def toggle_upload_description_patch(
         id: int,
         current_user: Annotated[User, Depends(get_current_authenticated_user)],
         description: Annotated[str, Form()] = '',
-):
+) -> Response:
     """Update the description of an upload."""
 
     upload_model = await get_upload_or_404_for_update(id, current_user)

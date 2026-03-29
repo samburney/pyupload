@@ -1,6 +1,7 @@
 import asyncio
-from datetime import datetime, timedelta, timezone
 
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from uuid import UUID
 from typing import TYPE_CHECKING
 from enum import Enum
@@ -39,6 +40,17 @@ class ArchiveFormatsEnum(str, Enum):
     zstd = 'tar.zstd'
     zstandard = 'tar.zstd'
 
+    @property
+    def mimetype(self) -> str:
+        _map = {
+            'zip':      'application/zip',
+            'tar.gz':   'application/gzip',
+            'tar.bz2':  'application/x-bzip2',
+            'tar.xz':   'application/x-xz',
+            'tar.zstd': 'application/zstd',
+        }
+        return _map[self.value]
+
 
 class DownloadArchive(models.Model, TimestampMixin):
     id = fields.UUIDField(primary_key=True)
@@ -59,6 +71,19 @@ class DownloadArchive(models.Model, TimestampMixin):
 
         await super().delete(using_db=using_db)
         await asyncio.to_thread(delete_file, config.archive_storage_path / self.filename)
+
+    async def cancel(self) -> bool:
+        """Cancel pending archive creation."""
+
+        if self.status == ArchiveStatusEnum.pending:
+            await self.delete()
+            return True
+        
+        return False
+
+    @property
+    def file_path(self) -> Path:
+        return config.archive_storage_path / self.filename
 
     @classmethod
     async def cleanup_expired(cls) -> int:
@@ -91,3 +116,6 @@ class DownloadArchiveSerializer(ModelSerializer[DownloadArchive]):
     filename: str
     format: ArchiveFormatsEnum
     status: ArchiveStatusEnum
+
+    # Computed fields
+    file_path: Path
