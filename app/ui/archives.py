@@ -1,13 +1,14 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Form, Request, Response
+from fastapi.responses import FileResponse
 from fastapi.exceptions import HTTPException
 
 from app.models.uploads import Upload
 from app.models.users import User
-from app.models.download_archives import DownloadArchive, ArchiveFormatsEnum
+from app.models.download_archives import DownloadArchive, ArchiveFormatsEnum, ArchiveStatusEnum
 
-from app.lib.helpers import make_unique_filename, clean_text
+from app.lib.helpers import make_unique_filename, clean_text, sanitise_filename
 from app.lib.scheduler import schedule_archive_job
 
 from app.ui.common.security import get_current_authenticated_user
@@ -17,41 +18,6 @@ from app.ui.common.uploads import get_readable_selected_upload_models
 
 
 router = APIRouter(prefix="/archives", tags=["download_archives"])
-
-
-@router.get("/{download_archive_id}/status")
-async def update_archive_status_get(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    download_archive_id: str,
-) -> Response:
-    """Update current download archive progress status"""
-
-    # If this isn't a HTMX request, bail out now
-    if not request.headers.get('hx-request', False):
-        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
-
-    # Get DownloadArchive model
-    download_archive_model = await DownloadArchive.get_or_none(id=download_archive_id, user=current_user)
-    if not download_archive_model:
-        flash_message(request, "The requested download archive could not be found.", "error")
-        response = templates.TemplateResponse(
-            request=request,
-            name="components/archive/download-button.html.j2",
-            status_code=404,
-        )
-        return response
-
-    # Return updated download button
-    response = templates.TemplateResponse(
-        request=request,
-        name="components/archive/download-button.html.j2",
-        context={
-            "download_archive": download_archive_model,
-        }
-    )
-
-    return response
 
 
 @router.post('/request/{download_format}', response_class=Response)
@@ -109,4 +75,146 @@ async def request_uploads_archive_post(
         }
     )
 
+    return response
+
+
+@router.get("/{download_archive_id}/status")
+async def update_archive_status_get(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    download_archive_id: str,
+) -> Response:
+    """Update current download archive progress status"""
+
+    # If this isn't a HTMX request, bail out now
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+
+    # Get DownloadArchive model
+    download_archive_model = await DownloadArchive.get_or_none(id=download_archive_id, user=current_user)
+    if not download_archive_model:
+        flash_message(request, "The requested download archive could not be found.", "error")
+        response = templates.TemplateResponse(
+            request=request,
+            name="components/archive/download-button.html.j2",
+            status_code=404,
+        )
+        return response
+
+    if download_archive_model.status == ArchiveStatusEnum.ready:
+        flash_message(request, "Your download archive is ready to download.")
+
+    # Return updated download button
+    response = templates.TemplateResponse(
+        request=request,
+        name="components/archive/download-button.html.j2",
+        context={
+            "download_archive": download_archive_model,
+        }
+    )
+
+    return response
+
+
+@router.post("/{download_archive_id}/cancel")
+async def cancel_pending_archive_post(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    download_archive_id: str,
+) -> Response:
+    """Update current download archive progress status"""
+
+    # If this isn't a HTMX request, bail out now
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+
+    # Get DownloadArchive model
+    download_archive_model = await DownloadArchive.get_or_none(id=download_archive_id,
+                                                               user=current_user,
+                                                               status=ArchiveStatusEnum.pending)
+    if not download_archive_model:
+        flash_message(request, "The requested download archive could not be found.", "error")
+        response = templates.TemplateResponse(
+            request=request,
+            name="components/archive/download-button.html.j2",
+            status_code=404,
+        )
+        return response
+
+    # If cancel failed (Probably moved to 'processing' state already), do nothing
+    if not await download_archive_model.cancel():
+        flash_message(request, "Archive download cancel request failed.", message_type="warning")
+        response = Response(
+            status_code=204,
+#            headers={"HX-Trigger": '{"update-sidebar": {}}'},
+        )
+
+    else:
+        flash_message(request, "Pending archive request cancelled.")
+        response = Response(
+            status_code=204,
+            headers={"HX-Trigger": '{"update-sidebar": {}}'},
+        )
+    return response
+
+
+@router.get("/{download_archive_id}/download/{download_archive_filename}")
+@router.get("/{download_archive_id}/download")
+async def download_archive_get(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    download_archive_id: str,
+    download_archive_filename: Optional[str] = None,
+) -> Response:
+    """Return FileResponse of prepared DownloadArchive file for user to download"""
+
+    # Get DownloadArchive model
+    download_archive_model = await DownloadArchive.get_or_none(id=download_archive_id, user=current_user)
+    if not download_archive_model:
+        flash_message(request, "The requested download archive could not be found.", "error")
+        response = templates.TemplateResponse(
+            request=request,
+            name="layout/error.html.j2",
+            status_code=404,
+        )
+        return response
+    
+    # Check archive status
+    if download_archive_model.status != ArchiveStatusEnum.ready:
+        if download_archive_model.status == ArchiveStatusEnum.pending or download_archive_model.status == ArchiveStatusEnum.processing:
+            flash_message(request, f"The requested download archive is still {download_archive_model.status.value}, please try again later.", "warning")
+        if download_archive_model.status == ArchiveStatusEnum.failed:
+            flash_message(request, f"Creation of the requested download archive {download_archive_model.status.value}.", "error")
+        response = templates.TemplateResponse(
+            request=request,
+            name="layout/error.html.j2",
+            status_code=404,
+        )
+        return response
+
+    # Determine filename
+    if not download_archive_filename:
+        download_archive_filename = download_archive_model.filename
+    filename = sanitise_filename(download_archive_filename)
+
+    # Determine and validate file_path
+    file_path = download_archive_model.file_path
+    if not file_path.exists() or not file_path.is_file():
+        flash_message(request, "The requested download archive could not be found.", "error")
+        response = templates.TemplateResponse(
+            request=request,
+            name="layout/error.html.j2",
+            status_code=404,
+        )
+        return response
+    
+    # Determine media_type
+    media_type = download_archive_model.format.mimetype
+
+    # Return file response
+    response = FileResponse(file_path, media_type=media_type)
+
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.headers["Cache-Control"] = "private, max-age=86400"
+    
     return response

@@ -119,7 +119,7 @@ async def serve_file(upload: Upload, filename: str | None = None, user: User | N
     # Return file response
     response = FileResponse(file_path, media_type=media_type)
 
-    response.headers["Content-Disposition"] = f"attachment; filename={filename}" if is_download else f"inline; filename={filename}"
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"' if is_download else f'inline; filename="{filename}"'
     response.headers["Cache-Control"] = f"{'private' if is_private else 'public'}, max-age=3600"
 
     return response
