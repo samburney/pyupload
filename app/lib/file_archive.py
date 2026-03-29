@@ -65,6 +65,28 @@ class FileArchive:
             if not upload_path.exists() or not upload_path.is_file():
                 raise FileNotFoundError(f"Upload path for {upload_path} could not be accessed or is not a file")
 
+    def _resolve_arcnames(self) -> list[tuple[Upload, str]]:
+        """Return (upload, arcname) pairs with duplicates disambiguated.
+
+        The first upload with a given name keeps it unchanged. Subsequent
+        uploads with the same name get a ` (N)` suffix inserted before the
+        extension, starting at 2 — e.g. photo.jpg, photo (2).jpg, photo (3).jpg.
+        """
+        seen: dict[str, int] = {}
+        result = []
+        for upload in self.uploads:
+            name = upload.originalname_dot_ext
+            if name in seen:
+                seen[name] += 1
+                stem = Path(name).stem
+                suffix = Path(name).suffix
+                arcname = f"{stem} ({seen[name]}){suffix}"
+            else:
+                seen[name] = 1
+                arcname = name
+            result.append((upload, arcname))
+        return result
+
     def create_archive(self) -> None:
         """Proxy function to create an archive in various formats"""
 
@@ -84,10 +106,8 @@ class FileArchive:
         from zipfile import ZipFile
 
         with ZipFile(self.archive_path, 'w') as archive_file:
-            for upload in self.uploads:
+            for upload, upload_filename in self._resolve_arcnames():
                 upload_path = upload.filepath.resolve()
-                upload_filename = upload.originalname_dot_ext
-
                 archive_file.write(filename=upload_path, arcname=upload_filename)
 
     def _create_tarball(self, mode: Literal['w:gz', 'w:bz2', 'w:xz']) -> None:
@@ -96,10 +116,8 @@ class FileArchive:
         import tarfile
 
         with tarfile.open(name=self.archive_path, mode=mode) as archive_file:
-            for upload in self.uploads:
+            for upload, upload_filename in self._resolve_arcnames():
                 upload_path = upload.filepath.resolve()
-                upload_filename = upload.originalname_dot_ext
-
                 archive_file.add(name=upload_path, arcname=upload_filename)
 
     def create_targz_archive(self) -> None:
@@ -129,10 +147,8 @@ class FileArchive:
 
             with compressor.stream_writer(archive_file) as stream_compressor:
                 with tarfile.open(fileobj=stream_compressor, mode='w|') as tarball:
-                    for upload in self.uploads:
+                    for upload, upload_filename in self._resolve_arcnames():
                         upload_path = upload.filepath.resolve()
-                        upload_filename = upload.originalname_dot_ext
-
                         tarball.add(name=upload_path, arcname=upload_filename)
 
 

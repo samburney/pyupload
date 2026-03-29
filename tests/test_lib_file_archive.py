@@ -170,6 +170,66 @@ class TestCreateArchiveDispatch:
 
 
 # ============================================================================
+# _resolve_arcnames
+# ============================================================================
+
+class TestResolveArcnames:
+
+    def test_no_duplicates_unchanged(self, mock_archive, mock_uploads, dirs):
+        """Unique names pass through unmodified."""
+        fa, *_ = make_file_archive(mock_archive, mock_uploads, dirs)
+        names = [arcname for _, arcname in fa._resolve_arcnames()]
+        assert names == [u.originalname_dot_ext for u in mock_uploads]
+
+    def test_single_duplicate_gets_suffix(self, mock_archive, mock_uploads, dirs):
+        """Second upload with same name gets ` (2)` suffix."""
+        mock_uploads[1].originalname_dot_ext = mock_uploads[0].originalname_dot_ext
+        fa, *_ = make_file_archive(mock_archive, mock_uploads, dirs)
+        names = [arcname for _, arcname in fa._resolve_arcnames()]
+        assert names[0] == "photo1.jpg"
+        assert names[1] == "photo1 (2).jpg"
+
+    def test_triple_duplicate(self, mock_archive, mock_uploads, dirs):
+        """Three uploads with the same name get no suffix, (2), (3)."""
+        _, upload_dir = dirs
+        third = Mock(spec=Upload)
+        third.id = 3
+        stored = "photo3_20260327-000000_aabbccdd.jpg"
+        (upload_dir / stored).write_bytes(b"fake image data 3")
+        third.originalname_dot_ext = mock_uploads[0].originalname_dot_ext
+        third.filepath = upload_dir / stored
+        mock_uploads[1].originalname_dot_ext = mock_uploads[0].originalname_dot_ext
+        mock_uploads.append(third)
+        mock_archive.upload_ids = [1, 2, 3]
+
+        fa, *_ = make_file_archive(mock_archive, mock_uploads, dirs)
+        names = [arcname for _, arcname in fa._resolve_arcnames()]
+        assert names == ["photo1.jpg", "photo1 (2).jpg", "photo1 (3).jpg"]
+
+    def test_mixed_unique_and_duplicate(self, mock_archive, mock_uploads, dirs):
+        """Unique names are unaffected when other names are duplicated."""
+        _, upload_dir = dirs
+        third = Mock(spec=Upload)
+        third.id = 3
+        stored = "photo3_20260327-000000_aabbccdd.jpg"
+        (upload_dir / stored).write_bytes(b"fake image data 3")
+        third.originalname_dot_ext = mock_uploads[0].originalname_dot_ext  # duplicate of first
+        third.filepath = upload_dir / stored
+        mock_uploads.append(third)
+        mock_archive.upload_ids = [1, 2, 3]
+
+        fa, *_ = make_file_archive(mock_archive, mock_uploads, dirs)
+        names = [arcname for _, arcname in fa._resolve_arcnames()]
+        assert names == ["photo1.jpg", "photo2.jpg", "photo1 (2).jpg"]
+
+    def test_upload_order_preserved(self, mock_archive, mock_uploads, dirs):
+        """Result list order matches the order of self.uploads."""
+        fa, *_ = make_file_archive(mock_archive, mock_uploads, dirs)
+        uploads_out = [upload for upload, _ in fa._resolve_arcnames()]
+        assert uploads_out == list(mock_uploads)
+
+
+# ============================================================================
 # create_zip_archive
 # ============================================================================
 
@@ -220,13 +280,17 @@ class TestCreateZipArchive:
                 source = upload.filepath.read_bytes()
                 assert zf.read(upload.originalname_dot_ext) == source
 
-    @pytest.mark.filterwarnings("ignore:Duplicate name:UserWarning")
     def test_zip_duplicate_original_names(self, mock_archive, mock_uploads, dirs):
-        """Two uploads with the same originalname_dot_ext are both included (second auto-renamed by zipfile)."""
+        """Duplicate originalname_dot_ext values are disambiguated with a (N) suffix."""
         mock_uploads[1].originalname_dot_ext = mock_uploads[0].originalname_dot_ext
         archive_path = self._build_and_run(mock_archive, mock_uploads, dirs)
         with zipfile.ZipFile(archive_path) as zf:
-            assert len(zf.namelist()) == 2
+            names = zf.namelist()
+        stem = Path(mock_uploads[0].originalname_dot_ext).stem
+        suffix = Path(mock_uploads[0].originalname_dot_ext).suffix
+        assert len(names) == 2
+        assert mock_uploads[0].originalname_dot_ext in names
+        assert f"{stem} (2){suffix}" in names
 
 
 # ============================================================================
@@ -303,6 +367,24 @@ class TestCreateTarballArchive:
                 assert member is not None
                 assert member.read() == upload.filepath.read_bytes()
 
+    @pytest.mark.parametrize("fmt,method,read_mode", [
+        (ArchiveFormatsEnum.tar_gzip, "create_targz_archive",  "r:gz"),
+        (ArchiveFormatsEnum.tar_bzip, "create_tarbz2_archive", "r:bz2"),
+        (ArchiveFormatsEnum.tar_xz,   "create_tarxz_archive",  "r:xz"),
+    ])
+    def test_duplicate_original_names(self, mock_archive, mock_uploads, dirs, fmt, method, read_mode):
+        """Duplicate arcnames are disambiguated with a (N) suffix."""
+        mock_archive.format = fmt
+        mock_archive.filename = f"archive_test_20260327-193717_abcd1234.{fmt.value}"
+        mock_uploads[1].originalname_dot_ext = mock_uploads[0].originalname_dot_ext
+        archive_path = self._build_and_run(mock_archive, mock_uploads, dirs, method)
+        with tarfile.open(archive_path, read_mode) as tf:  # type: ignore[call-overload]
+            names = tf.getnames()
+        stem = Path(mock_uploads[0].originalname_dot_ext).stem
+        suffix = Path(mock_uploads[0].originalname_dot_ext).suffix
+        assert mock_uploads[0].originalname_dot_ext in names
+        assert f"{stem} (2){suffix}" in names
+
 
 # ============================================================================
 # create_tarzstd_archive
@@ -362,6 +444,21 @@ class TestCreateTarzstdArchive:
                 with tarfile.open(fileobj=reader, mode="r|") as tf:
                     names = tf.getnames()
         assert set(names) == {u.originalname_dot_ext for u in mock_uploads}
+
+    def test_duplicate_original_names(self, mock_archive, mock_uploads, dirs):
+        """Duplicate arcnames are disambiguated with a (N) suffix."""
+        import zstandard
+        mock_uploads[1].originalname_dot_ext = mock_uploads[0].originalname_dot_ext
+        archive_path = self._build_and_run(mock_archive, mock_uploads, dirs)
+        with archive_path.open("rb") as f:
+            dctx = zstandard.ZstdDecompressor()
+            with dctx.stream_reader(f) as reader:
+                with tarfile.open(fileobj=reader, mode="r|") as tf:
+                    names = tf.getnames()
+        stem = Path(mock_uploads[0].originalname_dot_ext).stem
+        suffix = Path(mock_uploads[0].originalname_dot_ext).suffix
+        assert mock_uploads[0].originalname_dot_ext in names
+        assert f"{stem} (2){suffix}" in names
 
 
 # ============================================================================
