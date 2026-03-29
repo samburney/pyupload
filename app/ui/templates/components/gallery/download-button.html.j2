@@ -4,6 +4,7 @@
 <div id="archive-download-button" class="flex items-center">
     <div class="relative" x-data="{ open: false }">
         <div class="split-button split-button-ok md:max-lg:split-button-md">
+            {%- if download_archive is not defined or not download_archive or download_archive.status != 'ready' %}
             <button class="split-button-action text-center"
                 hx-post="{{ request.url_for('request_uploads_archive_post', download_format='zip') }}"
                 hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
@@ -12,6 +13,12 @@
                 hx-target-4*="#messages">
                 Download {{ selected_uploads | count }} Items
             </button>
+            {%- else %}
+            <a href="{{ request.url_for('download_archive_get', download_archive_id=download_archive.id, download_archive_filename=download_archive.filename) }}"
+                class="split-button-action text-center">
+                Download {{ selected_uploads | count }} Items
+            </a>
+            {%- endif %}
             <button type="button"
                     class="split-button-toggle"
                     aria-label="Toggle download options"

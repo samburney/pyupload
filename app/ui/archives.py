@@ -49,7 +49,7 @@ async def request_uploads_archive_post(
         return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
 
     # Create new DownloadArchive model
-    upload_ids = [upload.id for upload in upload_models]
+    upload_ids = sorted(upload.id for upload in upload_models)
     clean_username = clean_text(current_user.username)
     unique_filename = make_unique_filename(f"archive_{clean_username}")
     archive_filename = f"{unique_filename}.{archive_format.value}"
@@ -146,7 +146,6 @@ async def cancel_pending_archive_post(
         flash_message(request, "Archive download cancel request failed.", message_type="warning")
         response = Response(
             status_code=204,
-#            headers={"HX-Trigger": '{"update-sidebar": {}}'},
         )
 
     else:
