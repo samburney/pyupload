@@ -45,27 +45,28 @@ def mock_uploads(dirs):
     """Two Upload mocks with real files on disk."""
     _, upload_dir = dirs
     uploads = []
-    for i, orig_name in enumerate(["photo1.jpg", "photo2.jpg"], 1):
-        stored_name = f"photo{i}_20260327-000000_aabbccdd.jpg"
-        (upload_dir / stored_name).write_bytes(b"fake image data " + str(i).encode())
+    for i, orig_name in enumerate(["photo1", "photo2"], 1):
+        ext = "jpg"
+        stem = f"photo{i}_20260327-000000_aabbccdd"
+        stored_filename = f"{stem}.{ext}"
+        (upload_dir / stored_filename).write_bytes(b"fake image data " + str(i).encode())
         m = Mock(spec=Upload)
         m.id = i
         m.user_id = 1
-        m.name = stored_name
+        m.name = stem
+        m.ext = ext
         m.originalname = orig_name
+        m.originalname_dot_ext = f"{orig_name}.{ext}"
+        m.filepath = upload_dir / stored_filename
         uploads.append(m)
     return uploads
 
 
 def make_file_archive(mock_archive, mock_uploads, dirs, **kwargs):
-    """Construct a FileArchive with config and make_user_filepath patched."""
+    """Construct a FileArchive with config patched."""
     archive_dir, upload_dir = dirs
 
-    def _user_filepath(user_id, name):
-        return upload_dir / name
-
-    with patch("app.lib.file_archive.config") as mock_config, \
-         patch("app.lib.file_archive.make_user_filepath", side_effect=_user_filepath):
+    with patch("app.lib.file_archive.config") as mock_config:
         mock_config.archive_storage_path = archive_dir
         mock_config.storage_path = upload_dir
         return FileArchive(mock_archive, mock_uploads, **kwargs), archive_dir, upload_dir, mock_config
@@ -122,12 +123,11 @@ class TestFileArchiveInit:
     def test_upload_outside_storage_raises(self, mock_archive, mock_uploads, dirs):
         """Upload path resolving outside storage_path raises ValueError."""
         archive_dir, upload_dir = dirs
+        traversal_path = upload_dir / ".." / ".." / "etc" / "passwd"
+        for upload in mock_uploads:
+            upload.filepath = traversal_path
 
-        def _traversal_filepath(user_id, name):
-            return upload_dir / ".." / ".." / "etc" / "passwd"
-
-        with patch("app.lib.file_archive.config") as mock_config, \
-             patch("app.lib.file_archive.make_user_filepath", side_effect=_traversal_filepath):
+        with patch("app.lib.file_archive.config") as mock_config:
             mock_config.archive_storage_path = archive_dir
             mock_config.storage_path = upload_dir
             with pytest.raises(ValueError, match="outside upload storage"):
@@ -135,9 +135,7 @@ class TestFileArchiveInit:
 
     def test_missing_upload_file_raises(self, mock_archive, mock_uploads, dirs):
         """Upload whose file does not exist on disk raises FileNotFoundError."""
-        _, upload_dir = dirs
-        # Remove one of the files
-        (upload_dir / mock_uploads[0].name).unlink()
+        mock_uploads[0].filepath.unlink()
         with pytest.raises(FileNotFoundError):
             make_file_archive(mock_archive, mock_uploads, dirs)
 
@@ -181,11 +179,7 @@ class TestCreateZipArchive:
         """Helper: construct FileArchive and call create_zip_archive, return archive path."""
         archive_dir, upload_dir = dirs
 
-        def _user_filepath(user_id, name):
-            return upload_dir / name
-
-        with patch("app.lib.file_archive.config") as mock_config, \
-             patch("app.lib.file_archive.make_user_filepath", side_effect=_user_filepath):
+        with patch("app.lib.file_archive.config") as mock_config:
             mock_config.archive_storage_path = archive_dir
             mock_config.storage_path = upload_dir
             fa = FileArchive(mock_archive, mock_uploads)
@@ -211,26 +205,25 @@ class TestCreateZipArchive:
             assert len(zf.namelist()) == len(mock_uploads)
 
     def test_zip_uses_original_names(self, mock_archive, mock_uploads, dirs):
-        """ZIP member names are the uploads' originalname values."""
+        """ZIP member names are the uploads' original filenames (originalname + ext)."""
         archive_path = self._build_and_run(mock_archive, mock_uploads, dirs)
         with zipfile.ZipFile(archive_path) as zf:
             names = zf.namelist()
-        expected = {u.originalname for u in mock_uploads}
+        expected = {u.originalname_dot_ext for u in mock_uploads}
         assert set(names) == expected
 
     def test_zip_member_content_matches_source(self, mock_archive, mock_uploads, dirs):
         """ZIP member content matches the source file bytes."""
-        _, upload_dir = dirs
         archive_path = self._build_and_run(mock_archive, mock_uploads, dirs)
         with zipfile.ZipFile(archive_path) as zf:
             for upload in mock_uploads:
-                source = (upload_dir / upload.name).read_bytes()
-                assert zf.read(upload.originalname) == source
+                source = upload.filepath.read_bytes()
+                assert zf.read(upload.originalname_dot_ext) == source
 
     @pytest.mark.filterwarnings("ignore:Duplicate name:UserWarning")
     def test_zip_duplicate_original_names(self, mock_archive, mock_uploads, dirs):
-        """Two uploads with the same originalname are both included (second auto-renamed by zipfile)."""
-        mock_uploads[1].originalname = mock_uploads[0].originalname
+        """Two uploads with the same originalname_dot_ext are both included (second auto-renamed by zipfile)."""
+        mock_uploads[1].originalname_dot_ext = mock_uploads[0].originalname_dot_ext
         archive_path = self._build_and_run(mock_archive, mock_uploads, dirs)
         with zipfile.ZipFile(archive_path) as zf:
             assert len(zf.namelist()) == 2
@@ -246,11 +239,7 @@ class TestCreateTarballArchive:
         """Construct FileArchive, call the given method, return archive path."""
         archive_dir, upload_dir = dirs
 
-        def _user_filepath(user_id, name):
-            return upload_dir / name
-
-        with patch("app.lib.file_archive.config") as mock_config, \
-             patch("app.lib.file_archive.make_user_filepath", side_effect=_user_filepath):
+        with patch("app.lib.file_archive.config") as mock_config:
             mock_config.archive_storage_path = archive_dir
             mock_config.storage_path = upload_dir
             fa = FileArchive(mock_archive, mock_uploads)
@@ -290,13 +279,13 @@ class TestCreateTarballArchive:
         (ArchiveFormatsEnum.tar_xz,   "create_tarxz_archive",  "r:xz"),
     ])
     def test_uses_original_names(self, mock_archive, mock_uploads, dirs, fmt, method, read_mode):
-        """Tarball member names are the uploads' originalname values."""
+        """Tarball member names are the uploads' original filenames (originalname + ext)."""
         mock_archive.format = fmt
         mock_archive.filename = f"archive_test_20260327-193717_abcd1234.{fmt.value}"
         archive_path = self._build_and_run(mock_archive, mock_uploads, dirs, method)
         with tarfile.open(archive_path, read_mode) as tf:  # type: ignore[call-overload]
             names = tf.getnames()
-        assert set(names) == {u.originalname for u in mock_uploads}
+        assert set(names) == {u.originalname_dot_ext for u in mock_uploads}
 
     @pytest.mark.parametrize("fmt,method,read_mode", [
         (ArchiveFormatsEnum.tar_gzip, "create_targz_archive",  "r:gz"),
@@ -305,15 +294,14 @@ class TestCreateTarballArchive:
     ])
     def test_member_content_matches_source(self, mock_archive, mock_uploads, dirs, fmt, method, read_mode):
         """Tarball member content matches the source file bytes."""
-        _, upload_dir = dirs
         mock_archive.format = fmt
         mock_archive.filename = f"archive_test_20260327-193717_abcd1234.{fmt.value}"
         archive_path = self._build_and_run(mock_archive, mock_uploads, dirs, method)
         with tarfile.open(archive_path, read_mode) as tf:  # type: ignore[call-overload]
             for upload in mock_uploads:
-                member = tf.extractfile(upload.originalname)
+                member = tf.extractfile(upload.originalname_dot_ext)
                 assert member is not None
-                assert member.read() == (upload_dir / upload.name).read_bytes()
+                assert member.read() == upload.filepath.read_bytes()
 
 
 # ============================================================================
@@ -325,11 +313,7 @@ class TestCreateTarzstdArchive:
     def _build_and_run(self, mock_archive, mock_uploads, dirs):
         archive_dir, upload_dir = dirs
 
-        def _user_filepath(user_id, name):
-            return upload_dir / name
-
-        with patch("app.lib.file_archive.config") as mock_config, \
-             patch("app.lib.file_archive.make_user_filepath", side_effect=_user_filepath):
+        with patch("app.lib.file_archive.config") as mock_config:
             mock_config.archive_storage_path = archive_dir
             mock_config.storage_path = upload_dir
             mock_config.archive_zstd_level = 3
@@ -369,7 +353,7 @@ class TestCreateTarzstdArchive:
                     assert len(tf.getmembers()) == len(mock_uploads)
 
     def test_uses_original_names(self, mock_archive, mock_uploads, dirs):
-        """Zstd tarball member names are the uploads' originalname values."""
+        """Zstd tarball member names are the uploads' original filenames (originalname + ext)."""
         import zstandard
         archive_path = self._build_and_run(mock_archive, mock_uploads, dirs)
         with archive_path.open("rb") as f:
@@ -377,7 +361,7 @@ class TestCreateTarzstdArchive:
             with dctx.stream_reader(f) as reader:
                 with tarfile.open(fileobj=reader, mode="r|") as tf:
                     names = tf.getnames()
-        assert set(names) == {u.originalname for u in mock_uploads}
+        assert set(names) == {u.originalname_dot_ext for u in mock_uploads}
 
 
 # ============================================================================
