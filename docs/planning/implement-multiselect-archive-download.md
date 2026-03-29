@@ -14,9 +14,8 @@ Allow users to select multiple uploads in the gallery and request a downloadable
 - Frontend wiring of the existing gallery download button to the new UI routes
 
 ### Current State
-- Gallery multi-select is implemented; the sidebar shows a "Download Archive" split-button with format options (ZIP, TAR.GZ, TAR.ZSTD) but all hrefs are `#` placeholders
-- APScheduler is running with cron jobs for token, user, and orphaned-file cleanup
-- Steps 1–3 complete: model, migration, config, archive creation library, background job, and cleanup scheduler are all in place
+- Steps 1–4 and 6 complete with all tests passing; Step 5 (profile page) remains
+- Remaining work: Step 5
 
 ### Target State
 - Clicking a format option POSTs via HTMX to a UI route with the selected upload IDs and format
@@ -24,7 +23,16 @@ Allow users to select multiple uploads in the gallery and request a downloadable
 - The POST response is an HTML fragment showing a status indicator that polls a status route via HTMX until `ready`, then shows a download link
 - Completed archives also appear on the user's profile page with a download link
 - Archives expire after a configurable TTL (default 24 h) and are cleaned up by a scheduler job
-- Remaining work: Steps 4–6
+
+### Review Snapshot (2026-03-29)
+- Steps 1–4 and 6 complete; all tests green (41/41 in `test_ui_archives.py`, plus existing scheduler/model/archive-lib suites).
+- Step 5 (profile page) is the only remaining work.
+- Features added beyond original scope:
+  - `POST /archives/{id}/cancel` route with `HX-Trigger` sidebar refresh
+  - "Reuse existing archive if selection matches": `gallery_handle_selected_upload_post` queries non-expired archives for the current user + sorted `upload_ids` match and passes result to sidebar template
+  - `ArchiveFormatsEnum.mimetype` property for `Content-Type` mapping
+  - `FileArchive._resolve_arcnames()` for duplicate-safe archive member naming
+- Known pre-merge item: hardcoded `selectedIds = ['338', '327']` in `app/static/js/app/gallery/multiselect.js` must be removed before merge (marked with TODO)
 
 ---
 
@@ -77,15 +85,16 @@ Allow users to select multiple uploads in the gallery and request a downloadable
 2. [x] Support `zip` format using Python's stdlib `zipfile`
 3. [x] Support `tar.gz`, `tar.bz2`, `tar.xz` formats using Python's stdlib `tarfile`
 4. [x] Support `tar.zstd` format using the `zstandard` package — add `zstandard` to project dependencies via `uv`
-5. [x] Each file in the archive is stored using `upload.originalname` as the member name
+5. [x] Each file in the archive uses `upload.originalname` as the member name; duplicates disambiguated by `_resolve_arcnames()` with ` (N)` suffix before extension (e.g. `photo.jpg`, `photo (2).jpg`)
 6. [x] Raise `FileNotFoundError` if any source file is missing from disk
 
 **Tests** (`tests/test_lib_file_archive.py`):
 1. [x] `__init__` validation: path traversal, archive-is-dir, file-exists without/with overwrite, upload ID mismatch, upload path outside storage, missing upload file
 2. [x] `create_archive` dispatch: correct method called for each format, unsupported format raises `NotImplementedError`
-3. [x] ZIP: valid archive, correct members, `originalname` as arcnames, content matches source, duplicate names handled
-4. [x] TAR.GZ / TAR.BZ2 / TAR.XZ: valid archive, correct members, `originalname` as arcnames, content matches source (parametrized)
-5. [x] TAR.ZSTD: valid zstd-compressed tarball, correct members, `originalname` as arcnames
+3. [x] ZIP: valid archive, correct members, `originalname` as arcnames, content matches source, duplicate names deduplicated with ` (N)` suffix
+4. [x] TAR.GZ / TAR.BZ2 / TAR.XZ: valid archive, correct members, `originalname` as arcnames, content matches source, duplicate names (parametrized)
+5. [x] TAR.ZSTD: valid zstd-compressed tarball, correct members, `originalname` as arcnames, duplicate names
+6. [x] `_resolve_arcnames`: no duplicates unchanged, single/triple duplicates get ` (N)` suffix, mixed unique/duplicate, order preserved
 
 **Acceptance Criteria**:
 - [x] All formats produce valid, extractable archives containing the correct files
@@ -136,33 +145,39 @@ Allow users to select multiple uploads in the gallery and request a downloadable
 **Files**:
 - `app/ui/archives.py` *(new)*
 - `app/ui/__init__.py`
-- `app/main.py`
-- `app/ui/templates/archives/` *(new template directory)*
+- `app/ui/templates/components/archive/download-button.html.j2` *(new)*
 
 **Tasks**:
-1. [ ] `POST /archives/request` — requires authentication; accepts form body `upload_ids` (comma-separated or repeated field) and `format`; validates that all referenced uploads are visible to the requesting user (public uploads from any user, plus the user's own private uploads); rejects any IDs that are not visible; creates a `DownloadArchive` record (status: `pending`, `expires_at` derived from config TTL); calls `schedule_archive_job`; returns an HTML fragment (HTMX response) containing a status indicator component that polls the status route
-2. [ ] `GET /archives/{id}/status` — requires authentication; returns an HTML fragment showing current status for the requesting user's archive; when `ready`, includes a download link; when still `pending`, includes HTMX polling attributes to re-request after a short interval; returns 404 if not found or not owned by the requesting user
-3. [ ] `GET /archives/{id}/download` — requires authentication; verifies the archive belongs to the requesting user and that status is `ready` and `expires_at` is in the future; serves the archive file as an attachment via `FileResponse`; returns an appropriate error response if pending, failed, or expired
-4. [ ] Register the new router in `app/ui/__init__.py` and `app/main.py`
+1. [x] `POST /archives/request/{download_format}` — requires authentication; accepts form body `super_selected`, `selected_ids`, `deselected_ids`; filters to uploads readable by the requesting user; creates a `DownloadArchive` record (status: `pending`); calls `schedule_archive_job`; returns an HTML fragment containing a status indicator that polls the status route
+2. [x] `GET /archives/{id}/status` — requires authentication; returns updated `download-button.html.j2` fragment showing current status; when `ready`, flashes a message and includes a download link; polls every 2 s while `pending` or `processing`; returns 404 fragment if not found or not owned
+3. [x] `GET /archives/{id}/download[/{filename}]` — requires authentication; verifies archive belongs to requesting user and status is `ready`; serves archive file as attachment via `FileResponse` with correct `Content-Disposition` (quoted filename) and `Content-Type` from `ArchiveFormatsEnum.mimetype`; returns error template for pending/failed or missing file
+4. [x] `POST /archives/{id}/cancel` — requires authentication; cancels a `pending` archive; returns `HX-Trigger: {"update-sidebar": {}}` on success so the sidebar re-renders
+5. [x] Register the new router in `app/ui/__init__.py`
 
 **Implementation Notes**:
-- Visibility rule for Step 4 Task 1: an upload is visible to the requesting user if `private = 0` (public) OR `user_id = requesting_user.id` (own upload, regardless of privacy)
+- Actual path is `POST /archives/request/{download_format}` (format in path, not form body)
+- `upload_ids` stored sorted to enable direct `filter(upload_ids=sorted_list)` lookup for "reuse existing archive" feature
+- Cancel route has an intentionally dual branch: the `get_or_none` filter uses `status=pending` now, but `cancel()` checks status independently to allow future expansion to cancel `processing` archives without changing the guard logic
+- `ArchiveFormatsEnum.mimetype` property maps enum values to MIME type strings for `Content-Type` header
+- "Reuse existing archive" feature lives in `gallery.py` (sidebar context), not in `archives.py` (routes)
 
-**Tests**:
-1. [ ] `POST /archives/request` with a mix of the user's own uploads and other users' public uploads creates a DB record and returns an HTML fragment
-2. [ ] `POST /archives/request` rejects upload IDs that are private and not owned by the requesting user
-3. [ ] `POST /archives/request` rejects an invalid format value
-4. [ ] `GET /archives/{id}/status` returns correct fragment for `pending` and `ready` states
-5. [ ] `GET /archives/{id}/status` returns 404 for another user's archive
-6. [ ] `GET /archives/{id}/download` serves a file attachment for a `ready` archive
-7. [ ] `GET /archives/{id}/download` returns a non-200 response for a pending, failed, or expired archive
-8. [ ] `GET /archives/{id}/download` returns 404 for another user's archive
-9. [ ] All three routes return 401/redirect to login for unauthenticated requests
+**Tests** (`tests/test_ui_archives.py`):
+1. [x] `POST /archives/request/{format}` with valid selected IDs creates a DB record and returns an HTML fragment
+2. [x] `POST /archives/request/{format}` rejects upload IDs that are private and not owned by the requesting user
+3. [x] `POST /archives/request/{format}` rejects an invalid format value
+4. [x] `GET /archives/{id}/status` returns correct fragment for `pending` and `ready` states
+5. [x] `GET /archives/{id}/status` returns 404 fragment for another user's archive
+6. [x] `GET /archives/{id}/download` serves a file attachment for a `ready` archive
+7. [x] `GET /archives/{id}/download` returns a non-200 response for a pending, failed, or missing-file archive
+8. [x] `GET /archives/{id}/download` returns 404 for another user's archive
+9. [x] `POST /archives/{id}/cancel` cancels a pending archive and returns `HX-Trigger` header
+10. [x] All routes return 401/redirect to login for unauthenticated requests
 
 **Acceptance Criteria**:
-- [ ] Authenticated POST with valid visible upload IDs and format creates a `pending` record and returns a status fragment
-- [ ] Status fragment transitions to a download link once the archive is `ready`
-- [ ] A `ready` archive can be downloaded as a file attachment
+- [x] Authenticated POST with valid upload IDs and format creates a `pending` record and returns a status fragment
+- [x] Status fragment transitions to a download link once the archive is `ready`
+- [x] A `ready` archive can be downloaded as a file attachment
+- [x] Tests written and passing (41/41 passing)
 
 ---
 
@@ -195,17 +210,30 @@ Allow users to select multiple uploads in the gallery and request a downloadable
 
 **Files**:
 - `app/ui/templates/components/gallery/download-button.html.j2`
+- `app/ui/templates/components/gallery/multiselect-sidebar.html.j2`
 
 **Tasks**:
-1. [ ] Update each format `<a>` to trigger an HTMX `POST` to `/archives/request`, sending the current multiselect upload IDs and the chosen format
-2. [ ] Target the HTMX response to an appropriate element in the sidebar that will render the returned status fragment (polling indicator or download link)
+1. [x] Each format button triggers `hx-post` to `/archives/request/{format}`, including `[name='super_selected']`, `[name='selected_ids']`, `[name='deselected_ids']` form fields via `hx-include`
+2. [x] Response targets `#archive-download-button` in the sidebar; 4xx errors target `#messages`
+3. [x] `multiselect-sidebar.html.j2` conditionally renders `gallery/download-button.html.j2` (new request) or `archive/download-button.html.j2` (existing/in-progress archive) based on `download_archive` context variable
+4. [x] `archive/download-button.html.j2` shows queued/processing/ready/failed states with polling (`hx-trigger="every 2s"`) and cancel button
 
-**Tests**:
-1. [ ] Clicking a format option in the gallery with uploads selected issues the correct POST
+**Implementation Notes**:
+- `download-button.html.j2` also handles the "reuse ready archive" case: if `download_archive` is defined and `ready`, the primary action button becomes a direct download link instead of a POST
+- The sidebar shows the existing archive status component (`archive/download-button.html.j2`) whenever `download_archive` is set and not `ready`; once `ready` it reverts to `download-button.html.j2` (which then renders the download link variant)
+
+**Tests** (`tests/test_ui_archives.py::TestMultiselectSidebarRendering`):
+1. [x] No existing archive → request button with `hx-post` to `/archives/request/` is rendered
+2. [x] Matching pending archive → status component with cancel button is rendered
+3. [x] Matching processing archive → status component is rendered
+4. [x] Matching ready archive → direct download link is rendered
+5. [x] Failed archive excluded → request button is rendered (fresh start)
+6. [x] Archive for a different selection does not match → request button rendered
 
 **Acceptance Criteria**:
-- [ ] Clicking a format option triggers archive creation and shows inline status feedback to the user
-- [ ] When the archive is ready, a download link is presented in the sidebar
+- [x] Clicking a format option triggers archive creation and shows inline status feedback to the user
+- [x] When the archive is ready, a download link is presented in the sidebar
+- [x] Tests written and passing (41/41 passing)
 
 **Dependencies**:
-- Step 4 must be complete
+- Step 4 must be complete ✓
