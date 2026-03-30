@@ -37,7 +37,7 @@
             </td>
             <td>{{ download_archive.created_at | ago }}</td>
             <td>{{ download_archive.expires_at | ago }}</td>
-            <td>{{ download_archive.file_size | humanize_bytes if download_archive.file_size else "-" }}</td>
+            <td>{{ download_archive.file_size | humanize_bytes if download_archive.file_size is not none else "-" }}</td>
             <td>{{ download_archive.status.value | capitalize }}</td>
             <td class="flex">
                 {% if download_archive.status == 'ready' %}

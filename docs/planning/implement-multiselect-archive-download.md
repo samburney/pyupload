@@ -31,7 +31,17 @@ Allow users to select multiple uploads in the gallery and request a downloadable
   - "Reuse existing archive if selection matches": `gallery_handle_selected_upload_post` queries non-expired archives for the current user + sorted `upload_ids` match and passes result to sidebar template
   - `ArchiveFormatsEnum.mimetype` property for `Content-Type` mapping
   - `FileArchive._resolve_arcnames()` for duplicate-safe archive member naming
-- Known pre-merge item: hardcoded `selectedIds = ['338', '327']` in `app/static/js/app/gallery/multiselect.js` must be removed before merge (marked with TODO)
+- Known pre-merge item: hardcoded `selectedIds = ['338', '327']` in `app/static/js/app/gallery/multiselect.js` must be removed before merge into `main` (marked with TODO; intentionally retained for `implement_ui_polish` merge)
+
+### Review Snapshot (2026-03-29, pre-merge into implement_ui_polish)
+- Pre-merge code review completed; following fixes applied:
+  - `ARCHIVE_ZSTD_LEVEL` config now validated to be in range 1–22 (`app/lib/config.py`)
+  - `sanitise_filename` return value in download endpoint guarded against `None` with fallback (`app/ui/archives.py`)
+  - `file_size` zero-value check in profile-list template fixed to use `is not none` rather than truthiness (`archives/partials/profile-list.html.j2`)
+  - Typo "ocurred" → "occurred" fixed in `archive/download-button.html.j2`
+  - `aria-label` added to icon-only buttons in `gallery/multiselect-control.html.j2`
+  - `if` → `elif` on mutually exclusive status check in `download_archive_get` (`archives.py`)
+  - `.env.example` misleading `-1 to disable` comment removed from `ARCHIVE_MAX_AGE_HOURS`
 
 ---
 
