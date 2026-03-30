@@ -57,6 +57,8 @@ class AppConfig:
     if archive_max_age_hours <= 0:
         raise ValueError("ARCHIVE_MAX_AGE_HOURS must be a positive integer.")
     archive_zstd_level: int = int(os.getenv("ARCHIVE_ZSTD_LEVEL", "3"))
+    if not (1 <= archive_zstd_level <= 22):
+        raise ValueError("ARCHIVE_ZSTD_LEVEL must be between 1 and 22.")
 
     # Database configuration
     db_host = os.getenv("DB_HOST", "db")

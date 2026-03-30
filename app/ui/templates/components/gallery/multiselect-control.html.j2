@@ -26,6 +26,7 @@
             </div>
             <div class="flex gap-2">
                 <button class="p-2 rounded-sm hover:fill-gray-700 hover:shadow-md hover:cursor-pointer hover:outline hover:outline-red-200"
+                    aria-label="Deselect all"
                     title="Deselect all"
                     @click="clearSelection()">
                     <svg class="size-6">
@@ -33,6 +34,7 @@
                     </svg>
                 </button>
                 <button class="p-2 rounded-sm hover:fill-gray-700 hover:shadow-md hover:cursor-pointer hover:outline hover:outline-blue-200"
+                    aria-label="Select all"
                     title="Select All"
                     @click="toggleSelectAllVisible()"
                     :class="allVisibleSelected ? 'bg-blue-300 shadow-md' : 'bg-inherit shadow-none'">

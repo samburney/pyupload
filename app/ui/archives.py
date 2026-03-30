@@ -270,7 +270,7 @@ async def download_archive_get(
     if download_archive_model.status != ArchiveStatusEnum.ready:
         if download_archive_model.status == ArchiveStatusEnum.pending or download_archive_model.status == ArchiveStatusEnum.processing:
             flash_message(request, f"The requested download archive is still {download_archive_model.status.value}, please try again later.", "warning")
-        if download_archive_model.status == ArchiveStatusEnum.failed:
+        elif download_archive_model.status == ArchiveStatusEnum.failed:
             flash_message(request, f"Creation of the requested download archive {download_archive_model.status.value}.", "error")
         response = templates.TemplateResponse(
             request=request,
@@ -282,7 +282,7 @@ async def download_archive_get(
     # Determine filename
     if not download_archive_filename:
         download_archive_filename = download_archive_model.filename
-    filename = sanitise_filename(download_archive_filename)
+    filename = sanitise_filename(download_archive_filename) or sanitise_filename(download_archive_model.filename) or download_archive_model.filename
 
     # Determine and validate file_path
     file_path = download_archive_model.file_path
