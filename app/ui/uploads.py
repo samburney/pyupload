@@ -59,7 +59,7 @@ async def _render_upload_component(request: Request, current_user: User, upload_
     )
 
 
-@router.get("/upload", response_class=HTMLResponse)
+@router.get("/uploads", response_class=HTMLResponse)
 async def show_upload_page_get(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -75,7 +75,7 @@ async def show_upload_page_get(
     )
 
 
-@router.post("/upload", response_class=HTMLResponse)
+@router.post("/uploads", response_class=HTMLResponse)
 async def create_upload_post(
     current_user: Annotated[User, Depends(get_or_create_authenticated_user)],
     request: Request,
@@ -563,7 +563,7 @@ async def toggle_upload_private_patch(
     upload_model.private = upload_private
     await upload_model.save()
 
-    return await _render_upload_component(request, current_user, upload_model, "components/upload/sidebar.html.j2")
+    return await _render_upload_component(request, current_user, upload_model, "components/uploads/sidebar-content.html.j2")
 
 
 @router.patch("/uploads/{id}/description", response_class=Response)
@@ -588,7 +588,7 @@ async def toggle_upload_description_patch(
         request,
         current_user,
         upload_model,
-        "components/upload/description.html.j2",
+        "components/uploads/description.html.j2",
         context={"validation_errors": validation_errors},
         status_code=400 if validation_errors else 200,
     )

@@ -6,8 +6,8 @@
 {% call render_multiselect_chrome() %}
 <div class="flex flex-row grow">
     <div class="grow min-w-0">
-        {%- include("/gallery/partials/grid.html.j2") %}
-        {%- include("/gallery/partials/pagination.html.j2") %}
+        {%- include("/components/gallery/grid.html.j2") %}
+        {%- include("/components/gallery/pagination.html.j2") %}
     </div>
     <div class="flex-none w-0 opacity-0 ml-0 transition-[width,opacity,margin] ease-in-out"
         :class="{
@@ -22,9 +22,9 @@
         @transitionend.self="animating = false">
         <div id="sidebar-content"
             class="sticky top-2 flex w-40 lg:w-64">
-            {%- include("/components/upload/sidebar-placeholder.html.j2") %}
+            {%- include("/components/uploads/sidebar-placeholder.html.j2") %}
             <div class="absolute top-0 left-0 flex w-full">
-                {%- include("/gallery/partials/sidebar.html.j2") %}
+                {%- include("/gallery/partials/sidebar-content.html.j2") %}
             </div>
             <div id="sidebar-loading-indicator"
                 class="absolute top-0 left-0 flex w-full min-h-[calc(100dvh-148px)] justify-center items-center">

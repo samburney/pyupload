@@ -24,7 +24,7 @@ class TestUploadWidgetRendering:
     @pytest.mark.asyncio
     async def test_widget_included_in_upload_page(self, client):
         """Test that widget.html.j2 is included in the upload page."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         assert response.status_code == 200
         html = response.text
@@ -35,7 +35,7 @@ class TestUploadWidgetRendering:
     @pytest.mark.asyncio
     async def test_widget_has_alpine_store_initialization(self, client):
         """Test that widget initializes Alpine.js uploadWidget store."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -48,7 +48,7 @@ class TestUploadWidgetRendering:
     @pytest.mark.asyncio
     async def test_widget_has_file_input(self, client):
         """Test that widget contains hidden file input element."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -61,7 +61,7 @@ class TestUploadWidgetRendering:
     @pytest.mark.asyncio
     async def test_widget_has_drag_drop_zone(self, client):
         """Test that widget has drag-and-drop event handlers."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -73,7 +73,7 @@ class TestUploadWidgetRendering:
     @pytest.mark.asyncio
     async def test_widget_has_file_list_container(self, client):
         """Test that widget has container for file list display."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -83,7 +83,7 @@ class TestUploadWidgetRendering:
     @pytest.mark.asyncio
     async def test_widget_has_dynamic_border_styling(self, client):
         """Test that widget has dynamic border styling for drag state."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -99,20 +99,20 @@ class TestUploadFormIntegration:
     @pytest.mark.asyncio
     async def test_form_has_htmx_attributes(self, client):
         """Test that form has correct HTMX configuration."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
         # Should have HTMX attributes
         assert 'hx-encoding="multipart/form-data"' in html
-        assert 'hx-post="/upload"' in html
+        assert 'hx-post="/uploads"' in html
         assert 'hx-target=' in html
         assert 'hx-swap=' in html
 
     @pytest.mark.asyncio
     async def test_form_has_htmx_response_targets(self, client):
         """Test that form uses HTMX response-targets extension."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -122,7 +122,7 @@ class TestUploadFormIntegration:
     @pytest.mark.asyncio
     async def test_form_has_upload_button(self, client):
         """Test that form has upload submit button."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -133,7 +133,7 @@ class TestUploadFormIntegration:
     @pytest.mark.asyncio
     async def test_upload_button_has_alpine_binding(self, client):
         """Test that upload button has Alpine.js state binding."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -144,7 +144,7 @@ class TestUploadFormIntegration:
     @pytest.mark.asyncio
     async def test_form_includes_widget_component(self, client):
         """Test that form includes widget.html.j2 component."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -158,7 +158,7 @@ class TestFileListDisplay:
     @pytest.mark.asyncio
     async def test_file_list_has_grid_layout(self, client):
         """Test that file list uses grid layout for alignment."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -169,7 +169,7 @@ class TestFileListDisplay:
     @pytest.mark.asyncio
     async def test_file_list_has_column_headers(self, client):
         """Test that file list displays column headers."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -180,7 +180,7 @@ class TestFileListDisplay:
     @pytest.mark.asyncio
     async def test_file_list_uses_alpine_for_loop(self, client):
         """Test that file list uses Alpine.js x-for to render files."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -191,7 +191,7 @@ class TestFileListDisplay:
     @pytest.mark.asyncio
     async def test_file_list_displays_file_size(self, client):
         """Test that file list displays formatted file size."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -205,7 +205,7 @@ class TestMessageDisplay:
     @pytest.mark.asyncio
     async def test_messages_container_exists(self, client):
         """Test that messages container is present."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -215,7 +215,7 @@ class TestMessageDisplay:
     @pytest.mark.asyncio
     async def test_messages_have_alpine_state(self, client):
         """Test that messages use Alpine.js for state management."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -226,7 +226,7 @@ class TestMessageDisplay:
     @pytest.mark.asyncio
     async def test_messages_have_dismiss_buttons(self, client):
         """Test that messages can be dismissed."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -236,7 +236,7 @@ class TestMessageDisplay:
     @pytest.mark.asyncio
     async def test_messages_have_transitions(self, client):
         """Test that messages use Alpine transitions."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -246,7 +246,7 @@ class TestMessageDisplay:
     @pytest.mark.asyncio
     async def test_info_messages_styled_green(self, client):
         """Test that info messages template has green styling."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -257,7 +257,7 @@ class TestMessageDisplay:
     @pytest.mark.asyncio
     async def test_error_messages_styled_red(self, client):
         """Test that error messages template has red styling."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -272,7 +272,7 @@ class TestResponsiveDesign:
     @pytest.mark.asyncio
     async def test_page_has_responsive_classes(self, client):
         """Test that page uses Tailwind responsive classes."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -282,7 +282,7 @@ class TestResponsiveDesign:
     @pytest.mark.asyncio
     async def test_container_has_max_width(self, client):
         """Test that containers have max-width for desktop."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -292,7 +292,7 @@ class TestResponsiveDesign:
     @pytest.mark.asyncio
     async def test_widget_has_responsive_padding(self, client):
         """Test that widget has responsive padding."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -306,7 +306,7 @@ class TestButtonStates:
     @pytest.mark.asyncio
     async def test_upload_button_disabled_when_no_files(self, client):
         """Test that upload button is disabled when no files selected."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -317,7 +317,7 @@ class TestButtonStates:
     @pytest.mark.asyncio
     async def test_upload_button_has_disabled_styling(self, client):
         """Test that upload button has disabled state styling."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -344,7 +344,7 @@ class TestAlpineStoreIntegration:
     @pytest.mark.asyncio
     async def test_store_accessible_from_form(self, client):
         """Test that form can access widget store."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         
@@ -367,7 +367,7 @@ class TestAlpineStoreIntegration:
     @pytest.mark.asyncio
     async def test_store_has_helper_methods(self, client):
         """Test that store has helper methods."""
-        response = await client.get("/upload")
+        response = await client.get("/uploads")
         
         html = response.text
         

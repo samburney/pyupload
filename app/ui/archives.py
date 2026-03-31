@@ -78,7 +78,7 @@ async def request_uploads_archive_post(
     flash_message(request, "Download archive creation has been queued.")
     response = templates.TemplateResponse(
         request=request,
-        name="components/archive/download-button.html.j2",
+        name="components/archives/download-button.html.j2",
         context={
             "download_archive": download_archive_model,
         }
@@ -133,7 +133,7 @@ async def update_archive_status_get(
         flash_message(request, "The requested download archive could not be found.", "error")
         response = templates.TemplateResponse(
             request=request,
-            name="components/archive/download-button.html.j2",
+            name="components/archives/download-button.html.j2",
             status_code=404,
         )
         return response
@@ -144,7 +144,7 @@ async def update_archive_status_get(
     # Return updated download button
     response = templates.TemplateResponse(
         request=request,
-        name="components/archive/download-button.html.j2",
+        name="components/archives/download-button.html.j2",
         context={
             "download_archive": download_archive_model,
         }
@@ -173,7 +173,7 @@ async def cancel_pending_archive_post(
         flash_message(request, "The requested download archive could not be found.", "error")
         response = templates.TemplateResponse(
             request=request,
-            name="components/archive/download-button.html.j2",
+            name="components/archives/download-button.html.j2",
             status_code=404,
         )
         return response

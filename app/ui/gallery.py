@@ -127,7 +127,7 @@ async def gallery_handle_selected_upload_post(
     }
     response = templates.TemplateResponse(
         request,
-        "gallery/partials/sidebar.html.j2",
+        "gallery/partials/sidebar-content.html.j2",
         context=context
     )
 
