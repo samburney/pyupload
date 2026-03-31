@@ -1,8 +1,8 @@
 """Tests for app/ui/uploads.py - File upload UI endpoints.
 
 This module tests the FastAPI/Starlette file upload endpoints:
-- GET /upload - Display upload form page
-- POST /upload - Process form submission
+- GET /uploads - Display upload form page
+- POST /uploads - Process form submission
 - GET /get/{id}/{filename} - Serve files for viewing
 - GET /download/{id}/{filename} - Force download files
 - DELETE /uploads/{id} - Delete an uploaded file (owner only)
@@ -34,11 +34,11 @@ from app.models.users import User
 from app.models.uploads import Upload, UploadResult, UploadMetadata
 from app.lib.auth import create_access_token
 class TestUploadGetEndpoint:
-    """Test GET /upload endpoint for upload form page."""
+    """Test GET /uploads endpoint for upload form page."""
 
     @pytest.mark.asyncio
     async def test_upload_page_endpoint_exists(self, client):
-        """Test that GET /upload endpoint is accessible."""
+        """Test that GET /uploads endpoint is accessible."""
         response = await client.get("/uploads")
         
         # Should return 200 (auto-creates authenticated user)
@@ -119,11 +119,11 @@ class TestUploadGetEndpoint:
 
 
 class TestUploadPostEndpoint:
-    """Test POST /upload endpoint for file uploads."""
+    """Test POST /uploads endpoint for file uploads."""
 
     @pytest.mark.asyncio
     async def test_upload_endpoint_exists(self, client):
-        """Test that POST /upload endpoint is accessible."""
+        """Test that POST /uploads endpoint is accessible."""
         # Create a user first
         user = await User.create(
             username="testuser",
@@ -142,7 +142,7 @@ class TestUploadPostEndpoint:
 
     @pytest.mark.asyncio
     async def test_upload_post_processes_single_file(self, client, monkeypatch):
-        """Test that POST /upload processes a single file."""
+        """Test that POST /uploads processes a single file."""
         # Create a user
         user = await User.create(
             username="testuser",
@@ -185,7 +185,7 @@ class TestUploadPostEndpoint:
 
     @pytest.mark.asyncio
     async def test_upload_post_processes_multiple_files(self, client, monkeypatch):
-        """Test that POST /upload processes multiple files in batch."""
+        """Test that POST /uploads processes multiple files in batch."""
         # Create a user
         user = await User.create(
             username="testuser",
@@ -233,7 +233,7 @@ class TestUploadPostEndpoint:
 
     @pytest.mark.asyncio
     async def test_upload_post_returns_html_response(self, client, monkeypatch):
-        """Test that POST /upload returns HTML response."""
+        """Test that POST /uploads returns HTML response."""
         user = await User.create(
             username="testuser",
             email="test@example.com",
@@ -397,7 +397,7 @@ class TestUploadPostEndpoint:
 
     @pytest.mark.asyncio
     async def test_upload_post_auto_creates_user(self, client, monkeypatch):
-        """Test that POST /upload auto-creates authenticated user."""
+        """Test that POST /uploads auto-creates authenticated user."""
         # Database should start empty
         user_count_before = await User.all().count()
         

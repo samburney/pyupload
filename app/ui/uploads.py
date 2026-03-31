@@ -1,5 +1,4 @@
 import html
-import json
 
 from typing import Annotated
 from tortoise.exceptions import ValidationError
@@ -57,6 +56,12 @@ async def _render_upload_component(request: Request, current_user: User, upload_
         context=context,
         status_code=status_code,
     )
+
+
+@router.get("/upload", response_class=RedirectResponse, include_in_schema=False)
+async def redirect_upload_get():
+    """Redirect singular /upload route to /uploads."""
+    return RedirectResponse(url="/uploads", status_code=301)
 
 
 @router.get("/uploads", response_class=HTMLResponse)
