@@ -1,6 +1,6 @@
 {% if request.headers.get('hx-target', None) and request.headers.get('hx-target').startswith('gallery-card-') %}
 {% include "components/core/messages.html.j2" %}
-{% include "components/uploads/details.html.j2" %}
+{% include "components/uploads/sidebar-details.html.j2" %}
 {% endif %}
 <div id="gallery-card-{{ upload.id }}"
     class="relative group/card rounded-lg p-3 mb-4 border border-gray-100 shadow-sm shadow-gray-300
