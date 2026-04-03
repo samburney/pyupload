@@ -1,0 +1,16 @@
+<ul id="tag-suggestions"
+    class="menu"
+    x-show="menu"
+    x-cloak
+    x-transition
+    @click.outside="if ($event.target.id !== 'tag_search') { menu = false }">
+    {%- if suggested_tags is defined %}
+    {%- if new_tag %}
+        {% set tag = new_tag %}
+        {%- include "components/tags/suggestion.html.j2" %}
+    {%- endif %}
+    {%- for tag in suggested_tags %}
+        {%- include "components/tags/suggestion.html.j2" %}
+    {%- endfor %}
+    {%- endif %}
+</ul>

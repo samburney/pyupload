@@ -392,17 +392,33 @@
 
 /* Tag input */
 @utility tag-item {
-    @apply text-xs px-1 py-0.5 border border-blue-500 bg-blue-50 shadow shadow-blue-300 rounded-sm uppercase transition-all hover:bg-blue-100 hover:border-blue-500 cursor-default;
+    @apply relative text-xs px-1 py-0.5 border border-blue-500 bg-blue-50 shadow shadow-blue-300 rounded-sm uppercase transition-colors hover:bg-blue-100 hover:border-blue-500 cursor-default;
 
     &:hover .tag-remove {
-        @apply max-w-8 px-1 opacity-100 text-red-500;
+        @apply opacity-100 scale-100;
+    }
+
+    &:has(.tag-remove:hover) {
+        @apply bg-red-100 border-red-500 shadow-red-300;
     }
 }
 
+@utility tag-item-neutral {
+    @apply border-gray-500 bg-gray-50 shadow-gray-300 hover:bg-gray-100 hover:border-gray-500;
+}
+
 @utility tag-remove {
-    @apply inline-block max-w-0 opacity-0 overflow-hidden px-0 text-gray-300 transition-all duration-150 hover:text-black hover:rounded-3xl hover:bg-red-300 cursor-pointer;
+    @apply absolute -top-1.5 -right-1.5 size-3 rounded-full bg-red-500 text-white opacity-0 scale-0 transition-all duration-150 flex items-center justify-center cursor-pointer hover:bg-red-700;
+}
+
+@utility tag-add {
+    @apply inline-block max-w-0 opacity-0 overflow-hidden px-0 text-gray-300 transition-all duration-150 hover:text-black hover:rounded-3xl hover:bg-green-300 cursor-pointer;
 }
 
 @utility tag-item-sm {
     @apply text-2xs;
+}
+
+@utility tag-item-partial {
+    @apply tag-item-neutral cursor-pointer hover:bg-green-300 hover:border-green-500 hover:shadow-green-300;
 }

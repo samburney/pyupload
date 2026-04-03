@@ -6,7 +6,6 @@ from fastapi import APIRouter, Request, Depends, UploadFile, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.lib.config import get_app_config
-from app.lib.helpers import make_clean_tag
 from app.lib.error_handling import NotAuthorisedError, parse_tortoise_validation_errors
 from app.lib.upload_handler import handle_uploaded_files
 from app.lib.file_serving import serve_file, validate_file_request
@@ -25,17 +24,6 @@ from app.ui.common.session import flash_message, get_client_dimensions, BREAKPOI
 
 config = get_app_config()
 router = APIRouter(tags=["uploads"])
-
-
-async def _render_tag_input(request: Request, current_user: User, upload_model: Upload, status_code: int) -> Response:
-    await upload_model.fetch_relations()
-    upload = await UploadSerializer.from_tortoise_orm(upload_model)
-    return templates.TemplateResponse(
-        request,
-        "components/core/tag-input.html.j2",
-        context={"current_user": current_user, "upload": upload},
-        status_code=status_code,
-    )
 
 
 async def _render_upload_component(request: Request, current_user: User, upload_model: Upload, template: str, context: dict | None = None, status_code=200) -> Response:
@@ -334,89 +322,6 @@ async def delete_upload_delete(
     # Redirect to homepage with success message
     flash_message(request, "Upload deleted successfully.")
     return Response(status_code=204, headers={"HX-Redirect": "/profile"})
-
-
-@router.post("/uploads/{id}/tag-suggestions", response_class=HTMLResponse)
-async def get_tag_suggestions_post(
-    request: Request,
-    id: int,
-    current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    tag_name: Annotated[str, Form()] = "",
-) -> Response:
-    """Get tag suggestions for current upload, filtered by the current input value."""
-
-    if tag_name == '':
-        return Response(status_code=204)  # Return empty response if input is empty to avoid unnecessary database query
-
-    # Get upload from database
-    upload_model = await get_upload_with_relations_or_404(id)
-
-    # Serialize upload for template
-    upload = await UploadSerializer.from_tortoise_orm(upload_model)
-
-    # Get tag suggestions
-    new_tag = None
-    suggested_tags = await Tag.all().filter(name__icontains=tag_name) \
-        .exclude(id__in=[tag.id for tag in upload_model.tags])[:5] \
-        .values_list("name", flat=True)
-
-    if tag_name != '':
-        if tag_name not in suggested_tags:
-            new_tag = make_clean_tag(tag_name)
-
-    return templates.TemplateResponse(
-        request,
-        "components/core/tag-suggestions.html.j2",
-        context={
-            "upload": upload,
-            "new_tag": new_tag,
-            "existing_tags": suggested_tags,
-        },
-    )
-
-
-@router.post("/uploads/{id}/tag", response_class=Response)
-async def upload_add_tag_post(
-    id: int,
-    current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    request: Request,
-    tag_name: Annotated[str, Form()],
-) -> Response:
-    """Add a tag to an upload."""
-    
-    # Get upload from database
-    upload_model = await get_upload_with_relations_or_404(id)
-
-    # Add tag to the upload, creating the tag if it doesn't exist
-    try:
-        await Tag.add_or_create_for_upload(upload_model, tag_name)
-
-    except ValueError as e:
-        return await error_template_response(request, [str(e)], status_code=400)
-
-    return await _render_tag_input(request, current_user, upload_model, status_code=201)
-
-
-@router.delete("/uploads/{id}/tag", response_class=Response)
-async def upload_remove_tag_delete(
-    id: int,
-    current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    request: Request,
-    tag_name: str,
-) -> Response:
-    """Remove a tag from an upload."""
-    
-    # Get upload from database
-    upload_model = await get_upload_with_relations_or_404(id)
-
-    # Remove tag from upload
-    try:
-        await Tag.remove_tag_from_upload(upload_model, tag_name)
-
-    except ValueError as e:
-        return await error_template_response(request, [str(e)], status_code=400)
-
-    return await _render_tag_input(request, current_user, upload_model, status_code=200)
 
 
 @router.post("/uploads/{id}/collection-search", response_class=HTMLResponse)

@@ -10,6 +10,7 @@ from fastapi.exceptions import HTTPException
 
 from app.models.common.pagination import PaginationParams
 from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
+from app.models.tags import get_combined_tags_for_uploads
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
 
@@ -119,20 +120,27 @@ async def gallery_handle_selected_upload_post(
         download_archive_model = download_archive_models[0]
         download_archive = await DownloadArchiveSerializer.from_tortoise_orm(download_archive_model)
 
+    # Get selection details
     selection_owners = []
     seen_owners = set()
     selection_file_types = set()
     selection_file_size = 0
+
     for upload in selected_uploads:
+        # Selection owners
         if upload.user.id not in seen_owners:
             seen_owners.add(upload.user.id)
             selection_owners.append(upload.user)
+
+        # Other computed values
         selection_file_types.add(upload.type)
         selection_file_size += upload.size
+
     selection_details = {
         "owners": selection_owners,
         "file_types": selection_file_types,
         "file_size": selection_file_size,
+        "tags": get_combined_tags_for_uploads(selected_uploads),
     }
 
     # Template context
@@ -140,7 +148,7 @@ async def gallery_handle_selected_upload_post(
         "current_user": current_user,
         "selected_uploads": selected_uploads,
         "download_archive": download_archive,
-        "selection_details": selection_details
+        "selection_details": selection_details,
     }
     response = templates.TemplateResponse(
         request,

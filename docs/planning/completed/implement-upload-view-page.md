@@ -18,7 +18,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 ### Current State
 - `/view/{id}/{filename}` route renders a full upload detail page with sidebar metadata panel and file preview
-- View page fully componentised: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-sidebar-actions.html.j2`
+- View page fully componentised: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-sidebar-details.html.j2`, `upload-download-button.html.j2`, `upload-sidebar-actions.html.j2`
 - File preview in `view-frame.html.j2`: images display inline with loading indicator overlay, server-side cache-busting (`?t={updated_at_timestamp}`), and `id="view-frame-image"` for HTMX targeting; non-images show a file-type icon/link
 - Sidebar metadata panel in `upload-details.html.j2` with all fields and responsive styling
 - Download button in `upload-download-button.html.j2`: dropdown for images (original, JPG, GIF, PNG conversions); plain button for non-images
@@ -51,7 +51,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Sharing, inline editing, privacy toggle, delete, and all view-page tests remain pending.
 
 ### Review Snapshot (2026-02-22)
-- View page fully refactored into reusable components: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-sidebar-actions.html.j2`. Steps 2 task 1 and Step 3 task 1 now complete.
+- View page fully refactored into reusable components: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-sidebar-details.html.j2`, `upload-download-button.html.j2`, `upload-sidebar-actions.html.j2`. Steps 2 task 1 and Step 3 task 1 now complete.
 - `view-frame.html.j2` adds `id="view-frame-image"` on image for HTMX targeting, server-side cache-busting via `?t={updated_at_timestamp}`, and a loading indicator overlay (Steps 2 task 6 partial — loading state handled, broken image placeholder still pending).
 - `upload-sidebar-actions.html.j2` implements owner-only image rotation UI: HTMX-powered dropdown with 90° CW, 180°, and 90° CCW options. HTMX swaps `#view-frame-image`, `#upload-details`, and `#messages` in-place after rotation; Rotate button disabled during in-flight requests via `hx-disabled-elt`; loading spinner shown via `hx-indicator`.
 - `app/ui/images.py` provides the `POST /images/{id}/rotate/{angle}` UI endpoint that rotates the image and returns the full rendered view page for HTMX partial extraction.
@@ -64,7 +64,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/models/tags.py`: `Tag.add_or_create_for_upload` and `Tag.remove_tag_from_upload` class methods added; `TagSerializer` added.
 - `app/models/uploads.py`: `tags = fields.ManyToManyField("models.Tag", ...)` added to `Upload`; `tags` field added to `UploadSerializer`.
 - Three new HTMX endpoints in `app/ui/uploads.py`: `POST /uploads/{id}/tag-suggestions`, `POST /uploads/{id}/tag`, `DELETE /uploads/{id}/tag`.
-- `app/ui/templates/components/core/tag-input.html.j2`: new Alpine.js tag input widget with autocomplete, add, and remove interactions.
+- `app/ui/templates/components/tags/input.html.j2`: new Alpine.js tag input widget with autocomplete, add, and remove interactions.
 - `app/ui/templates/components/core/tag-suggestions.html.j2`: suggestions dropdown partial for HTMX swap.
 - All `prefetch_related` calls across `app/ui/main.py`, `app/ui/images.py`, `app/ui/users.py`, and `app/api/images.py` updated to include `"tags"`.
 - Tests: `tests/test_models_tags.py` (14 tests), `tests/test_lib_helpers.py` additions (`TestCleanText`, `TestMakeCleanTag`), and `tests/test_ui_uploads.py` additions (`TestTagSuggestionsEndpoint`, `TestUploadAddTagEndpoint`, `TestUploadDeleteTagEndpoint`) — all 788 tests passing.
@@ -512,7 +512,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/models/tags.py`
 - `app/models/uploads.py`
 - `app/ui/uploads.py`
-- `app/ui/templates/components/core/tag-input.html.j2`
+- `app/ui/templates/components/tags/input.html.j2`
 - `app/ui/templates/components/core/tag-suggestions.html.j2`
 
 **Tasks**:
@@ -567,7 +567,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/templates/components/core/image-rotate-select.html.j2` (new, extracted)
 - `app/ui/templates/components/upload/delete-button.html.j2` (new, extracted)
 - `app/ui/templates/components/upload/sidebar-actions.html.j2`
-- `app/ui/templates/components/core/tag-input.html.j2`
+- `app/ui/templates/components/tags/input.html.j2`
 - `input.css`
 
 **Tasks**:

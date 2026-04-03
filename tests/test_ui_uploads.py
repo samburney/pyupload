@@ -6,9 +6,6 @@ This module tests the FastAPI/Starlette file upload endpoints:
 - GET /get/{id}/{filename} - Serve files for viewing
 - GET /download/{id}/{filename} - Force download files
 - DELETE /uploads/{id} - Delete an uploaded file (owner only)
-- POST /uploads/{id}/tag-suggestions - Get tag suggestions (owner only, HTMX)
-- POST /uploads/{id}/tag - Add a tag to an upload (owner only, HTMX)
-- DELETE /uploads/{id}/tag - Remove a tag from an upload (owner only, HTMX)
 - PATCH /uploads/{id}/private - Toggle upload privacy (owner only, HTMX)
 - PATCH /uploads/{id}/description - Update upload description (owner only, HTMX)
 
@@ -22,7 +19,8 @@ Tests verify:
 - Error handling and per-file error recovery
 - Success/error message display
 - File serving with proper Content-Disposition headers
-- Tag management (add, remove, suggestions) with access control
+
+Tag management tests have moved to tests/test_ui_tags.py.
 """
 
 import pytest
@@ -951,8 +949,12 @@ class TestDeleteUploadPage:
         assert await Upload.get_or_none(id=upload_id) is None
 
 
+# ---------------------------------------------------------------------------
+# Upload helper (also used by privacy toggle and description tests below)
+# ---------------------------------------------------------------------------
+
 def _tag_upload_data(user, suffix: str = "") -> dict:
-    """Minimal Upload.create kwargs for tag endpoint tests."""
+    """Minimal Upload.create kwargs for upload-backed endpoint tests."""
     return {
         "user": user,
         "description": f"tag test {suffix}",
@@ -967,7 +969,7 @@ def _tag_upload_data(user, suffix: str = "") -> dict:
 
 
 async def _create_tag_upload_with_file(user, suffix: str, tmp_path, monkeypatch) -> Upload:
-    """Create a tag-test upload with a real backing file in tmp storage."""
+    """Create a test upload with a real backing file in tmp storage."""
     import app.models.uploads
 
     monkeypatch.setattr(app.models.uploads.config, "storage_path", tmp_path)
@@ -976,245 +978,6 @@ async def _create_tag_upload_with_file(user, suffix: str, tmp_path, monkeypatch)
     upload.filepath.write_text("tag test file")
 
     return upload
-
-
-class TestTagSuggestionsEndpoint:
-    """Tests for POST /uploads/{id}/tag-suggestions."""
-
-    @pytest.mark.asyncio
-    async def test_redirects_to_login_when_unauthenticated(self, client):
-        """Unauthenticated requests redirect to /login."""
-        response = await client.post("/uploads/1/tag-suggestions", data={"tag_name": "foo"}, follow_redirects=False)
-        assert response.status_code == 303
-        assert "/login" in response.headers.get("location", "")
-
-    @pytest.mark.asyncio
-    async def test_returns_404_for_nonexistent_upload(self, client):
-        """Returns 404 when the upload does not exist."""
-        user = await User.create(username="tsugg404", email="tsugg404@example.com", password="pw", is_registered=True)
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post("/uploads/999999/tag-suggestions", data={"tag_name": "foo"})
-        assert response.status_code == 404
-
-    @pytest.mark.asyncio
-    async def test_any_authenticated_user_can_get_suggestions(self, client):
-        """Any authenticated user may request tag suggestions for any upload."""
-        owner = await User.create(username="tsugowner", email="tsugowner@example.com", password="pw", is_registered=True)
-        other = await User.create(username="tsugother", email="tsugother@example.com", password="pw", is_registered=True)
-        upload = await Upload.create(**_tag_upload_data(owner, "sug403"))
-
-        token = create_access_token({"sub": other.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post(f"/uploads/{upload.id}/tag-suggestions", data={"tag_name": "foo"})
-        assert response.status_code == 200
-
-    @pytest.mark.asyncio
-    async def test_returns_204_for_empty_tag_name(self, client):
-        """An empty tag_name returns 204 No Content without hitting the database."""
-        user = await User.create(username="tsugempty", email="tsugempty@example.com", password="pw", is_registered=True)
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post("/uploads/1/tag-suggestions", data={"tag_name": ""})
-        assert response.status_code == 204
-
-    @pytest.mark.asyncio
-    async def test_returns_suggestions_matching_query(self, client, tmp_path, monkeypatch):
-        """Returns tags matching the query string from the database."""
-        from app.models.tags import Tag
-
-        user = await User.create(username="tsugmatch", email="tsugmatch@example.com", password="pw", is_registered=True)
-        upload = await _create_tag_upload_with_file(user, "sugmatch", tmp_path, monkeypatch)
-        await Tag.create(name="python")
-        await Tag.create(name="pyupload")
-        await Tag.create(name="unrelated")
-
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post(f"/uploads/{upload.id}/tag-suggestions", data={"tag_name": "py"})
-        assert response.status_code == 200
-        html = response.text
-        assert "python" in html
-        assert "pyupload" in html
-        assert "unrelated" not in html
-
-    @pytest.mark.asyncio
-    async def test_excludes_tags_already_on_upload(self, client, tmp_path, monkeypatch):
-        """Tags already attached to the upload are not included in suggestions."""
-        from app.models.tags import Tag
-
-        user = await User.create(username="tsugexcl", email="tsugexcl@example.com", password="pw", is_registered=True)
-        upload = await _create_tag_upload_with_file(user, "sugexcl", tmp_path, monkeypatch)
-        await Tag.add_or_create_for_upload(upload, "already-attached")
-        await Tag.create(name="other-match")
-
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post(f"/uploads/{upload.id}/tag-suggestions", data={"tag_name": "a"})
-        assert response.status_code == 200
-        assert "already-attached" not in response.text
-
-
-class TestUploadAddTagEndpoint:
-    """Tests for POST /uploads/{id}/tag."""
-
-    @pytest.mark.asyncio
-    async def test_redirects_to_login_when_unauthenticated(self, client):
-        """Unauthenticated requests redirect to /login."""
-        response = await client.post("/uploads/1/tag", data={"tag_name": "foo"}, follow_redirects=False)
-        assert response.status_code == 303
-        assert "/login" in response.headers.get("location", "")
-
-    @pytest.mark.asyncio
-    async def test_returns_404_for_nonexistent_upload(self, client):
-        """Returns 404 when the upload does not exist."""
-        user = await User.create(username="tadd404", email="tadd404@example.com", password="pw", is_registered=True)
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post("/uploads/999999/tag", data={"tag_name": "foo"})
-        assert response.status_code == 404
-
-    @pytest.mark.asyncio
-    async def test_any_authenticated_user_can_add_tag(self, client):
-        """Any authenticated user may add a tag to any upload."""
-        owner = await User.create(username="taddowner", email="taddowner@example.com", password="pw", is_registered=True)
-        other = await User.create(username="taddother", email="taddother@example.com", password="pw", is_registered=True)
-        upload = await Upload.create(**_tag_upload_data(owner, "add403"))
-
-        token = create_access_token({"sub": other.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post(f"/uploads/{upload.id}/tag", data={"tag_name": "foo"})
-        assert response.status_code == 201
-
-    @pytest.mark.asyncio
-    async def test_adds_tag_and_returns_201(self, client, tmp_path, monkeypatch):
-        """Successfully adding a tag returns 201 with the updated tag-input HTML."""
-        from app.models.tags import Tag
-
-        user = await User.create(username="taddsucc", email="taddsucc@example.com", password="pw", is_registered=True)
-        upload = await _create_tag_upload_with_file(user, "addsucc", tmp_path, monkeypatch)
-
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post(f"/uploads/{upload.id}/tag", data={"tag_name": "newtag"})
-        assert response.status_code == 201
-        assert "text/html" in response.headers.get("content-type", "")
-
-    @pytest.mark.asyncio
-    async def test_tag_persisted_in_database(self, client, tmp_path, monkeypatch):
-        """The tag is saved in the database and associated with the upload."""
-        from app.models.tags import Tag
-
-        user = await User.create(username="tadddb", email="tadddb@example.com", password="pw", is_registered=True)
-        upload = await _create_tag_upload_with_file(user, "adddb", tmp_path, monkeypatch)
-
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        await client.post(f"/uploads/{upload.id}/tag", data={"tag_name": "persisted"})
-
-        await upload.fetch_related("tags")
-        assert any(t.name == "persisted" for t in upload.tags)
-
-    @pytest.mark.asyncio
-    async def test_returns_400_for_empty_tag_name(self, client, tmp_path, monkeypatch):
-        """An empty or invalid tag name (after cleaning) returns 400 Bad Request."""
-        user = await User.create(username="taddempty", email="taddempty@example.com", password="pw", is_registered=True)
-        upload = await _create_tag_upload_with_file(user, "addempty", tmp_path, monkeypatch)
-
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.post(f"/uploads/{upload.id}/tag", data={"tag_name": "!@#$"})
-        assert response.status_code == 400
-
-
-class TestUploadDeleteTagEndpoint:
-    """Tests for DELETE /uploads/{id}/tag."""
-
-    @pytest.mark.asyncio
-    async def test_redirects_to_login_when_unauthenticated(self, client):
-        """Unauthenticated requests redirect to /login."""
-        response = await client.delete("/uploads/1/tag?tag_name=foo", follow_redirects=False)
-        assert response.status_code == 303
-        assert "/login" in response.headers.get("location", "")
-
-    @pytest.mark.asyncio
-    async def test_returns_404_for_nonexistent_upload(self, client):
-        """Returns 404 when the upload does not exist."""
-        user = await User.create(username="tdel404", email="tdel404@example.com", password="pw", is_registered=True)
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.delete("/uploads/999999/tag?tag_name=foo")
-        assert response.status_code == 404
-
-    @pytest.mark.asyncio
-    async def test_any_authenticated_user_can_remove_tag(self, client):
-        """Any authenticated user may remove a tag from any upload."""
-        owner = await User.create(username="tdelowner", email="tdelowner@example.com", password="pw", is_registered=True)
-        other = await User.create(username="tdelother", email="tdelother@example.com", password="pw", is_registered=True)
-        upload = await Upload.create(**_tag_upload_data(owner, "del403"))
-
-        token = create_access_token({"sub": other.username})
-        client.cookies = {"access_token": token}
-
-        # Tag does not exist so removal succeeds silently — returns 200 with updated HTML
-        response = await client.delete(f"/uploads/{upload.id}/tag?tag_name=foo")
-        assert response.status_code == 200
-
-    @pytest.mark.asyncio
-    async def test_removes_tag_and_returns_200(self, client, tmp_path, monkeypatch):
-        """Successfully removing a tag returns 200 with the updated tag-input HTML."""
-        from app.models.tags import Tag
-
-        user = await User.create(username="tdelsucc", email="tdelsucc@example.com", password="pw", is_registered=True)
-        upload = await _create_tag_upload_with_file(user, "delsucc", tmp_path, monkeypatch)
-        await Tag.add_or_create_for_upload(upload, "removable")
-
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.delete(f"/uploads/{upload.id}/tag?tag_name=removable")
-        assert response.status_code == 200
-        assert "text/html" in response.headers.get("content-type", "")
-
-    @pytest.mark.asyncio
-    async def test_tag_removed_from_database(self, client, tmp_path, monkeypatch):
-        """The tag association is removed after the delete request."""
-        from app.models.tags import Tag
-
-        user = await User.create(username="tdeldb", email="tdeldb@example.com", password="pw", is_registered=True)
-        upload = await _create_tag_upload_with_file(user, "deldb", tmp_path, monkeypatch)
-        await Tag.add_or_create_for_upload(upload, "gone")
-
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        await client.delete(f"/uploads/{upload.id}/tag?tag_name=gone")
-
-        await upload.fetch_related("tags")
-        assert all(t.name != "gone" for t in upload.tags)
-
-    @pytest.mark.asyncio
-    async def test_returns_400_for_empty_tag_name(self, client, tmp_path, monkeypatch):
-        """An empty or invalid tag name (after cleaning) returns 400 Bad Request."""
-        user = await User.create(username="tdelempty", email="tdelempty@example.com", password="pw", is_registered=True)
-        upload = await _create_tag_upload_with_file(user, "delempty", tmp_path, monkeypatch)
-
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-
-        response = await client.delete(f"/uploads/{upload.id}/tag?tag_name=!@%23%24")
-        assert response.status_code == 400
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,91 @@
+{% macro render_tags_readonly() %}
+<div id="tag-input">
+    <label class="text-xs text-gray-700 font-medium">Tags</label>
+    <div class="input tag-input mt-1">
+        <div class="p-2">
+            <ul class="flex flex-wrap gap-1 items-center">
+                {%- for tag in tags %}
+                <li class="text-xs">
+                    {%- if tag.selection_type is not defined or tag.selection_type == "common" %}
+                    <div class="px-1 py-0.5 border border-blue-500 shadow shadow-blue-300 rounded-sm uppercase">
+                    {% elif tag.selection_type == "partial" %}
+                    <div class="px-1 py-0.5 border border-gray-500 shadow shadow-gray-300 rounded-sm uppercase">
+                    {% endif %}
+                        <span>{{ tag.name }}</span>
+                    </div>
+                </li>
+                {%- endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro render_tags_input() %}
+<div id="tag-input">
+    <label class="text-xs text-gray-700 font-medium" for="tag_search">Tags</label>
+    <div class="input tag-input mt-1"
+         @click="$focus.focus(document.getElementById('tag_search'))"
+         x-data="tagInput">
+        <div class="relative hover:bg-gray-200 p-2">
+            <ul class="peer flex flex-wrap gap-1 items-center">
+                {%- for tag in tags %}
+                <input name="tag_name" type="hidden" value="{{ tag.name }}" />
+                {%- if tag.selection_type is not defined or tag.selection_type == "common" %}
+                <li class="tag-item max-lg:tag-item-sm"
+                    @click.stop>
+                {%- elif tag.selection_type == "partial" %}
+                <li class="tag-item tag-item-partial max-lg:tag-item-sm"
+                        hx-trigger="click"
+                        hx-post="/tags/update"
+                        hx-include="previous [name='tag_name'], [name='selected_ids']"
+                        hx-select="#tag-input"
+                        hx-target="#tag-input"
+                        hx-target-4*="#messages"
+                        hx-swap="outerHTML"
+                    @click.stop>
+                {%- endif %}
+                    <button class="tag-remove" type="button"
+                        hx-trigger="click"
+                        hx-post="/tags/delete"
+                        hx-include="previous [name='tag_name'], [name='selected_ids']"
+                        hx-select="#tag-input"
+                        hx-target="#tag-input"
+                        hx-target-4*="#messages"
+                        hx-swap="outerHTML"
+                        @click.stop>
+                        <span class="sr-only">Remove tag</span>
+                        <svg class="size-3 fill-white" aria-hidden="true"><use href="#material-symbols-outlined-close"></use></svg>
+                    </button>
+                    <span>{{ tag.name }}</span>
+                </li>
+                {%- endfor %}
+                <li class="text-xs">
+                    <div class="relative">
+                        <input type="text" id="tag_search" name="tag_search" placeholder="{{ 'Click to add tags...' if tags | length == 0 else '' }}"
+                               class="text-xs ring-0 px-1 py-0.5 min-w-16 focus:min-w-16 placeholder-shown:min-w-0 placeholder:italic field-sizing-content bg-transparent shadow-none border-0 rounded-none focus:border-b focus:border-b-blue-500 focus:-mb-px peer"
+                               x-model="newTag"
+                               @keyup="update()"
+                               @focus="update()"
+                               @click="update()"
+                               @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find('#tag-suggestions li:first-child'), 'click'); }"
+                               hx-trigger="keyup[event.target.value.trim() !== ''] changed delay:200ms"
+                               hx-post="/tags/suggestions"
+                               hx-include="[name='tag_name']"
+                               hx-target="#tag-suggestions"
+                               hx-swap="outerHTML"
+                               hx-select-oob="#messages"
+                               hx-target-4*="#messages">
+                        {%- include "components/tags/suggestions.html.j2" %}
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endmacro -%}
+
+{# Handle HTMX partial request #}
+{%- if request and request.headers.get('hx-target', '') == 'tag-input' %}
+{{ render_tags_input() }}
+{% endif %}

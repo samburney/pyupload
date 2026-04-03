@@ -1,3 +1,3 @@
-from app.ui import main, archives, auth, gallery, images, uploads, users, common
+from app.ui import main, common, archives, auth, gallery, images, tags, uploads, users
 
-__all__ = ["main", "archives", "auth", "gallery", "images", "uploads", "users", "common"]
+__all__ = ["main", "common", "archives", "auth", "gallery", "images", "tags", "uploads", "users"]

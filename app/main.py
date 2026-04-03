@@ -87,6 +87,7 @@ app.include_router(ui.archives.router, include_in_schema=False)
 app.include_router(ui.auth.router, include_in_schema=False)
 app.include_router(ui.gallery.router, include_in_schema=False)
 app.include_router(ui.images.router, include_in_schema=False)
+app.include_router(ui.tags.router, include_in_schema=False)
 app.include_router(ui.uploads.router, include_in_schema=False)
 app.include_router(ui.users.router, include_in_schema=False)
 

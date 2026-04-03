@@ -7,12 +7,15 @@
             h-min break-inside-avoid-column flex-col justify-center transition-all
             duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101
             has-checked:outline-3 has-checked:outline-blue-500"
+    {%- if current_user and current_user.id == upload.user.id %}
     @click.self="toggleSelected($el.querySelector('input[type=checkbox]').value);"
     @click.capture="if (selectedCount > 0 && !$event.target.closest('input[type=checkbox]')) {
             $event.preventDefault();
             $event.stopPropagation();
             toggleSelected($el.querySelector('input[type=checkbox]').value);
-        }">
+        }"
+    {%- endif %}
+        >
     {%- if upload.image %}
     {%- set ar_decimal = (upload.image.width / upload.image.height) | round(3) %}
     {%- set thumb_max_width = 640 %}
@@ -63,7 +66,7 @@
             </div>
         </div>
     </a>
-    {% else %}
+    {%- else %}
     <a class="block border border-dashed text-gray-600 hover:text-gray-400 border-gray-600 hover:border-gray-400 rounded-md object-cover w-16 h-16 mx-auto"
         aria-label="Download {{ upload.display_name }}"
         href="{{ upload.url }}">
@@ -71,21 +74,21 @@
             {{ upload.dot_ext }}
         </div>
     </a>
-    {% endif %}
+    {%- endif %}
     <div class="mt-2">
         <dl>
             <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mt-2">
                 <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
-                    {% if not upload.private %}
+                    {%- if not upload.private %}
                     <svg class="size-4{% if current_user and upload.user.id == current_user.id %} text-blue-600{% else %} text-gray-700{% endif %}"
                         viewBox="0 0 24 24">
                         <use href="#icon-user-public"></use>
                     </svg>
-                    {% else %}
+                    {%- else %}
                     <svg class="size-4 text-green-400" viewBox="0 0 32 32">
                         <use href="#icon-user-private"></use>
                     </svg>
-                    {% endif %}
+                    {%- endif %}
                     <p class="font-medium">{{ upload.user.username }}</p>
                 </dd>
                 <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
@@ -131,7 +134,7 @@
             </div>
         </dl>
     </div>
-    {% if current_user and current_user.id == upload.user.id %}
+    {%- if current_user and current_user.id == upload.user.id %}
     <input name="selected_upload_ids" value="{{ upload.id }}" type="checkbox"
         class="absolute top-6 left-6 bg-transparent rounded-full invisible 
             checked:bg-blue-500 checked:visible
@@ -146,5 +149,5 @@
                 }
             } 
         }" />
-    {% endif %}
+    {%- endif %}
 </div>
