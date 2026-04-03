@@ -15,7 +15,6 @@ already exists (POST /gallery).
 
 import uuid
 from datetime import datetime, timedelta, timezone
-import pytest
 import pytest_asyncio
 from unittest.mock import patch
 
@@ -94,7 +93,6 @@ def _make_archive_file(archive: DownloadArchive) -> None:
 
 class TestRequestArchivePost:
 
-    @pytest.mark.asyncio
     async def test_requires_htmx_header(self, client):
         owner = await _make_user("req_nohtmx")
         upload = await _make_upload(owner, "f1")
@@ -105,7 +103,6 @@ class TestRequestArchivePost:
         )
         assert response.status_code == 400
 
-    @pytest.mark.asyncio
     async def test_requires_authentication(self, client):
         owner = await _make_user("req_noauth_owner")
         upload = await _make_upload(owner, "f2")
@@ -116,7 +113,6 @@ class TestRequestArchivePost:
         )
         assert response.status_code in (302, 303, 401)
 
-    @pytest.mark.asyncio
     async def test_invalid_format_returns_400(self, client):
         owner = await _make_user("req_badfmt")
         upload = await _make_upload(owner, "f3")
@@ -128,7 +124,6 @@ class TestRequestArchivePost:
         )
         assert response.status_code == 400
 
-    @pytest.mark.asyncio
     async def test_empty_selection_returns_403(self, client):
         owner = await _make_user("req_empty")
         client.cookies = _auth(owner)
@@ -139,7 +134,6 @@ class TestRequestArchivePost:
         )
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_private_upload_from_other_user_excluded(self, client):
         """Private uploads from another user produce no readable selection → 403."""
         owner = await _make_user("req_perm_owner")
@@ -153,7 +147,6 @@ class TestRequestArchivePost:
         )
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_public_upload_from_other_user_is_readable(self, client):
         """Public uploads from another user are readable and create a valid archive."""
         owner = await _make_user("req_pub_owner")
@@ -169,7 +162,6 @@ class TestRequestArchivePost:
         assert response.status_code == 200
         assert await DownloadArchive.filter(user=owner).count() == 1
 
-    @pytest.mark.asyncio
     async def test_valid_request_creates_pending_record(self, client):
         owner = await _make_user("req_valid")
         upload = await _make_upload(owner, "f4")
@@ -184,7 +176,6 @@ class TestRequestArchivePost:
         archive = await DownloadArchive.filter(user=owner).get()
         assert archive.status == ArchiveStatusEnum.pending
 
-    @pytest.mark.asyncio
     async def test_valid_request_schedules_job(self, client):
         owner = await _make_user("req_schedule")
         upload = await _make_upload(owner, "f5")
@@ -197,7 +188,6 @@ class TestRequestArchivePost:
             )
         mock_schedule.assert_called_once()
 
-    @pytest.mark.asyncio
     async def test_valid_request_returns_html_fragment(self, client):
         owner = await _make_user("req_html")
         upload = await _make_upload(owner, "f6")
@@ -210,7 +200,6 @@ class TestRequestArchivePost:
             )
         assert "text/html" in response.headers.get("content-type", "")
 
-    @pytest.mark.asyncio
     async def test_upload_ids_stored_sorted(self, client):
         """IDs sent in reverse order must be stored ascending for archive deduplication."""
         owner = await _make_user("req_sorted")
@@ -227,7 +216,6 @@ class TestRequestArchivePost:
         archive = await DownloadArchive.filter(user=owner).get()
         assert archive.upload_ids == sorted([u1.id, u2.id])
 
-    @pytest.mark.asyncio
     async def test_all_formats_accepted(self, client):
         """Each supported format value creates a record with the correct format."""
         formats = ["zip", "tar.gz", "tar.bz2", "tar.xz", "tar.zstd"]
@@ -250,7 +238,6 @@ class TestRequestArchivePost:
 
 class TestArchiveStatusGet:
 
-    @pytest.mark.asyncio
     async def test_requires_htmx_header(self, client):
         owner = await _make_user("status_nohtmx")
         upload = await _make_upload(owner, "g1")
@@ -259,7 +246,6 @@ class TestArchiveStatusGet:
         response = await client.get(f"/archives/{archive.id}/status")
         assert response.status_code == 400
 
-    @pytest.mark.asyncio
     async def test_requires_authentication(self, client):
         owner = await _make_user("status_noauth_owner")
         upload = await _make_upload(owner, "g2")
@@ -270,7 +256,6 @@ class TestArchiveStatusGet:
         )
         assert response.status_code in (302, 303, 401)
 
-    @pytest.mark.asyncio
     async def test_returns_html_fragment(self, client):
         owner = await _make_user("status_html")
         upload = await _make_upload(owner, "g3")
@@ -283,7 +268,6 @@ class TestArchiveStatusGet:
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
-    @pytest.mark.asyncio
     async def test_pending_archive_shows_queued_state(self, client):
         owner = await _make_user("status_pending")
         upload = await _make_upload(owner, "g4")
@@ -296,7 +280,6 @@ class TestArchiveStatusGet:
         assert response.status_code == 200
         assert "queued" in response.text.lower()
 
-    @pytest.mark.asyncio
     async def test_processing_archive_shows_processing_state(self, client):
         owner = await _make_user("status_processing")
         upload = await _make_upload(owner, "g5")
@@ -309,7 +292,6 @@ class TestArchiveStatusGet:
         assert response.status_code == 200
         assert "processing" in response.text.lower()
 
-    @pytest.mark.asyncio
     async def test_ready_archive_contains_download_link(self, client):
         owner = await _make_user("status_ready")
         upload = await _make_upload(owner, "g6")
@@ -324,7 +306,6 @@ class TestArchiveStatusGet:
         assert str(archive.id) in response.text
         assert "/download/" in response.text
 
-    @pytest.mark.asyncio
     async def test_other_users_archive_returns_404(self, client):
         owner = await _make_user("status_404_owner")
         other = await _make_user("status_404_other")
@@ -337,7 +318,6 @@ class TestArchiveStatusGet:
         )
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_nonexistent_archive_returns_404(self, client):
         owner = await _make_user("status_notfound")
         client.cookies = _auth(owner)
@@ -354,7 +334,6 @@ class TestArchiveStatusGet:
 
 class TestCancelArchivePost:
 
-    @pytest.mark.asyncio
     async def test_requires_htmx_header(self, client):
         owner = await _make_user("cancel_nohtmx")
         upload = await _make_upload(owner, "c1")
@@ -363,7 +342,6 @@ class TestCancelArchivePost:
         response = await client.post(f"/archives/{archive.id}/cancel")
         assert response.status_code == 400
 
-    @pytest.mark.asyncio
     async def test_requires_authentication(self, client):
         owner = await _make_user("cancel_noauth_owner")
         upload = await _make_upload(owner, "c2")
@@ -374,7 +352,6 @@ class TestCancelArchivePost:
         )
         assert response.status_code in (302, 303, 401)
 
-    @pytest.mark.asyncio
     async def test_cancel_pending_returns_204(self, client):
         owner = await _make_user("cancel_ok")
         upload = await _make_upload(owner, "c3")
@@ -386,7 +363,6 @@ class TestCancelArchivePost:
         )
         assert response.status_code == 204
 
-    @pytest.mark.asyncio
     async def test_cancel_returns_hx_trigger_for_sidebar_refresh(self, client):
         owner = await _make_user("cancel_trigger")
         upload = await _make_upload(owner, "c4")
@@ -400,7 +376,6 @@ class TestCancelArchivePost:
         assert "HX-Trigger" in response.headers
         assert "update-sidebar" in response.headers["HX-Trigger"]
 
-    @pytest.mark.asyncio
     async def test_cancel_deletes_db_record(self, client):
         owner = await _make_user("cancel_delete")
         upload = await _make_upload(owner, "c5")
@@ -413,7 +388,6 @@ class TestCancelArchivePost:
         )
         assert await DownloadArchive.get_or_none(id=archive_id) is None
 
-    @pytest.mark.asyncio
     async def test_cannot_cancel_another_users_archive(self, client):
         owner = await _make_user("cancel_owner")
         other = await _make_user("cancel_other")
@@ -426,7 +400,6 @@ class TestCancelArchivePost:
         )
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_cancel_nonexistent_archive_returns_404(self, client):
         owner = await _make_user("cancel_notfound")
         client.cookies = _auth(owner)
@@ -443,7 +416,6 @@ class TestCancelArchivePost:
 
 class TestDownloadArchiveGet:
 
-    @pytest.mark.asyncio
     async def test_requires_authentication(self, client):
         owner = await _make_user("dl_noauth_owner")
         upload = await _make_upload(owner, "d1")
@@ -452,7 +424,6 @@ class TestDownloadArchiveGet:
         response = await client.get(f"/archives/{archive.id}/download")
         assert response.status_code in (302, 303, 401)
 
-    @pytest.mark.asyncio
     async def test_ready_archive_returns_200(self, client):
         owner = await _make_user("dl_ready")
         upload = await _make_upload(owner, "d2")
@@ -462,7 +433,6 @@ class TestDownloadArchiveGet:
         response = await client.get(f"/archives/{archive.id}/download")
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_ready_archive_content_type_is_zip(self, client):
         owner = await _make_user("dl_ctype")
         upload = await _make_upload(owner, "d3")
@@ -472,7 +442,6 @@ class TestDownloadArchiveGet:
         response = await client.get(f"/archives/{archive.id}/download")
         assert response.headers.get("content-type") == "application/zip"
 
-    @pytest.mark.asyncio
     async def test_ready_archive_content_disposition_is_quoted_attachment(self, client):
         """Content-Disposition must be 'attachment' with a quoted filename."""
         owner = await _make_user("dl_cd")
@@ -485,7 +454,6 @@ class TestDownloadArchiveGet:
         assert cd.startswith("attachment")
         assert 'filename="' in cd
 
-    @pytest.mark.asyncio
     async def test_named_download_uses_given_filename(self, client):
         """/{id}/download/{filename} variant reflects the requested filename."""
         owner = await _make_user("dl_named")
@@ -499,7 +467,6 @@ class TestDownloadArchiveGet:
         assert response.status_code == 200
         assert "my_export.zip" in response.headers.get("content-disposition", "")
 
-    @pytest.mark.asyncio
     async def test_pending_archive_returns_error(self, client):
         owner = await _make_user("dl_pending")
         upload = await _make_upload(owner, "d6")
@@ -508,7 +475,6 @@ class TestDownloadArchiveGet:
         response = await client.get(f"/archives/{archive.id}/download")
         assert response.status_code not in (200, 302)
 
-    @pytest.mark.asyncio
     async def test_failed_archive_returns_error(self, client):
         owner = await _make_user("dl_failed")
         upload = await _make_upload(owner, "d7")
@@ -517,7 +483,6 @@ class TestDownloadArchiveGet:
         response = await client.get(f"/archives/{archive.id}/download")
         assert response.status_code not in (200, 302)
 
-    @pytest.mark.asyncio
     async def test_other_users_archive_returns_404(self, client):
         owner = await _make_user("dl_404_owner")
         other = await _make_user("dl_404_other")
@@ -528,7 +493,6 @@ class TestDownloadArchiveGet:
         response = await client.get(f"/archives/{archive.id}/download")
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_missing_file_on_disk_returns_404(self, client):
         """Ready status but no file on disk → 404."""
         owner = await _make_user("dl_nofile")
@@ -565,7 +529,6 @@ class TestMultiselectSidebarRendering:
         u2 = await _make_upload(owner, "sb2")
         return [u1, u2]
 
-    @pytest.mark.asyncio
     async def test_no_existing_archive_shows_request_button(self, client, owner, uploads):
         """When no matching archive exists, the format-selection button (hx-post) is shown."""
         client.cookies = _auth(owner)
@@ -576,7 +539,6 @@ class TestMultiselectSidebarRendering:
         assert response.status_code == 200
         assert "/archives/request/" in response.text
 
-    @pytest.mark.asyncio
     async def test_pending_archive_shows_status_component(self, client, owner, uploads):
         """When a matching pending archive exists, the status/cancel component is shown."""
         archive = await _make_archive(owner, uploads, status=ArchiveStatusEnum.pending, suffix="sb000001")
@@ -590,7 +552,6 @@ class TestMultiselectSidebarRendering:
         assert str(archive.id) in response.text
         assert "queued" in response.text.lower()
 
-    @pytest.mark.asyncio
     async def test_processing_archive_shows_status_component(self, client, owner, uploads):
         """When a matching processing archive exists, the status component is shown."""
         archive = await _make_archive(owner, uploads, status=ArchiveStatusEnum.processing, suffix="sb000002")
@@ -603,7 +564,6 @@ class TestMultiselectSidebarRendering:
         assert str(archive.id) in response.text
         assert "processing" in response.text.lower()
 
-    @pytest.mark.asyncio
     async def test_ready_archive_shows_download_link(self, client, owner, uploads):
         """When a matching ready archive exists, a direct download link is shown."""
         archive = await _make_archive(owner, uploads, status=ArchiveStatusEnum.ready, suffix="sb000003")
@@ -616,7 +576,6 @@ class TestMultiselectSidebarRendering:
         assert str(archive.id) in response.text
         assert "/download/" in response.text
 
-    @pytest.mark.asyncio
     async def test_failed_archive_excluded_shows_request_button(self, client, owner, uploads):
         """Failed archives are excluded from the query; the fresh request button is shown."""
         await _make_archive(owner, uploads, status=ArchiveStatusEnum.failed, suffix="sb000004")
@@ -628,7 +587,6 @@ class TestMultiselectSidebarRendering:
         assert response.status_code == 200
         assert "/archives/request/" in response.text
 
-    @pytest.mark.asyncio
     async def test_different_selection_shows_request_button(self, client, owner, uploads):
         """An archive for a different set of uploads does not match the current selection."""
         u3 = await _make_upload(owner, "sb3")
@@ -649,7 +607,6 @@ class TestMultiselectSidebarRendering:
 
 class TestDeleteArchiveDelete:
 
-    @pytest.mark.asyncio
     async def test_requires_htmx_header(self, client):
         owner = await _make_user("del_nohtmx")
         upload = await _make_upload(owner, "e1")
@@ -658,7 +615,6 @@ class TestDeleteArchiveDelete:
         response = await client.delete(f"/archives/{archive.id}")
         assert response.status_code == 400
 
-    @pytest.mark.asyncio
     async def test_requires_authentication(self, client):
         owner = await _make_user("del_noauth_owner")
         upload = await _make_upload(owner, "e2")
@@ -666,7 +622,6 @@ class TestDeleteArchiveDelete:
         response = await client.delete(f"/archives/{archive.id}", headers=_htmx())
         assert response.status_code in (302, 303, 401)
 
-    @pytest.mark.asyncio
     async def test_deletes_pending_archive(self, client):
         owner = await _make_user("del_pending")
         upload = await _make_upload(owner, "e3")
@@ -677,7 +632,6 @@ class TestDeleteArchiveDelete:
         assert response.status_code in (200, 204)
         assert await DownloadArchive.get_or_none(id=archive_id) is None
 
-    @pytest.mark.asyncio
     async def test_deletes_ready_archive(self, client):
         owner = await _make_user("del_ready")
         upload = await _make_upload(owner, "e4")
@@ -688,7 +642,6 @@ class TestDeleteArchiveDelete:
         assert response.status_code in (200, 204)
         assert await DownloadArchive.get_or_none(id=archive_id) is None
 
-    @pytest.mark.asyncio
     async def test_returns_hx_trigger_when_on_profile_page(self, client):
         owner = await _make_user("del_profile_trigger")
         upload = await _make_upload(owner, "e5")
@@ -701,7 +654,6 @@ class TestDeleteArchiveDelete:
         assert response.status_code == 200
         assert "refresh-profile-download-archives-table" in response.headers.get("HX-Trigger", "")
 
-    @pytest.mark.asyncio
     async def test_returns_204_when_not_on_profile_page(self, client):
         owner = await _make_user("del_no_profile")
         upload = await _make_upload(owner, "e6")
@@ -710,14 +662,12 @@ class TestDeleteArchiveDelete:
         response = await client.delete(f"/archives/{archive.id}", headers=_htmx())
         assert response.status_code == 204
 
-    @pytest.mark.asyncio
     async def test_nonexistent_archive_returns_404(self, client):
         owner = await _make_user("del_notfound")
         client.cookies = _auth(owner)
         response = await client.delete(f"/archives/{uuid.uuid4()}", headers=_htmx())
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_cannot_delete_another_users_archive(self, client):
         owner = await _make_user("del_owner")
         other = await _make_user("del_other")
@@ -735,19 +685,16 @@ class TestDeleteArchiveDelete:
 
 class TestProfileArchiveListGet:
 
-    @pytest.mark.asyncio
     async def test_requires_htmx_header(self, client):
         owner = await _make_user("plist_nohtmx")
         client.cookies = _auth(owner)
         response = await client.get("/archives/profile-list")
         assert response.status_code == 400
 
-    @pytest.mark.asyncio
     async def test_requires_authentication(self, client):
         response = await client.get("/archives/profile-list", headers=_htmx())
         assert response.status_code in (302, 303, 401)
 
-    @pytest.mark.asyncio
     async def test_returns_html_with_archives(self, client):
         owner = await _make_user("plist_html")
         upload = await _make_upload(owner, "p1")
@@ -758,7 +705,6 @@ class TestProfileArchiveListGet:
         assert "text/html" in response.headers.get("content-type", "")
         assert archive.filename in response.text
 
-    @pytest.mark.asyncio
     async def test_excludes_expired_archives(self, client):
         owner = await _make_user("plist_expired")
         upload = await _make_upload(owner, "p2")
@@ -770,7 +716,6 @@ class TestProfileArchiveListGet:
         assert response.status_code == 200
         assert archive.filename not in response.text
 
-    @pytest.mark.asyncio
     async def test_empty_state_when_no_archives(self, client):
         owner = await _make_user("plist_empty")
         client.cookies = _auth(owner)
@@ -779,7 +724,6 @@ class TestProfileArchiveListGet:
         assert "profile-download-archives-table" in response.text
         assert "<table" not in response.text
 
-    @pytest.mark.asyncio
     async def test_ready_archive_includes_download_link(self, client):
         owner = await _make_user("plist_ready")
         upload = await _make_upload(owner, "p3")
@@ -790,7 +734,6 @@ class TestProfileArchiveListGet:
         assert str(archive.id) in response.text
         assert "/download/" in response.text
 
-    @pytest.mark.asyncio
     async def test_polls_when_archives_in_progress(self, client):
         """Table hx-trigger should include 'every 2s' when a pending archive exists."""
         owner = await _make_user("plist_poll")
@@ -800,7 +743,6 @@ class TestProfileArchiveListGet:
         response = await client.get("/archives/profile-list", headers=_htmx())
         assert "every 2s" in response.text
 
-    @pytest.mark.asyncio
     async def test_no_polling_when_all_archives_terminal(self, client):
         """Table hx-trigger should not include 'every 2s' when all archives are terminal."""
         owner = await _make_user("plist_nopoll")

@@ -37,7 +37,6 @@ async def test_user(db):
 class TestRefreshTokenModel:
     """Test RefreshToken model creation and fields."""
 
-    @pytest.mark.asyncio
     async def test_create_refresh_token(self, test_user):
         """Test that RefreshToken instance can be created successfully."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -58,7 +57,6 @@ class TestRefreshTokenModel:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_refresh_token_foreign_key_relationship(self, test_user):
         """Test that foreign key relationship to User works."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -77,7 +75,6 @@ class TestRefreshTokenModel:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_refresh_token_hash_stored_correctly(self, test_user):
         """Test that token_hash is stored correctly."""
         original_token = "my_secret_token_12345"
@@ -101,7 +98,6 @@ class TestRefreshTokenModel:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_refresh_token_expires_at_datetime(self, test_user):
         """Test that expires_at datetime is handled correctly."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -126,7 +122,6 @@ class TestRefreshTokenModel:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_refresh_token_revoked_defaults_to_false(self, test_user):
         """Test that revoked flag defaults to False."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -143,7 +138,6 @@ class TestRefreshTokenModel:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_refresh_token_timestamps(self, test_user):
         """Test that created_at and updated_at timestamps work."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -168,7 +162,6 @@ class TestRefreshTokenModel:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_refresh_token_cascade_delete_with_user(self, test_user):
         """Test that deleting user cascades to refresh tokens."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -189,7 +182,6 @@ class TestRefreshTokenModel:
         found = await RefreshToken.get_or_none(id=token_id)
         assert found is None
 
-    @pytest.mark.asyncio
     async def test_multiple_refresh_tokens_per_user(self, db):
         """Test that a user can have multiple refresh tokens."""
         user = await User.create(
@@ -222,7 +214,6 @@ class TestRefreshTokenModel:
 class TestRefreshTokenMethods:
     """Test RefreshToken model methods."""
 
-    @pytest.mark.asyncio
     async def test_revoke_method(self, test_user):
         """Test RefreshToken.revoke() instance method."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -247,7 +238,6 @@ class TestRefreshTokenMethods:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_revoke_method_idempotent(self, test_user):
         """Test that revoking already-revoked token is idempotent."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -268,7 +258,6 @@ class TestRefreshTokenMethods:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_is_valid_method_with_valid_token(self, test_user):
         """Test RefreshToken.is_valid() returns True for valid token."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -285,7 +274,6 @@ class TestRefreshTokenMethods:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_is_valid_method_with_revoked_token(self, test_user):
         """Test RefreshToken.is_valid() returns False for revoked token."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -302,7 +290,6 @@ class TestRefreshTokenMethods:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_is_valid_method_with_expired_token(self, test_user):
         """Test RefreshToken.is_valid() returns False for expired token."""
         token_hash = hashlib.sha256("test_token".encode()).hexdigest()
@@ -319,7 +306,6 @@ class TestRefreshTokenMethods:
 
         await refresh_token.delete()
 
-    @pytest.mark.asyncio
     async def test_revoke_all_for_user_method(self, db):
         """Test RefreshToken.revoke_all_for_user() class method."""
         user = await User.create(
@@ -352,7 +338,6 @@ class TestRefreshTokenMethods:
 
         await user.delete()
 
-    @pytest.mark.asyncio
     async def test_cleanup_expired_method(self, db):
         """Test RefreshToken.cleanup_expired() class method."""
         user = await User.create(

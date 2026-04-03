@@ -15,7 +15,6 @@ Tests verify:
 - Authentication requirements
 """
 
-import pytest
 from app.models.users import User
 from app.models.uploads import Upload
 from app.models.images import Image
@@ -25,7 +24,6 @@ from app.lib.auth import create_access_token
 class TestGetFileMetadata:
     """Test GET /api/v1/files/{id} endpoint."""
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_success(self, client):
         """Test successful retrieval of file metadata."""
         # Create user and file
@@ -67,7 +65,6 @@ class TestGetFileMetadata:
         assert data["type"] == "text/plain"
         assert data["viewed"] == 5
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_returns_enriched_fields(self, client):
         """Test that response includes enriched fields."""
         user = await User.create(
@@ -109,7 +106,6 @@ class TestGetFileMetadata:
         assert data["is_private"] is True
         assert data["is_owner"] is True
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_urls_are_absolute(self, client):
         """Test that URLs returned are absolute URLs."""
         user = await User.create(
@@ -148,7 +144,6 @@ class TestGetFileMetadata:
         assert data["download_url"].startswith("http://")
         assert f"/download/{upload.id}/" in data["download_url"]
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_field_name_transformation(self, client):
         """Test that field names are transformed correctly."""
         user = await User.create(
@@ -184,7 +179,6 @@ class TestGetFileMetadata:
         # originalname should include the extension
         assert data["originalname"] == "original_name.txt"
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_includes_image_data(self, client, tmp_path, monkeypatch):
         """Test that image metadata is included for image uploads."""
         import app.models.uploads
@@ -240,7 +234,6 @@ class TestGetFileMetadata:
         assert data["image"][0]["width"] == 800
         assert data["image"][0]["height"] == 600
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_404_for_nonexistent_file(self, client):
         """Test that getting metadata for non-existent file returns 404."""
         user = await User.create(
@@ -261,7 +254,6 @@ class TestGetFileMetadata:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_403_for_private_file(self, client):
         """Test that accessing another user's private file returns 403."""
         owner = await User.create(
@@ -300,7 +292,6 @@ class TestGetFileMetadata:
         assert response.status_code == 403
         assert "permission" in response.json()["detail"].lower()
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_allows_owner_access_to_private_file(self, client):
         """Test that owner can access their own private file metadata."""
         user = await User.create(
@@ -333,7 +324,6 @@ class TestGetFileMetadata:
         assert data["is_owner"] is True
         assert data["is_private"] is True
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_allows_public_file_access(self, client):
         """Test that any authenticated user can access public file metadata."""
         owner = await User.create(
@@ -374,7 +364,6 @@ class TestGetFileMetadata:
         assert data["is_owner"] is False
         assert data["is_private"] is False
 
-    @pytest.mark.asyncio
     async def test_get_file_metadata_requires_authentication(self, client):
         """Test that endpoint requires authentication."""
         user = await User.create(

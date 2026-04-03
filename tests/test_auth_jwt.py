@@ -12,7 +12,6 @@ Acceptance Criteria:
 - Invalid/expired tokens result in anonymous user
 """
 
-import pytest
 import jwt
 from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
@@ -21,7 +20,11 @@ from unittest.mock import Mock, AsyncMock
 
 from app.main import app
 from app.lib.config import get_app_config
-from app.lib.auth import create_access_token, create_token_cookie, get_current_user_from_request
+from app.lib.auth import (
+    create_access_token, create_refresh_token, create_token_cookie,
+    get_current_user_from_request, store_refresh_token,
+)
+from app.models.refresh_tokens import RefreshToken
 from app.models.users import User, UserPydantic, authenticate_user
 
 
@@ -159,7 +162,6 @@ class TestJWTTokenCookie:
 class TestGetCurrentUserFromRequest:
     """Test get_current_user_from_request function for token validation."""
 
-    @pytest.mark.asyncio
     async def test_get_current_user_from_request_with_valid_token(self, monkeypatch):
         """Test that get_current_user_from_request returns user with valid token."""
         config = get_app_config()
@@ -195,7 +197,6 @@ class TestGetCurrentUserFromRequest:
         assert isinstance(result, User)
         assert result.username == "testuser"
 
-    @pytest.mark.asyncio
     async def test_get_current_user_from_request_without_token(self):
         """Test that get_current_user_from_request returns None without token."""
         # Mock request without token
@@ -207,7 +208,6 @@ class TestGetCurrentUserFromRequest:
         
         assert result is None
 
-    @pytest.mark.asyncio
     async def test_get_current_user_from_request_with_invalid_token(self):
         """Test that get_current_user_from_request returns None with invalid token."""
         # Mock request with invalid token
@@ -219,7 +219,6 @@ class TestGetCurrentUserFromRequest:
         
         assert result is None
 
-    @pytest.mark.asyncio
     async def test_get_current_user_from_request_with_expired_token(self):
         """Test that get_current_user_from_request returns anonymous user with expired token."""
         config = get_app_config()
@@ -245,7 +244,6 @@ class TestGetCurrentUserFromRequest:
         
         assert result is None
 
-    @pytest.mark.asyncio
     async def test_get_current_user_from_request_with_nonexistent_user(self, monkeypatch):
         """Test that get_current_user_from_request returns anonymous when user not in DB."""
         config = get_app_config()
@@ -274,7 +272,6 @@ class TestGetCurrentUserFromRequest:
 class TestLoginEndpoint:
     """Test login endpoint with JWT token generation."""
 
-    @pytest.mark.asyncio
     async def test_login_endpoint_exists(self):
         """Test that login endpoint is accessible."""
         client = TestClient(app)
@@ -282,7 +279,6 @@ class TestLoginEndpoint:
         
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_login_post_with_valid_credentials_sets_cookie(self, monkeypatch):
         """Test that successful login sets access_token cookie."""
         from app.main import app as fastapi_app
@@ -326,7 +322,6 @@ class TestLoginEndpoint:
 class TestLogoutEndpoint:
     """Test logout endpoint with JWT token removal."""
 
-    @pytest.mark.asyncio
     async def test_logout_endpoint_exists(self, monkeypatch):
         """Test that logout endpoint is accessible."""
         from app.lib.config import get_app_config
@@ -354,7 +349,6 @@ class TestLogoutEndpoint:
         # Should redirect
         assert response.status_code in [302, 303, 307]
 
-    @pytest.mark.asyncio
     async def test_logout_deletes_access_token_cookie(self, monkeypatch):
         """Test that logout deletes the access_token cookie."""
         # Create a valid token to authenticate
@@ -384,7 +378,6 @@ class TestLogoutEndpoint:
         # The cookie should be deleted (max-age=0 or expires in past)
         assert "access_token" in set_cookie_header.lower() or response.status_code in [302, 303, 307]
 
-    @pytest.mark.asyncio
     async def test_logout_redirects_to_home(self, monkeypatch):
         """Test that logout redirects to home page."""
         # Create a valid token to authenticate
@@ -417,7 +410,6 @@ class TestLogoutEndpoint:
 class TestAuthenticationIntegration:
     """Integration tests for full authentication flow."""
 
-    @pytest.mark.asyncio
     async def test_full_auth_flow_login_and_access(self, monkeypatch):
         """Test complete flow: login with JWT, access protected resource."""
         config = get_app_config()
@@ -468,7 +460,6 @@ class TestAuthenticationIntegration:
 class TestAuthenticateUser:
     """Test authenticate_user function."""
 
-    @pytest.mark.asyncio
     async def test_authenticate_user_with_username(self, monkeypatch):
         """Test authenticating user by username."""
         from app.models.users import authenticate_user
@@ -492,7 +483,6 @@ class TestAuthenticateUser:
         assert result is not None
         assert result.username == "testuser"
 
-    @pytest.mark.asyncio
     async def test_authenticate_user_with_email(self, monkeypatch):
         """Test authenticating user by email."""
         from app.models.users import authenticate_user
@@ -516,7 +506,6 @@ class TestAuthenticateUser:
         
         assert result is not None
 
-    @pytest.mark.asyncio
     async def test_authenticate_user_wrong_password(self, monkeypatch):
         """Test authentication fails with wrong password."""
         from app.models.users import authenticate_user
@@ -539,7 +528,6 @@ class TestAuthenticateUser:
         
         assert result is None
 
-    @pytest.mark.asyncio
     async def test_authenticate_user_nonexistent_user(self, monkeypatch):
         """Test authentication fails for non-existent user."""
         from app.models.users import authenticate_user
@@ -563,7 +551,6 @@ class TestAuthenticateUser:
 class TestLoginRefreshTokenIntegration:
     """Test login endpoint properly creates and stores refresh tokens."""
 
-    @pytest.mark.asyncio
     async def test_login_sets_refresh_token_cookie(self, monkeypatch):
         """Test that successful login sets refresh_token cookie."""
         from app.main import app as fastapi_app
@@ -595,7 +582,6 @@ class TestLoginRefreshTokenIntegration:
         assert "access_token" in response.cookies
         assert "refresh_token" in response.cookies
 
-    @pytest.mark.asyncio
     async def test_login_stores_refresh_token_in_database(self, monkeypatch):
         """Test that login stores refresh token in database."""
         from app.main import app as fastapi_app
@@ -637,7 +623,6 @@ class TestLoginRefreshTokenIntegration:
 class TestLogoutRefreshTokenIntegration:
     """Test logout endpoint properly revokes refresh tokens."""
 
-    @pytest.mark.asyncio
     async def test_logout_revokes_refresh_token(self, monkeypatch):
         """Test that logout revokes the refresh token."""
         from app.main import app as fastapi_app
@@ -678,7 +663,6 @@ class TestLogoutRefreshTokenIntegration:
         # Should have revoked the token
         assert revoke_called["value"] is True
 
-    @pytest.mark.asyncio
     async def test_logout_deletes_both_cookies(self, monkeypatch):
         """Test that logout deletes both access and refresh token cookies."""
         from app.main import app as fastapi_app
@@ -716,7 +700,6 @@ class TestLogoutRefreshTokenIntegration:
         # The cookies dict will show them but they're marked for deletion
         assert response.status_code in [302, 303, 307]
 
-    @pytest.mark.asyncio
     async def test_logout_works_without_refresh_token(self, monkeypatch):
         """Test that logout works even without refresh token (backward compat)."""
         from app.main import app as fastapi_app
@@ -753,127 +736,74 @@ class TestLogoutRefreshTokenIntegration:
 
 
 class TestLogoutAllEndpoint:
-    """Test /logout-all endpoint functionality."""
+    """Tests for GET /logout-all — revokes all refresh tokens for the authenticated user."""
 
-    @pytest.mark.asyncio
-    async def test_logout_all_endpoint_exists(self, monkeypatch):
-        """Test that /logout-all endpoint is accessible."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        # Create token for authentication
-        from app.lib.auth import create_access_token
-        mock_user = Mock(spec=User)
-        mock_user.id = 1
-        mock_user.username = "testuser"
-        
-        access_token = create_access_token(data={"sub": "testuser"})
-        
-        # Mock User.get_or_none
-        async def mock_get_or_none(**kwargs):
-            if kwargs.get("username") == "testuser":
-                return mock_user
-            return None
-        
-        # Mock revoke_user_refresh_tokens
-        async def mock_revoke_all(user):
-            return 0
-        
-        import app.lib.auth
-        monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
-        monkeypatch.setattr(app.lib.auth, "revoke_user_refresh_tokens", mock_revoke_all)
-        
-        client.cookies.set("access_token", access_token)
-        response = client.get("/logout-all", follow_redirects=False)
-        
-        # Should redirect
-        assert response.status_code in [302, 303, 307]
+    async def test_requires_authentication(self, client):
+        """An unauthenticated request redirects to login."""
+        response = await client.get("/logout-all", follow_redirects=False)
 
-    @pytest.mark.asyncio
-    async def test_logout_all_requires_authentication(self):
-        """Test that /logout-all requires authenticated user."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        # Make request without authentication
-        response = client.get("/logout-all", follow_redirects=False)
-        
-        # Should redirect to login (303) when not authenticated
         assert response.status_code == 303
 
-    @pytest.mark.asyncio
-    async def test_logout_all_revokes_all_user_tokens(self, monkeypatch):
-        """Test that /logout-all revokes all user's refresh tokens."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        # Track revoke call
-        revoke_all_called = {"value": False, "count": 0}
-        
-        # Create token
-        from app.lib.auth import create_access_token
-        mock_user = Mock(spec=User)
-        mock_user.id = 1
-        mock_user.username = "testuser"
-        
-        access_token = create_access_token(data={"sub": "testuser"})
-        
-        # Mock User.get_or_none
-        async def mock_get_or_none(**kwargs):
-            if kwargs.get("username") == "testuser":
-                return mock_user
-            return None
-        
-        # Mock revoke_user_refresh_tokens
-        async def mock_revoke_all(user):
-            revoke_all_called["value"] = True
-            revoke_all_called["count"] = 5  # Simulate 5 tokens revoked
-            return 5
-        
-        import app.ui.auth
-        monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
-        monkeypatch.setattr(app.ui.auth, "revoke_user_refresh_tokens", mock_revoke_all)
-        
-        client.cookies.set("access_token", access_token)
-        response = client.get("/logout-all", follow_redirects=False)
-        
-        # Should have called revoke_user_refresh_tokens
-        assert revoke_all_called["value"] is True
-        assert revoke_all_called["count"] == 5
+    async def test_authenticated_user_is_redirected(self, client):
+        """An authenticated user is redirected after logout-all."""
+        user = await User.create(username="logoutall1", email="logoutall1@example.com", password="pw", is_registered=True)
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
 
-    @pytest.mark.asyncio
-    async def test_logout_all_deletes_current_cookies(self, monkeypatch):
-        """Test that /logout-all deletes current device cookies."""
-        from app.main import app as fastapi_app
-        client = TestClient(fastapi_app)
-        
-        # Create tokens
-        from app.lib.auth import create_access_token, create_refresh_token
-        mock_user = Mock(spec=User)
-        mock_user.id = 1
-        mock_user.username = "testuser"
-        
-        access_token = create_access_token(data={"sub": "testuser"})
-        refresh_token = create_refresh_token(mock_user)
-        
-        # Mock User.get_or_none
-        async def mock_get_or_none(**kwargs):
-            if kwargs.get("username") == "testuser":
-                return mock_user
-            return None
-        
-        # Mock revoke_user_refresh_tokens
-        async def mock_revoke_all(user):
-            return 3
-        
-        import app.lib.auth
-        monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
-        monkeypatch.setattr(app.lib.auth, "revoke_user_refresh_tokens", mock_revoke_all)
-        
-        # Make request
-        client.cookies.set("access_token", access_token)
-        client.cookies.set("refresh_token", refresh_token)
-        response = client.get("/logout-all", follow_redirects=False)
-        
-        # Should redirect and delete cookies
+        response = await client.get("/logout-all", follow_redirects=False)
+
         assert response.status_code in [302, 303, 307]
+
+    async def test_revokes_all_user_refresh_tokens(self, client):
+        """All DB refresh tokens for the user are deleted after logout-all."""
+        user = await User.create(username="logoutall2", email="logoutall2@example.com", password="pw", is_registered=True)
+
+        for _ in range(3):
+            rt = create_refresh_token(user)
+            await store_refresh_token(rt, user)
+
+        assert await RefreshToken.filter(user=user).count() == 3
+
+        access_token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": access_token}
+
+        await client.get("/logout-all", follow_redirects=False)
+
+        assert await RefreshToken.filter(user=user, revoked=False).count() == 0
+
+    async def test_clears_access_token_cookie(self, client):
+        """The response marks the access_token cookie for deletion."""
+        user = await User.create(username="logoutall3", email="logoutall3@example.com", password="pw", is_registered=True)
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.get("/logout-all", follow_redirects=False)
+
+        assert response.status_code in [302, 303, 307]
+        assert "access_token" in response.headers.get("set-cookie", "")
+
+
+class TestUsersMe:
+    """Tests for GET /api/v1/users/me."""
+
+    async def test_returns_401_without_authorization_header(self, client):
+        """Request without a Bearer token returns 401."""
+        response = await client.get("/api/v1/users/me")
+
+        assert response.status_code == 401
+
+    async def test_returns_401_with_invalid_token(self, client):
+        """Request with a malformed Bearer token returns 401."""
+        response = await client.get("/api/v1/users/me", headers={"Authorization": "Bearer not.a.real.token"})
+
+        assert response.status_code == 401
+
+    async def test_returns_current_user_data_with_valid_token(self, client):
+        """A valid Bearer token returns 200 with the authenticated user's username."""
+        user = await User.create(username="meuser", email="meuser@example.com", password="pw", is_registered=True)
+        token = create_access_token({"sub": user.username})
+
+        response = await client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {token}"})
+
+        assert response.status_code == 200
+        assert user.username in response.text

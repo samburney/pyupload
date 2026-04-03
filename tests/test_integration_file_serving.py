@@ -10,7 +10,6 @@ workflow from upload to viewing and downloading, including:
 - Cross-component integration (auth + storage + serving)
 """
 
-import pytest
 from io import BytesIO
 from app.models.users import User
 from app.models.uploads import Upload
@@ -20,7 +19,6 @@ from app.lib.auth import create_access_token
 class TestFileServingWorkflow:
     """Integration tests for complete file serving workflows."""
 
-    @pytest.mark.asyncio
     async def test_upload_view_download_workflow(self, client, tmp_path, monkeypatch):
         """Test complete workflow: upload file → view it → download it."""
         import app.models.uploads
@@ -71,7 +69,6 @@ class TestFileServingWorkflow:
         await upload.refresh_from_db()
         assert upload.viewed == 0  # Owner views don't increment
 
-    @pytest.mark.asyncio
     async def test_public_file_workflow_anonymous_user(self, client, tmp_path, monkeypatch):
         """Test that anonymous users can view public files."""
         import app.models.uploads
@@ -112,7 +109,6 @@ class TestFileServingWorkflow:
         await upload.refresh_from_db()
         assert upload.viewed == 1
 
-    @pytest.mark.asyncio
     async def test_private_file_workflow_multi_user(self, client, tmp_path, monkeypatch):
         """Test private file access control across multiple users."""
         import app.models.uploads
@@ -181,7 +177,6 @@ class TestFileServingWorkflow:
 class TestFileServingSecurity:
     """Security-focused integration tests."""
 
-    @pytest.mark.asyncio
     async def test_path_traversal_prevention(self, client, tmp_path, monkeypatch):
         """Test that path traversal attacks are prevented."""
         import app.models.uploads
@@ -250,7 +245,6 @@ class TestFileServingSecurity:
         assert correct_response.status_code == 200
         assert correct_response.content == b"legitimate content"
 
-    @pytest.mark.asyncio
     async def test_access_control_bypass_attempts(self, client, tmp_path, monkeypatch):
         """Test that access control cannot be bypassed."""
         import app.models.uploads
@@ -303,7 +297,6 @@ class TestFileServingSecurity:
         owner_response = await client.get(f"/get/{upload.id}/secure.txt")
         assert owner_response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_sql_injection_in_file_id(self, client, tmp_path, monkeypatch):
         """Test that SQL injection attempts in file ID are handled safely."""
         import app.models.uploads
@@ -327,7 +320,6 @@ class TestFileServingSecurity:
 class TestFileServingEdgeCases:
     """Integration tests for edge cases and special scenarios."""
 
-    @pytest.mark.asyncio
     async def test_special_characters_in_filename(self, client, tmp_path, monkeypatch):
         """Test file serving with special characters in filename."""
         import app.models.uploads
@@ -363,7 +355,6 @@ class TestFileServingEdgeCases:
         assert response.status_code == 200
         assert response.content == b"content with special chars"
 
-    @pytest.mark.asyncio
     async def test_concurrent_access_increments_view_counter(self, client, tmp_path, monkeypatch):
         """Test that multiple concurrent accesses increment view counter correctly."""
         import app.models.uploads
@@ -425,7 +416,6 @@ class TestFileServingEdgeCases:
         assert upload.viewed >= 1  # At least some views counted
         # In production with proper DB, this would be 5
 
-    @pytest.mark.asyncio
     async def test_api_metadata_endpoint_integration(self, client, tmp_path, monkeypatch):
         """Test API metadata endpoint integration with file serving."""
         import app.models.uploads
@@ -481,7 +471,6 @@ class TestFileServingEdgeCases:
         assert download_response.status_code == 200
         assert "attachment" in download_response.headers["content-disposition"]
 
-    @pytest.mark.asyncio
     async def test_missing_file_on_disk_but_db_record_exists(self, client, tmp_path, monkeypatch):
         """Test graceful handling when DB record exists but file is missing."""
         import app.models.uploads

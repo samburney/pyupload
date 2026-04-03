@@ -65,7 +65,6 @@ class TestIsInlineMimetype:
 class TestServeFile:
     """Test serve_file function."""
 
-    @pytest.mark.asyncio
     async def test_serve_public_file_anonymous_user(self, db, tmp_path, monkeypatch):
         """Test serving a public file to an anonymous user."""
         # Mock storage path
@@ -103,7 +102,6 @@ class TestServeFile:
         assert isinstance(response, FileResponse)
         assert response.media_type == "text/plain"
 
-    @pytest.mark.asyncio
     async def test_serve_private_file_to_owner(self, db, tmp_path, monkeypatch):
         """Test serving a private file to the owner."""
         # Mock storage path
@@ -140,7 +138,6 @@ class TestServeFile:
 
         assert isinstance(response, FileResponse)
 
-    @pytest.mark.asyncio
     async def test_serve_private_file_to_anonymous_returns_403(self, db):
         """Test that serving a private file to anonymous user returns 403."""
         user = await User.create(
@@ -167,7 +164,6 @@ class TestServeFile:
         with pytest.raises(NotAuthorisedError):
             await serve_file(upload, filename=None, user=None, download=False)
 
-    @pytest.mark.asyncio
     async def test_serve_private_file_to_different_user_returns_403(self, db):
         """Test that serving a private file to a different user returns 403."""
         owner = await User.create(
@@ -201,7 +197,6 @@ class TestServeFile:
         with pytest.raises(NotAuthorisedError):
             await serve_file(upload, filename=None, user=other_user, download=False)
 
-    @pytest.mark.asyncio
     async def test_serve_nonexistent_file_returns_404(self, db):
         """Test that serving a non-existent file returns 404."""
         user = await User.create(
@@ -228,7 +223,6 @@ class TestServeFile:
         with pytest.raises(FileNotFoundError):
             await serve_file(upload, filename=None, user=None, download=False)
 
-    @pytest.mark.asyncio
     async def test_serve_file_image_processing_failure_returns_422(self, db, tmp_path, monkeypatch):
         """Test that image processing failures are mapped to 422 responses."""
         config = get_app_config()
@@ -272,7 +266,6 @@ class TestServeFile:
             with pytest.raises(ImageProcessingError):
                 await serve_file(upload, filename="image-320x0.jpg", user=None, download=False)
 
-    @pytest.mark.asyncio
     async def test_view_counter_increments_for_non_owner(self, db, tmp_path, monkeypatch):
         """Test that view counter increments when non-owner accesses file."""
         # Mock storage path
@@ -314,7 +307,6 @@ class TestServeFile:
         await upload.refresh_from_db()
         assert upload.viewed == initial_views + 1
 
-    @pytest.mark.asyncio
     async def test_view_counter_does_not_increment_for_owner(self, db, tmp_path, monkeypatch):
         """Test that view counter does not increment when owner accesses file."""
         # Mock storage path
@@ -356,7 +348,6 @@ class TestServeFile:
         await upload.refresh_from_db()
         assert upload.viewed == initial_views  # Should not increment
 
-    @pytest.mark.asyncio
     async def test_content_disposition_inline_for_images(self, db, tmp_path, monkeypatch):
         """Test that Content-Disposition is inline for image files."""
         # Mock storage path
@@ -392,7 +383,6 @@ class TestServeFile:
 
         assert "inline" in response.headers["Content-Disposition"]
 
-    @pytest.mark.asyncio
     async def test_content_disposition_attachment_when_download_true(self, db, tmp_path, monkeypatch):
         """Test that Content-Disposition is attachment when download=True."""
         # Mock storage path
@@ -428,7 +418,6 @@ class TestServeFile:
 
         assert "attachment" in response.headers["Content-Disposition"]
 
-    @pytest.mark.asyncio
     async def test_custom_filename_sanitization(self, db, tmp_path, monkeypatch):
         """Test that custom filenames are sanitized."""
         # Mock storage path
@@ -472,7 +461,6 @@ class TestServeFile:
 class TestCacheControlHeaders:
     """Test Cache-Control header behavior."""
 
-    @pytest.mark.asyncio
     async def test_cache_control_private_for_private_files(self, db, tmp_path, monkeypatch):
         """Test that private files get Cache-Control: private header."""
         # Mock storage path
@@ -510,7 +498,6 @@ class TestCacheControlHeaders:
         assert "private" in response.headers["Cache-Control"]
         assert "max-age=3600" in response.headers["Cache-Control"]
 
-    @pytest.mark.asyncio
     async def test_cache_control_public_for_public_files(self, db, tmp_path, monkeypatch):
         """Test that public files get Cache-Control: public header."""
         # Mock storage path
@@ -552,7 +539,6 @@ class TestCacheControlHeaders:
 class TestContentDispositionVariety:
     """Test Content-Disposition header for various MIME types."""
 
-    @pytest.mark.asyncio
     async def test_inline_for_video_files(self, db, tmp_path, monkeypatch):
         """Test that video files are served inline by default."""
         config = get_app_config()
@@ -586,7 +572,6 @@ class TestContentDispositionVariety:
 
         assert "inline" in response.headers["Content-Disposition"]
 
-    @pytest.mark.asyncio
     async def test_inline_for_audio_files(self, db, tmp_path, monkeypatch):
         """Test that audio files are served inline by default."""
         config = get_app_config()
@@ -620,7 +605,6 @@ class TestContentDispositionVariety:
 
         assert "inline" in response.headers["Content-Disposition"]
 
-    @pytest.mark.asyncio
     async def test_inline_for_pdf_files(self, db, tmp_path, monkeypatch):
         """Test that PDF files are served inline by default."""
         config = get_app_config()
@@ -654,7 +638,6 @@ class TestContentDispositionVariety:
 
         assert "inline" in response.headers["Content-Disposition"]
 
-    @pytest.mark.asyncio
     async def test_attachment_for_binary_files(self, db, tmp_path, monkeypatch):
         """Test that binary files are served as attachment by default."""
         config = get_app_config()
@@ -688,7 +671,6 @@ class TestContentDispositionVariety:
 
         assert "attachment" in response.headers["Content-Disposition"]
 
-    @pytest.mark.asyncio
     async def test_attachment_for_zip_files(self, db, tmp_path, monkeypatch):
         """Test that archive files are served as attachment."""
         config = get_app_config()
@@ -722,7 +704,6 @@ class TestContentDispositionVariety:
 
         assert "attachment" in response.headers["Content-Disposition"]
 
-    @pytest.mark.asyncio
     async def test_download_param_forces_attachment_for_all_types(self, db, tmp_path, monkeypatch):
         """Test that download=True forces attachment even for inline types."""
         config = get_app_config()
@@ -761,7 +742,6 @@ class TestContentDispositionVariety:
 class TestMimeTypeHandling:
     """Test MIME type handling in FileResponse."""
 
-    @pytest.mark.asyncio
     async def test_correct_mime_type_for_images(self, db, tmp_path, monkeypatch):
         """Test that image MIME type is set correctly."""
         config = get_app_config()
@@ -795,7 +775,6 @@ class TestMimeTypeHandling:
 
         assert response.media_type == "image/jpeg"
 
-    @pytest.mark.asyncio
     async def test_correct_mime_type_for_videos(self, db, tmp_path, monkeypatch):
         """Test that video MIME type is set correctly."""
         config = get_app_config()
@@ -829,7 +808,6 @@ class TestMimeTypeHandling:
 
         assert response.media_type == "video/mp4"
 
-    @pytest.mark.asyncio
     async def test_correct_mime_type_for_audio(self, db, tmp_path, monkeypatch):
         """Test that audio MIME type is set correctly."""
         config = get_app_config()
@@ -863,7 +841,6 @@ class TestMimeTypeHandling:
 
         assert response.media_type == "audio/mpeg"
 
-    @pytest.mark.asyncio
     async def test_correct_mime_type_for_pdf(self, db, tmp_path, monkeypatch):
         """Test that PDF MIME type is set correctly."""
         config = get_app_config()
@@ -897,7 +874,6 @@ class TestMimeTypeHandling:
 
         assert response.media_type == "application/pdf"
 
-    @pytest.mark.asyncio
     async def test_correct_mime_type_for_text(self, db, tmp_path, monkeypatch):
         """Test that text MIME type is set correctly."""
         config = get_app_config()

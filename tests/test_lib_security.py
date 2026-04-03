@@ -11,7 +11,6 @@ This module tests cryptographic and security functions:
 JWT functions are tested in test_lib_auth.py.
 """
 
-import pytest
 from unittest.mock import Mock
 from fastapi import Request
 

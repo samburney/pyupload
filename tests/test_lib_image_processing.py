@@ -37,7 +37,6 @@ config = get_app_config()
 class TestMakeImageMetadata:
     """Test image metadata extraction."""
 
-    @pytest.mark.asyncio
     async def test_extract_jpeg_metadata(self, db):
         """Test metadata extraction from JPEG image."""
         # Create a real JPEG image
@@ -86,7 +85,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_extract_png_metadata(self, db):
         """Test metadata extraction from PNG image."""
         # Create a real PNG image with transparency
@@ -131,7 +129,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_extract_gif_metadata(self, db):
         """Test metadata extraction from GIF image."""
         # Create a real GIF image
@@ -174,7 +171,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_extract_webp_metadata(self, db):
         """Test metadata extraction from WebP image."""
         try:
@@ -221,7 +217,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_metadata_has_all_required_fields(self, db):
         """Test that returned metadata has all required fields."""
         img = Pillow.new("RGB", (100, 100), color="white")
@@ -279,7 +274,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_color_depth_rgb(self, db):
         """Test color depth detection for RGB images."""
         img = Pillow.new("RGB", (200, 200), color="black")
@@ -320,7 +314,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_color_depth_rgba(self, db):
         """Test color depth detection for RGBA images."""
         img = Pillow.new("RGBA", (150, 150), color=(0, 0, 0, 255))
@@ -361,7 +354,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_invalid_image_data_handled_gracefully(self, db):
         """Test that invalid image data is handled gracefully."""
         user = await User.create(
@@ -399,7 +391,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_corrupted_image_data_handled_gracefully(self, db):
         """Test that corrupted image data is handled gracefully."""
         # Create valid PNG header but corrupt data
@@ -436,7 +427,6 @@ class TestMakeImageMetadata:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_metadata_extraction_performance(self, db):
         """Test that metadata extraction completes within performance target."""
         # Create a 2MB-ish JPEG image
@@ -484,7 +474,6 @@ class TestMakeImageMetadata:
 class TestProcessUploadedImage:
     """Test image processing and database record creation."""
 
-    @pytest.mark.asyncio
     async def test_process_uploaded_image_creates_record(self, db):
         """Test that process_uploaded_image creates Image database record."""
         img = Pillow.new("RGB", (640, 480), color="blue")
@@ -529,7 +518,6 @@ class TestProcessUploadedImage:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_process_uploaded_image_stores_metadata(self, db):
         """Test that process_uploaded_image stores all metadata correctly."""
         img = Pillow.new("RGBA", (800, 600), color=(255, 128, 64, 200))
@@ -573,7 +561,6 @@ class TestProcessUploadedImage:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_process_uploaded_image_invalid_image_raises_error(self, db):
         """Test that processing invalid image raises ImageProcessingError."""
         user = await User.create(
@@ -611,7 +598,6 @@ class TestProcessUploadedImage:
 class TestImageProcessingIntegration:
     """Integration tests for image processing with upload pipeline."""
 
-    @pytest.mark.asyncio
     async def test_image_processing_called_after_successful_upload(self, db):
         """Test that image processing is called as part of upload pipeline."""
         # This is implicitly tested by test_lib_file_storage.py integration tests
@@ -622,7 +608,6 @@ class TestImageProcessingIntegration:
 class TestImageFilenameMetadataValidation:
     """Validation tests for processed image metadata generation."""
 
-    @pytest.mark.asyncio
     async def test_make_image_filename_metadata_raises_when_image_metadata_missing(self, db):
         """Image processing requests must fail if related image metadata does not exist."""
         user = await User.create(
@@ -663,7 +648,6 @@ class _DummyImagesRelation:
 class TestGetImageBytes:
     """Tests for get_image_bytes new processing branches."""
 
-    @pytest.mark.asyncio
     async def test_get_image_bytes_writes_jpeg_for_processed_request(self):
         """Processed JPEG requests should return non-empty converted bytes."""
         img = Pillow.new("RGB", (64, 64), color="orange")
@@ -695,7 +679,6 @@ class TestGetImageBytes:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_get_image_bytes_raises_for_unsupported_output_type(self):
         """Unsupported output types should raise NotImplementedError."""
         img = Pillow.new("RGB", (32, 32), color="purple")
@@ -725,7 +708,6 @@ class TestGetImageBytes:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_get_image_bytes_writes_png_for_processed_request(self):
         """Processed PNG requests should return non-empty PNG bytes."""
         img = Pillow.new("RGB", (32, 32), color="teal")
@@ -758,7 +740,6 @@ class TestGetImageBytes:
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    @pytest.mark.asyncio
     async def test_get_image_bytes_writes_gif_for_processed_request(self):
         """Processed GIF requests should return non-empty GIF bytes."""
         img = Pillow.new("RGB", (32, 32), color="cyan")
@@ -902,7 +883,6 @@ class TestHandleImageResize:
 class TestProcessedImageCacheBehavior:
     """Tests for processed-image cache behavior in non-debug mode."""
 
-    @pytest.mark.asyncio
     async def test_get_processed_image_path_uses_existing_cache_when_not_debug(self, tmp_path):
         """When debug is disabled and cache exists, processing should not rerun."""
         user_dir = tmp_path / "user_1"
@@ -938,7 +918,6 @@ class TestProcessedImageCacheBehavior:
         get_image_bytes_mock.assert_not_awaited()
         assert cache_path.read_bytes() == b"cached"
 
-    @pytest.mark.asyncio
     async def test_get_processed_image_path_builds_cache_when_missing_and_not_debug(self, tmp_path):
         """When debug is disabled and cache is missing, processing should populate cache."""
         user_dir = tmp_path / "user_1"
@@ -979,23 +958,19 @@ class TestProcessedImageCacheBehavior:
 class TestMimeTypeToImageFormat:
     """Tests for mime_type_to_image_format."""
 
-    @pytest.mark.asyncio
     async def test_jpeg_returns_jpeg(self):
         """image/jpeg must map to PIL format string 'JPEG'."""
         result = await mime_type_to_image_format("image/jpeg")
         assert result == "JPEG"
 
-    @pytest.mark.asyncio
     async def test_png_returns_png(self):
         result = await mime_type_to_image_format("image/png")
         assert result == "PNG"
 
-    @pytest.mark.asyncio
     async def test_gif_returns_gif(self):
         result = await mime_type_to_image_format("image/gif")
         assert result == "GIF"
 
-    @pytest.mark.asyncio
     async def test_unsupported_type_raises_image_processing_error(self):
         """Unsupported MIME types must raise ImageProcessingError, not KeyError."""
         with pytest.raises(ImageProcessingError):
@@ -1091,7 +1066,6 @@ class TestDoImageRotation:
         await Image.create(upload=upload, type="jpeg", width=width, height=height, bits=24, channels=3)
         return await Upload.get(id=upload.id).prefetch_related("images")
 
-    @pytest.mark.asyncio
     async def test_raises_value_error_on_invalid_angle(self, db, tmp_path):
         """Angles outside [90, 180, 270] must raise ValueError."""
         upload = await self._create_upload_with_image("rotinvalid", "rotinvalid@example.com")
@@ -1102,7 +1076,6 @@ class TestDoImageRotation:
             with pytest.raises(ValueError, match="Invalid rotation angle"):
                 await do_image_rotation(upload, 45)
 
-    @pytest.mark.asyncio
     async def test_raises_when_no_image_metadata(self, db, tmp_path):
         """Uploads with no Image record must raise ImageProcessingError."""
         user = await User.create(username="rotnoimg", email="rotnoimg@example.com", password="pw")
@@ -1119,7 +1092,6 @@ class TestDoImageRotation:
             with pytest.raises(ImageProcessingError, match="No image metadata"):
                 await do_image_rotation(upload, 90)
 
-    @pytest.mark.asyncio
     async def test_90_degree_rotation_swaps_dimensions(self, db, tmp_path):
         """Metadata returned after a 90° rotation must have width and height swapped."""
         upload = await self._create_upload_with_image("rot90", "rot90@example.com", width=100, height=60)
@@ -1132,7 +1104,6 @@ class TestDoImageRotation:
         assert result.width == 60
         assert result.height == 100
 
-    @pytest.mark.asyncio
     async def test_270_degree_rotation_swaps_dimensions(self, db, tmp_path):
         upload = await self._create_upload_with_image("rot270", "rot270@example.com", width=100, height=60)
         img_path = tmp_path / "test.jpg"
@@ -1144,7 +1115,6 @@ class TestDoImageRotation:
         assert result.width == 60
         assert result.height == 100
 
-    @pytest.mark.asyncio
     async def test_180_degree_rotation_preserves_dimensions(self, db, tmp_path):
         upload = await self._create_upload_with_image("rot180", "rot180@example.com", width=100, height=60)
         img_path = tmp_path / "test.jpg"
@@ -1156,7 +1126,6 @@ class TestDoImageRotation:
         assert result.width == 100
         assert result.height == 60
 
-    @pytest.mark.asyncio
     async def test_overwrites_source_file(self, db, tmp_path):
         """The source image file must be replaced with the rotated version."""
         upload = await self._create_upload_with_image("rotfile", "rotfile@example.com")
@@ -1169,7 +1138,6 @@ class TestDoImageRotation:
 
         assert img_path.read_bytes() != original_bytes
 
-    @pytest.mark.asyncio
     async def test_clears_matching_cache_files(self, db, tmp_path):
         """Cached processed images matching the upload name must be deleted after rotation."""
         upload = await self._create_upload_with_image("rotcache", "rotcache@example.com")

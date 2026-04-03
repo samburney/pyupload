@@ -13,7 +13,6 @@ Tests verify:
 - UploadResult structure validation
 """
 
-import pytest
 from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -25,7 +24,6 @@ from app.lib.auth import create_access_token
 class TestUploadEndpointAuthentication:
     """Test authentication requirements for upload endpoint."""
 
-    @pytest.mark.asyncio
     async def test_endpoint_accessible_at_post_uploads(self, client):
         """Test that endpoint is accessible at POST /api/v1/uploads."""
         # Create a user and token
@@ -51,7 +49,6 @@ class TestUploadEndpointAuthentication:
         # Should not return 404 (endpoint exists)
         assert response.status_code in [200, 400, 422]
 
-    @pytest.mark.asyncio
     async def test_returns_401_if_not_authenticated(self, client):
         """Test that endpoint returns 401 when not authenticated."""
         # Make request without authentication token
@@ -63,7 +60,6 @@ class TestUploadEndpointAuthentication:
         # Should return 401 Unauthorized
         assert response.status_code == 401
 
-    @pytest.mark.asyncio
     async def test_returns_401_with_invalid_token(self, client):
         """Test that endpoint returns 401 with invalid token."""
         # Make request with invalid token
@@ -80,7 +76,6 @@ class TestUploadEndpointAuthentication:
 class TestUploadEndpointInputValidation:
     """Test input validation for upload endpoint."""
 
-    @pytest.mark.asyncio
     async def test_returns_400_if_no_files_provided(self, client):
         """Test that endpoint returns 400 or 422 when no files are provided."""
         # Create a user and token
@@ -108,7 +103,6 @@ class TestUploadEndpointInputValidation:
         json_response = response.json()
         assert "detail" in json_response
 
-    @pytest.mark.asyncio
     async def test_returns_400_if_empty_file_list(self, client):
         """Test that endpoint returns 400 when file list is empty."""
         # Create a user and token
@@ -137,7 +131,6 @@ class TestUploadEndpointInputValidation:
 class TestUploadEndpointSuccessfulUploads:
     """Test successful file upload scenarios."""
 
-    @pytest.mark.asyncio
     async def test_endpoint_returns_200_with_auth(self, client, monkeypatch):
         """Test that endpoint returns 200 when authenticated."""
         # Create a user and token
@@ -179,7 +172,6 @@ class TestUploadEndpointSuccessfulUploads:
 class TestUploadEndpointResponseStructure:
     """Test response structure and format."""
 
-    @pytest.mark.asyncio
     async def test_upload_returns_results_array(self, client, monkeypatch):
         """Test that upload endpoint returns results array."""
         # Create a user and token
@@ -231,7 +223,6 @@ class TestUploadEndpointResponseStructure:
 class TestUploadEndpointErrorHandling:
     """Test error handling and per-file error recovery."""
 
-    @pytest.mark.asyncio
     async def test_batch_upload_with_mixed_results(self, client, monkeypatch):
         """Test batch upload where some files succeed and some fail."""
         # Create a user and token
@@ -289,7 +280,6 @@ class TestUploadEndpointErrorHandling:
         results = json_response["results"]
         assert len(results) == 3
 
-    @pytest.mark.asyncio
     async def test_batch_upload_with_all_files_failing(self, client, monkeypatch):
         """Test batch upload where all files fail."""
         # Create a user and token
@@ -339,7 +329,6 @@ class TestUploadEndpointErrorHandling:
         results = json_response["results"]
         assert len(results) == 2
 
-    @pytest.mark.asyncio
     async def test_quota_exceeded_error_handled(self, client, monkeypatch):
         """Test that quota exceeded errors are properly handled."""
         # Create a user and token
@@ -391,13 +380,11 @@ class TestUploadEndpointErrorHandling:
 class TestDeleteUploadEndpoint:
     """Tests for DELETE /api/v1/uploads/{id}."""
 
-    @pytest.mark.asyncio
     async def test_returns_401_when_unauthenticated(self, client):
         """Unauthenticated DELETE requests must be rejected with 401."""
         response = await client.delete("/api/v1/uploads/1")
         assert response.status_code == 401
 
-    @pytest.mark.asyncio
     async def test_returns_404_for_nonexistent_upload(self, client):
         """Returns 404 when the upload ID does not exist."""
         user = await User.create(
@@ -413,7 +400,6 @@ class TestDeleteUploadEndpoint:
         )
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_returns_403_for_non_owner(self, client):
         """Returns 403 when the authenticated user is not the upload owner."""
         owner = await User.create(
@@ -446,7 +432,6 @@ class TestDeleteUploadEndpoint:
         )
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_returns_200_with_success_json_for_owner(self, client, monkeypatch):
         """Owner delete returns 200 with a success JSON result."""
         user = await User.create(
@@ -480,7 +465,6 @@ class TestDeleteUploadEndpoint:
         data = response.json()
         assert data["result"]["status"] == "success"
 
-    @pytest.mark.asyncio
     async def test_removes_upload_from_database(self, client):
         """Successful delete removes the upload record from the database."""
         user = await User.create(
@@ -516,7 +500,6 @@ class TestDeleteUploadEndpoint:
 class TestUploadEndpointResponseTypes:
     """Test response type correctness."""
 
-    @pytest.mark.asyncio
     async def test_response_is_valid_json(self, client, monkeypatch):
         """Test that response is valid JSON."""
         # Create a user and token
@@ -552,7 +535,6 @@ class TestUploadEndpointResponseTypes:
         assert isinstance(json_response, dict)
         assert "results" in json_response
 
-    @pytest.mark.asyncio
     async def test_error_response_is_valid_json(self, client):
         """Test that error response is valid JSON."""
         # Make request without authentication

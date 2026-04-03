@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 import pytest_asyncio
 
 from app.models.users import User
@@ -30,7 +29,6 @@ async def _make_user(suffix="") -> User:
 
 class TestDownloadArchiveModel:
 
-    @pytest.mark.asyncio
     async def test_create_pending(self, db):
         """Model can be created and persisted with pending status."""
         user = await _make_user()
@@ -47,7 +45,6 @@ class TestDownloadArchiveModel:
         assert archive.format == ArchiveFormatsEnum.zip
         assert archive.upload_ids == [1, 2, 3]
 
-    @pytest.mark.asyncio
     async def test_defaults(self, db):
         """status defaults to pending and format defaults to zip."""
         user = await _make_user("0")
@@ -60,7 +57,6 @@ class TestDownloadArchiveModel:
         assert archive.status == ArchiveStatusEnum.pending
         assert archive.format == ArchiveFormatsEnum.zip
 
-    @pytest.mark.asyncio
     async def test_uuid_primary_key(self, db):
         """Primary key is a UUID auto-generated on creation."""
         user = await _make_user("2")
@@ -82,7 +78,6 @@ class TestDownloadArchiveModel:
         assert a1.id != a2.id
         assert str(a1.id)  # serialises to a string
 
-    @pytest.mark.asyncio
     async def test_upload_ids_roundtrip(self, db):
         """upload_ids JSONField persists and retrieves a list of integers correctly."""
         user = await _make_user("3")
@@ -98,7 +93,6 @@ class TestDownloadArchiveModel:
         fetched = await DownloadArchive.get(id=archive.id)
         assert fetched.upload_ids == ids
 
-    @pytest.mark.asyncio
     async def test_status_transitions(self, db):
         """Status field can be updated through the lifecycle."""
         user = await _make_user("4")
@@ -121,7 +115,6 @@ class TestDownloadArchiveModel:
         assert fetched.status == ArchiveStatusEnum.ready
         assert fetched.filename == "archives/test.zip"
 
-    @pytest.mark.asyncio
     async def test_all_formats_accepted(self, db):
         """All canonical format enum values can be persisted."""
         user = await _make_user("5")
@@ -136,7 +129,6 @@ class TestDownloadArchiveModel:
             fetched = await DownloadArchive.get(id=archive.id)
             assert fetched.format == fmt
 
-    @pytest.mark.asyncio
     async def test_timestamp_mixin_populated(self, db):
         """created_at and updated_at are set on creation."""
         user = await _make_user("6")
@@ -151,7 +143,6 @@ class TestDownloadArchiveModel:
         assert archive.created_at is not None
         assert archive.updated_at is not None
 
-    @pytest.mark.asyncio
     async def test_user_cascade_delete(self, db):
         """Deleting a user cascades to their DownloadArchive records."""
         user = await _make_user("7")
@@ -197,7 +188,6 @@ class TestDownloadArchiveCleanupExpired:
         await DownloadArchive.filter(id=archive.id).update(created_at=past)
         return await DownloadArchive.get(id=archive.id)
 
-    @pytest.mark.asyncio
     async def test_deletes_expired_db_records(self, user):
         """Expired archive records are removed from the database."""
         archive = await self._make_expired_archive(user)
@@ -209,7 +199,6 @@ class TestDownloadArchiveCleanupExpired:
 
         assert await DownloadArchive.get_or_none(id=archive.id) is None
 
-    @pytest.mark.asyncio
     async def test_preserves_non_expired_records(self, user):
         """Recently created archive records are not deleted."""
         archive = await DownloadArchive.create(
@@ -229,7 +218,6 @@ class TestDownloadArchiveCleanupExpired:
         assert count == 0
         await DownloadArchive.filter(id=archive.id).delete()
 
-    @pytest.mark.asyncio
     async def test_deletes_archive_file_from_disk(self, user, tmp_path):
         """cleanup_expired removes the archive file from disk."""
         archive_dir = tmp_path / "archives"
@@ -254,7 +242,6 @@ class TestDownloadArchiveCleanupExpired:
 
         assert not (archive_dir / filename).exists()
 
-    @pytest.mark.asyncio
     async def test_returns_count_of_deleted_records(self, user):
         """cleanup_expired returns the number of records deleted."""
         for i in range(3):
@@ -267,7 +254,6 @@ class TestDownloadArchiveCleanupExpired:
 
         assert count == 3
 
-    @pytest.mark.asyncio
     async def test_mixed_expired_and_fresh(self, user):
         """Only expired records are deleted; fresh records are preserved."""
         expired = await self._make_expired_archive(user, suffix="mix")

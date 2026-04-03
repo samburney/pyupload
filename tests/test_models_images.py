@@ -31,7 +31,6 @@ class TestImageModel:
 
         assert image.aspect_ratio is None
 
-    @pytest.mark.asyncio
     async def test_image_model_creation(self, db):
         """Test Image model creation succeeds."""
         # Create user and upload first
@@ -72,7 +71,6 @@ class TestImageModel:
         assert image.bits == 24
         assert image.channels == 3
 
-    @pytest.mark.asyncio
     async def test_image_model_all_fields_persist(self, db):
         """Test Image model persists all required fields."""
         user = await User.create(
@@ -115,7 +113,6 @@ class TestImageModel:
         assert retrieved.bits == 32
         assert retrieved.channels == 4
 
-    @pytest.mark.asyncio
     async def test_image_model_upload_relationship(self, db):
         """Test Image model upload foreign key relationship."""
         user = await User.create(
@@ -153,7 +150,6 @@ class TestImageModel:
         retrieved_image = await Image.get(id=image.id)
         assert retrieved_image.upload_id == upload.id
 
-    @pytest.mark.asyncio
     async def test_image_model_table_mapping(self, db):
         """Test Image model maps correctly to images table."""
         user = await User.create(
@@ -189,7 +185,6 @@ class TestImageModel:
         assert len(all_images) > 0
         assert any(i.id == image.id for i in all_images)
 
-    @pytest.mark.asyncio
     async def test_image_model_timestamp_mixin_created_at(self, db):
         """Test Image model TimestampMixin created_at tracking."""
         user = await User.create(
@@ -226,7 +221,6 @@ class TestImageModel:
         assert image.created_at is not None
         assert before <= image.created_at <= after + timedelta(seconds=1)
 
-    @pytest.mark.asyncio
     async def test_image_model_timestamp_mixin_updated_at(self, db):
         """Test Image model TimestampMixin updated_at tracking."""
         user = await User.create(
@@ -263,7 +257,6 @@ class TestImageModel:
         # updated_at should be >= created_at
         assert image.updated_at >= image.created_at
 
-    @pytest.mark.asyncio
     async def test_multiple_images_for_single_upload(self, db):
         """Test that a single upload can have multiple Image records (one-to-many)."""
         user = await User.create(
@@ -302,7 +295,6 @@ class TestImageModel:
         assert len(images) == 3
         assert all(img.upload_id == upload.id for img in images)
 
-    @pytest.mark.asyncio
     async def test_image_metadata_fields_rgb(self, db):
         """Test image model with RGB metadata (3 channels, 24 bits)."""
         user = await User.create(
@@ -336,7 +328,6 @@ class TestImageModel:
         assert image.bits == 24
         assert image.channels == 3
 
-    @pytest.mark.asyncio
     async def test_image_metadata_fields_rgba(self, db):
         """Test image model with RGBA metadata (4 channels, 32 bits)."""
         user = await User.create(
@@ -370,7 +361,6 @@ class TestImageModel:
         assert image.bits == 32
         assert image.channels == 4
 
-    @pytest.mark.asyncio
     async def test_image_metadata_fields_grayscale(self, db):
         """Test image model with grayscale metadata (1 channel, 8 bits)."""
         user = await User.create(
@@ -404,7 +394,6 @@ class TestImageModel:
         assert image.bits == 8
         assert image.channels == 1
 
-    @pytest.mark.asyncio
     async def test_image_model_cascade_delete_on_upload_delete(self, db):
         """Test that Image records are deleted when Upload is deleted (CASCADE)."""
         user = await User.create(
@@ -447,7 +436,6 @@ class TestImageModel:
         image_count = await Image.filter(id=image_id).count()
         assert image_count == 0
 
-    @pytest.mark.asyncio
     async def test_image_various_dimensions(self, db):
         """Test image model with various dimension sizes."""
         user = await User.create(
@@ -495,7 +483,6 @@ class TestImageModel:
 class TestImageModelIntegration:
     """Integration tests for Image model with Upload relationships."""
 
-    @pytest.mark.asyncio
     async def test_multiple_uploads_with_images(self, db):
         """Test multiple uploads each with associated image records."""
         user = await User.create(
@@ -532,7 +519,6 @@ class TestImageModelIntegration:
         all_images = await Image.all()
         assert len(all_images) >= 3
 
-    @pytest.mark.asyncio
     async def test_image_query_by_upload(self, db):
         """Test querying images filtered by upload."""
         user = await User.create(

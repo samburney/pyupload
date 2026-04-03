@@ -9,7 +9,6 @@ This module tests the FastAPI/Starlette authentication endpoints:
 Tests use Starlette TestClient for HTTP request testing.
 """
 
-import pytest
 from unittest.mock import Mock
 from datetime import datetime, timedelta, timezone
 from starlette.testclient import TestClient
@@ -25,7 +24,6 @@ from app.lib.config import get_app_config
 class TestLoginEndpoint:
     """Test login endpoint with JWT token generation."""
 
-    @pytest.mark.asyncio
     async def test_login_endpoint_exists(self):
         """Test that login endpoint is accessible."""
         client = TestClient(app)
@@ -33,7 +31,6 @@ class TestLoginEndpoint:
         
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_login_post_with_valid_credentials_sets_cookie(self, monkeypatch):
         """Test that successful login sets access_token cookie."""
         from app.main import app as fastapi_app
@@ -67,7 +64,6 @@ class TestLoginEndpoint:
         assert response.status_code == 200
         assert "access_token" in response.cookies
 
-    @pytest.mark.asyncio
     async def test_login_post_with_invalid_credentials_returns_401(self, monkeypatch):
         """Test that login with invalid credentials returns 401."""
         from app.main import app as fastapi_app
@@ -92,7 +88,6 @@ class TestLoginEndpoint:
 class TestLogoutEndpoint:
     """Test logout endpoint with JWT token removal."""
 
-    @pytest.mark.asyncio
     async def test_logout_endpoint_exists(self, monkeypatch):
         """Test that logout endpoint is accessible."""
         from app.lib.config import get_app_config
@@ -120,7 +115,6 @@ class TestLogoutEndpoint:
         # Should redirect
         assert response.status_code in [302, 303, 307]
 
-    @pytest.mark.asyncio
     async def test_logout_deletes_access_token_cookie(self, monkeypatch):
         """Test that logout deletes the access_token cookie."""
         # Create a valid token to authenticate
@@ -150,7 +144,6 @@ class TestLogoutEndpoint:
         # The cookie should be deleted (max-age=0 or expires in past)
         assert "access_token" in set_cookie_header.lower() or response.status_code in [302, 303, 307]
 
-    @pytest.mark.asyncio
     async def test_logout_redirects_to_home(self, monkeypatch):
         """Test that logout redirects to home page."""
         # Create a valid token to authenticate
@@ -188,7 +181,6 @@ class TestLogoutEndpoint:
 class TestLoginRefreshTokenIntegration:
     """Test login endpoint properly creates and stores refresh tokens."""
 
-    @pytest.mark.asyncio
     async def test_login_sets_refresh_token_cookie(self, monkeypatch):
         """Test that successful login sets refresh_token cookie."""
         from app.main import app as fastapi_app
@@ -220,7 +212,6 @@ class TestLoginRefreshTokenIntegration:
         assert "access_token" in response.cookies
         assert "refresh_token" in response.cookies
 
-    @pytest.mark.asyncio
     async def test_login_stores_refresh_token_in_database(self, monkeypatch):
         """Test that login stores refresh token in database."""
         from app.main import app as fastapi_app
@@ -262,7 +253,6 @@ class TestLoginRefreshTokenIntegration:
 class TestLogoutRefreshTokenIntegration:
     """Test logout endpoint properly revokes refresh tokens."""
 
-    @pytest.mark.asyncio
     async def test_logout_revokes_refresh_token(self, monkeypatch):
         """Test that logout revokes the refresh token."""
         from app.main import app as fastapi_app
@@ -303,7 +293,6 @@ class TestLogoutRefreshTokenIntegration:
         # Should have revoked the token
         assert revoke_called["value"] is True
 
-    @pytest.mark.asyncio
     async def test_logout_deletes_both_cookies(self, monkeypatch):
         """Test that logout deletes both access and refresh token cookies."""
         from app.main import app as fastapi_app
@@ -341,7 +330,6 @@ class TestLogoutRefreshTokenIntegration:
         # The cookies dict will show them but they're marked for deletion
         assert response.status_code in [302, 303, 307]
 
-    @pytest.mark.asyncio
     async def test_logout_works_without_refresh_token(self, monkeypatch):
         """Test that logout works even without refresh token (backward compat)."""
         from app.main import app as fastapi_app
@@ -380,7 +368,6 @@ class TestLogoutRefreshTokenIntegration:
 class TestLogoutAllEndpoint:
     """Test /logout-all endpoint functionality."""
 
-    @pytest.mark.asyncio
     async def test_logout_all_endpoint_exists(self, monkeypatch):
         """Test that /logout-all endpoint is accessible."""
         from app.main import app as fastapi_app
@@ -414,7 +401,6 @@ class TestLogoutAllEndpoint:
         # Should redirect
         assert response.status_code in [302, 303, 307]
 
-    @pytest.mark.asyncio
     async def test_logout_all_requires_authentication(self):
         """Test that /logout-all requires authenticated user."""
         from app.main import app as fastapi_app
@@ -426,7 +412,6 @@ class TestLogoutAllEndpoint:
         # Should redirect to login (303) when not authenticated
         assert response.status_code == 303
 
-    @pytest.mark.asyncio
     async def test_logout_all_revokes_all_user_tokens(self, monkeypatch):
         """Test that /logout-all revokes all user's refresh tokens."""
         from app.main import app as fastapi_app
@@ -466,7 +451,6 @@ class TestLogoutAllEndpoint:
         assert revoke_all_called["value"] is True
         assert revoke_all_called["count"] == 5
 
-    @pytest.mark.asyncio
     async def test_logout_all_deletes_current_cookies(self, monkeypatch):
         """Test that /logout-all deletes current device cookies."""
         from app.main import app as fastapi_app
@@ -507,7 +491,6 @@ class TestLogoutAllEndpoint:
 class TestAuthenticationIntegration:
     """Integration tests for full authentication flow."""
 
-    @pytest.mark.asyncio
     async def test_full_auth_flow_login_and_access(self, monkeypatch):
         """Test complete flow: login with JWT, access protected resource."""
         config = get_app_config()

@@ -12,7 +12,6 @@ Acceptance Criteria:
 - Middleware doesn't interfere with normal requests
 """
 
-import pytest
 from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock, patch
 from fastapi import FastAPI
@@ -30,7 +29,6 @@ from app.models.users import User
 class TestFingerprintAutoLogin:
     """Test auto-login based on fingerprint matching."""
 
-    @pytest.mark.asyncio
     async def test_autologin_with_matching_fingerprint(self, db):
         """Test that matching fingerprint triggers auto-login with token cookies set."""
         app = FastAPI()
@@ -78,7 +76,6 @@ class TestFingerprintAutoLogin:
         finally:
             await user.delete()
 
-    @pytest.mark.asyncio
     async def test_updates_last_seen_at_on_autologin(self, db):
         """Test that last_seen_at is updated when auto-login occurs."""
         app = FastAPI()
@@ -116,7 +113,6 @@ class TestFingerprintAutoLogin:
         finally:
             await user.delete()
 
-    @pytest.mark.asyncio
     async def test_updates_last_login_ip_on_autologin(self, db):
         """Test that last_login_ip is updated when auto-login occurs."""
         app = FastAPI()
@@ -159,7 +155,6 @@ class TestFingerprintAutoLogin:
 class TestSkipAutoLogin:
     """Test cases where auto-login should be skipped."""
 
-    @pytest.mark.asyncio
     async def test_skips_already_authenticated_user(self, db):
         """Test that already authenticated users skip fingerprint check."""
         app = FastAPI()
@@ -197,7 +192,6 @@ class TestSkipAutoLogin:
         finally:
             await user.delete()
 
-    @pytest.mark.asyncio
     async def test_skips_when_no_fingerprint_match(self):
         """Test that no fingerprint match leaves user anonymous."""
         app = FastAPI()
@@ -223,7 +217,6 @@ class TestSkipAutoLogin:
                     # No cookies should be set
                     assert cookies_set is False
 
-    @pytest.mark.asyncio
     async def test_skips_abandoned_users(self, db):
         """Test that abandoned users are not auto-logged in."""
         app = FastAPI()
@@ -242,7 +235,6 @@ class TestSkipAutoLogin:
                 
                 assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_skips_disabled_users(self):
         """Test that disabled users are not auto-logged in."""
         app = FastAPI()
@@ -261,7 +253,6 @@ class TestSkipAutoLogin:
                 
                 assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_skips_registered_users(self):
         """Test that registered users are not auto-logged in via fingerprint."""
         app = FastAPI()
@@ -288,7 +279,6 @@ class TestSkipAutoLogin:
 class TestErrorHandling:
     """Test that middleware handles errors gracefully."""
 
-    @pytest.mark.asyncio
     async def test_handles_operational_error_gracefully(self):
         """Test that database OperationalError doesn't break request."""
         app = FastAPI()
@@ -309,7 +299,6 @@ class TestErrorHandling:
             assert response.status_code == 200
             assert response.json() == {"message": "success"}
 
-    @pytest.mark.asyncio
     async def test_handles_configuration_error_gracefully(self):
         """Test that database ConfigurationError doesn't break request."""
         app = FastAPI()
@@ -329,7 +318,6 @@ class TestErrorHandling:
             # Request should succeed
             assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_handles_user_save_error_gracefully(self, db):
         """Test that error during user.save() doesn't break request."""
         app = FastAPI()
@@ -375,7 +363,6 @@ class TestErrorHandling:
 class TestPassThrough:
     """Test that middleware doesn't interfere with normal requests."""
 
-    @pytest.mark.asyncio
     async def test_passes_through_anonymous_requests(self):
         """Test that anonymous requests (no JWT, no fingerprint match) work normally."""
         app = FastAPI()
@@ -393,7 +380,6 @@ class TestPassThrough:
                 assert response.status_code == 200
                 assert response.json() == {"message": "success"}
 
-    @pytest.mark.asyncio
     async def test_preserves_response_content(self, db):
         """Test that middleware doesn't modify response content."""
         app = FastAPI()
@@ -424,7 +410,6 @@ class TestPassThrough:
         finally:
             await user.delete()
 
-    @pytest.mark.asyncio
     async def test_preserves_response_status_codes(self):
         """Test that middleware preserves various HTTP status codes."""
         app = FastAPI()
@@ -458,7 +443,6 @@ class TestPassThrough:
 class TestIntegration:
     """Test integration scenarios with other middleware and features."""
 
-    @pytest.mark.asyncio
     async def test_autologin_sets_cookies_for_subsequent_requests(self, db):
         """Test that auto-login creates cookies that can be used in future requests."""
         app = FastAPI()
@@ -499,7 +483,6 @@ class TestIntegration:
         finally:
             await user.delete()
 
-    @pytest.mark.asyncio
     async def test_works_with_multiple_requests(self, db):
         """Test that middleware works correctly across multiple requests."""
         app = FastAPI()

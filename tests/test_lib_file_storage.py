@@ -198,7 +198,6 @@ class TestPathConstruction:
 class TestQuotaValidation:
     """Test quota enforcement (file size and upload count limits)."""
 
-    @pytest.mark.asyncio
     async def test_validate_user_quotas_enforces_file_size_limit(self):
         """Quota checking enforces size limits correctly."""
         # Create a mock user with 1MB max file size
@@ -214,7 +213,6 @@ class TestQuotaValidation:
         with pytest.raises(UserQuotaExceeded):
             await validate_user_quotas(user, file)
 
-    @pytest.mark.asyncio
     async def test_validate_user_quotas_enforces_upload_count_limit(self):
         """Quota checking enforces upload count limits correctly."""
         # Create a mock user
@@ -232,7 +230,6 @@ class TestQuotaValidation:
         with pytest.raises(UserQuotaExceeded):
             await validate_user_quotas(user, file)
 
-    @pytest.mark.asyncio
     async def test_validate_user_quotas_allows_under_limit(self):
         """Quota checking allows files under limits."""
         # Create a mock user
@@ -250,7 +247,6 @@ class TestQuotaValidation:
         result = await validate_user_quotas(user, file)
         assert result is True
 
-    @pytest.mark.asyncio
     async def test_validate_user_quotas_unlimited_file_size(self):
         """Quota checking supports unlimited file size (-1)."""
         # Create a mock user with unlimited file size
@@ -267,7 +263,6 @@ class TestQuotaValidation:
         result = await validate_user_quotas(user, file)
         assert result is True
 
-    @pytest.mark.asyncio
     async def test_validate_user_quotas_unlimited_upload_count(self):
         """Quota checking supports unlimited upload count (-1)."""
         # Create a mock user with unlimited uploads
@@ -290,7 +285,6 @@ class TestQuotaValidation:
 class TestFileTypeValidation:
     """Test MIME type validation."""
 
-    @pytest.mark.asyncio
     async def test_validate_user_filetypes_allows_wildcard(self):
         """File type validation allows wildcard '*' for all types."""
         user = AsyncMock(spec=User)
@@ -302,7 +296,6 @@ class TestFileTypeValidation:
             result = await validate_user_filetypes(user, file)
             assert result is True
 
-    @pytest.mark.asyncio
     async def test_validate_user_filetypes_allows_specific_types(self):
         """File type validation allows explicitly configured types."""
         user = AsyncMock(spec=User)
@@ -314,7 +307,6 @@ class TestFileTypeValidation:
             result = await validate_user_filetypes(user, file)
             assert result is True
 
-    @pytest.mark.asyncio
     async def test_validate_user_filetypes_rejects_disallowed_types(self):
         """File type validation rejects disallowed types."""
         user = AsyncMock(spec=User)

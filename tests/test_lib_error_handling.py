@@ -45,7 +45,6 @@ class TestGetErrorImageResponse:
 
 
 class TestErrorResponseForGet:
-    @pytest.mark.asyncio
     async def test_returns_html_response_for_non_image(self):
         response = await error_response_for_get(
             filename="missing.txt",
@@ -57,7 +56,6 @@ class TestErrorResponseForGet:
         assert isinstance(response, HTMLResponse)
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_returns_image_response_for_supported_image(self):
         response = await error_response_for_get(
             filename="missing.jpg",

@@ -1,6 +1,5 @@
 """Tests for app/lib/helpers.py functions."""
 
-import pytest
 from app.lib.helpers import (
     is_bool,
     validate_mime_types,

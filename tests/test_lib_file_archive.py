@@ -483,7 +483,6 @@ class TestCleanupOrphanedArchives:
         os.utime(path, (past, past))
         return path
 
-    @pytest.mark.asyncio
     async def test_deletes_orphaned_file(self, db, tmp_path):
         """A file on disk with no DB record older than max_age is deleted."""
         archive_dir = tmp_path / "archives"
@@ -498,7 +497,6 @@ class TestCleanupOrphanedArchives:
         assert count == 1
         assert not orphan.exists()
 
-    @pytest.mark.asyncio
     async def test_skips_file_with_db_record(self, user, tmp_path):
         """A file with a matching DB record is not treated as an orphan."""
         archive_dir = tmp_path / "archives"
@@ -522,7 +520,6 @@ class TestCleanupOrphanedArchives:
         assert count == 0
         assert (archive_dir / filename).exists()
 
-    @pytest.mark.asyncio
     async def test_skips_file_too_new(self, db, tmp_path):
         """A file younger than max_age is not deleted even without a DB record."""
         archive_dir = tmp_path / "archives"
@@ -538,7 +535,6 @@ class TestCleanupOrphanedArchives:
         assert count == 0
         assert new_file.exists()
 
-    @pytest.mark.asyncio
     async def test_skips_dot_files(self, db, tmp_path):
         """Dot files are ignored regardless of age or DB record."""
         archive_dir = tmp_path / "archives"
@@ -552,7 +548,6 @@ class TestCleanupOrphanedArchives:
 
         assert count == 0
 
-    @pytest.mark.asyncio
     async def test_skips_directories(self, db, tmp_path):
         """Subdirectories inside the archive storage path are ignored."""
         archive_dir = tmp_path / "archives"
@@ -566,7 +561,6 @@ class TestCleanupOrphanedArchives:
 
         assert count == 0
 
-    @pytest.mark.asyncio
     async def test_returns_correct_count(self, db, tmp_path):
         """Returns the number of orphaned files deleted."""
         archive_dir = tmp_path / "archives"

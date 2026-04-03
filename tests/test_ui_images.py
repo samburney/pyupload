@@ -50,7 +50,6 @@ class TestPostRotateImageUI:
     # Invalid angle
     # ------------------------------------------------------------------
 
-    @pytest.mark.asyncio
     async def test_invalid_angle_returns_400(self, client):
         """An angle outside [90, 180, 270] must return HTTP 400."""
         user = await User.create(
@@ -63,7 +62,6 @@ class TestPostRotateImageUI:
         response = await client.post("/images/999/rotate/45")
         assert response.status_code == 400
 
-    @pytest.mark.asyncio
     async def test_invalid_angle_returns_rendered_html_not_empty(self, client):
         """The 400 response must be a rendered error page, not an empty body.
 
@@ -83,7 +81,6 @@ class TestPostRotateImageUI:
         # A rendered template will always be substantially longer than an empty HTMLResponse
         assert len(response.text) > 100
 
-    @pytest.mark.asyncio
     async def test_invalid_angle_response_contains_error_title(self, client):
         """The rendered 400 error page must include the error title."""
         user = await User.create(
@@ -96,7 +93,6 @@ class TestPostRotateImageUI:
         response = await client.post("/images/999/rotate/45")
         assert "Invalid Rotation Angle" in response.text
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("angle", [0, 45, 91, 180000, -90, 360])
     async def test_various_invalid_angles_return_400(self, client, angle):
         """All angles outside [90, 180, 270] must be rejected with 400."""
@@ -114,7 +110,6 @@ class TestPostRotateImageUI:
     # Upload not found
     # ------------------------------------------------------------------
 
-    @pytest.mark.asyncio
     async def test_upload_not_found_returns_404(self, client):
         """A valid angle for a non-existent upload must return HTTP 404."""
         user = await User.create(
@@ -128,7 +123,6 @@ class TestPostRotateImageUI:
         response = await client.post("/images/99999/rotate/90")
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_upload_not_found_returns_rendered_html(self, client):
         """The 404 response must be a rendered HTML error page."""
         user = await User.create(
@@ -148,7 +142,6 @@ class TestPostRotateImageUI:
     # Authorisation
     # ------------------------------------------------------------------
 
-    @pytest.mark.asyncio
     async def test_unauthenticated_redirects_to_login(self, client):
         """A request without an auth cookie must redirect to the login page (303)."""
         user = await User.create(
@@ -162,7 +155,6 @@ class TestPostRotateImageUI:
         response = await client.post(f"/images/{upload.id}/rotate/90")
         assert response.status_code == 303
 
-    @pytest.mark.asyncio
     async def test_non_owner_returns_403(self, client):
         """A request from a user who does not own the upload must return 403."""
         owner = await User.create(
@@ -183,7 +175,6 @@ class TestPostRotateImageUI:
         response = await client.post(f"/images/{upload.id}/rotate/90")
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_private_upload_non_owner_returns_403(self, client):
         """A private upload must not be rotatable by a different user."""
         owner = await User.create(
@@ -208,7 +199,6 @@ class TestPostRotateImageUI:
     # Success
     # ------------------------------------------------------------------
 
-    @pytest.mark.asyncio
     async def test_success_returns_200_html(self, client):
         """A valid rotation request from the owner must return 200 HTML."""
         user = await User.create(
@@ -228,7 +218,6 @@ class TestPostRotateImageUI:
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
-    @pytest.mark.asyncio
     async def test_success_calls_rotate_image_with_correct_angle(self, client):
         """rotate_image must be called with exactly the angle from the URL."""
         user = await User.create(
@@ -248,7 +237,6 @@ class TestPostRotateImageUI:
 
         mock_rotate.assert_awaited_once_with(270)
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("angle", [90, 180, 270])
     async def test_all_valid_angles_return_200(self, client, angle):
         """All valid rotation angles (90, 180, 270) must be accepted."""
@@ -268,7 +256,6 @@ class TestPostRotateImageUI:
 
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_success_response_contains_flash_message(self, client):
         """A successful rotation must produce a flash message in the response."""
         user = await User.create(

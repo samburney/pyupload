@@ -1,6 +1,5 @@
 """Tests for cleanup_orphaned_files function in file_storage module."""
 
-import pytest
 from pathlib import Path
 from datetime import datetime, timedelta
 from unittest.mock import patch, AsyncMock
@@ -15,7 +14,6 @@ from app.models.users import User
 config = get_app_config()
 
 
-@pytest.mark.asyncio
 class TestCleanupOrphanedFiles:
     """Test orphaned file cleanup functionality."""
 

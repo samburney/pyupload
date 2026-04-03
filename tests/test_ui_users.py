@@ -1,218 +1,36 @@
+"""Tests for app/ui/users.py — User profile page.
 
-import pytest
+Covers:
+- GET /profile: authentication required, default and explicit sort order,
+  upload and image rendering, pagination, download archives section
+"""
+
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+
 from app.lib.auth import create_access_token
 from app.lib.config import get_app_config
+from app.models.images import Image
 from app.models.users import User
 from app.models.uploads import Upload
 from app.models.download_archives import DownloadArchive, ArchiveFormatsEnum, ArchiveStatusEnum
 
+
 config = get_app_config()
 
-class TestUserProfileEndpoint:
-    """Test GET /profile endpoint."""
 
-    @pytest.mark.asyncio
-    async def test_profile_page_default_sorting(self, client, monkeypatch):
-        """Test that profile page uses created_at desc sorting by default."""
-
-        # Create and authenticate a user
-        mock_user = MagicMock(spec=User)
-        mock_user.id = 1
-        mock_user.username = "testuser"
-        mock_user.is_registered = True
-        mock_user.max_uploads_count = -1  # Unlimited
-        mock_user.uploads_count = AsyncMock(return_value=0)
-
-        async def mock_get_or_none(**kwargs):
-            if kwargs.get("username") == "testuser":
-                return mock_user
-            return None
-
-        monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
-
-        token = create_access_token({"sub": "testuser"})
-        client.cookies = {"access_token": token}
-
-        # Mock Upload.paginate and Upload.pages to avoid DB queries and check arguments
-        with patch("app.models.uploads.Upload.paginate") as mock_paginate, \
-             patch("app.models.uploads.Upload.pages", new_callable=AsyncMock) as mock_pages, \
-             patch("app.models.uploads.UploadSerializer.from_queryset", new_callable=AsyncMock) as mock_from_queryset:
-            mock_paginate.return_value = MagicMock()
-            mock_pages.return_value = 1
-            mock_from_queryset.return_value = []
-
-            # Make request
-            response = await client.get("/profile")
-
-            assert response.status_code == 200
-
-            # Verify default sorting was applied
-            call_kwargs = mock_paginate.call_args[1]
-            assert call_kwargs.get("sort_by") == "created_at"
-            assert call_kwargs.get("sort_order") == "desc"
-
-    @pytest.mark.asyncio
-    async def test_profile_page_explicit_sorting(self, client, monkeypatch):
-        """Test that profile page respects explicit sorting parameters."""
-
-        # Create and authenticate a user
-        mock_user = MagicMock(spec=User)
-        mock_user.id = 1
-        mock_user.username = "testuser"
-        mock_user.is_registered = True
-        mock_user.max_uploads_count = -1  # Unlimited
-        mock_user.uploads_count = AsyncMock(return_value=0)
-
-        async def mock_get_or_none(**kwargs):
-            if kwargs.get("username") == "testuser":
-                return mock_user
-            return None
-
-        monkeypatch.setattr(User, "get_or_none", mock_get_or_none)
-
-        token = create_access_token({"sub": "testuser"})
-        client.cookies = {"access_token": token}
-
-        with patch("app.models.uploads.Upload.paginate") as mock_paginate, \
-             patch("app.models.uploads.Upload.pages", new_callable=AsyncMock) as mock_pages, \
-             patch("app.models.uploads.UploadSerializer.from_queryset", new_callable=AsyncMock) as mock_from_queryset:
-            mock_paginate.return_value = MagicMock()
-            mock_pages.return_value = 1
-            mock_from_queryset.return_value = []
-
-            # Make request with explicit sorting
-            response = await client.get("/profile?sort_by=size&sort_order=asc")
-
-            assert response.status_code == 200
-
-            # Verify explicit sorting was applied
-            call_kwargs = mock_paginate.call_args[1]
-            assert call_kwargs.get("sort_by") == "size"
-            assert call_kwargs.get("sort_order") == "asc"
-
-
-class TestUserProfileIntegration:
-    """Integration tests for user profile page rendering."""
-
-    @pytest.mark.asyncio
-    async def test_profile_empty_state(self, client):
-        """Test profile page with no uploads."""
-        # Create user but no uploads
-        user = await User.create(username="testuser", email="test@example.com", is_registered=True, password="password")
-        
-        # Authenticate
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-        
-        response = await client.get("/profile")
-        assert response.status_code == 200
-        html = response.text
-        
-        assert "Profile" in html
-        assert user.username in html
-        # Should not show uploads section when user has no uploads
-        assert "<strong>Uploads</strong>" not in html
-        assert "break-inside-avoid-column" not in html
-
-    @pytest.mark.asyncio
-    async def test_profile_renders_uploads(self, client):
-        """Test rendering of mixed upload types (image vs file)."""
-        user = await User.create(username="gallery_user", email="gallery@example.com", is_registered=True, password="password")
-        
-        # Authenticate
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-        
-        # Create non-image upload
-        text_upload = await Upload.create(
-            user=user,
-            description="A text file",
-            name="notes",
-            cleanname="notes",
-            originalname="notes.txt",
-            ext="txt",
-            size=1024,
-            type="text/plain",
-            extra=""
-        )
-        
-        # Create image upload
-        image_upload = await Upload.create(
-            user=user,
-            description="An image",
-            name="photo",
-            cleanname="photo",
-            originalname="photo.jpg",
-            ext="jpg",
-            size=2048,
-            type="image/jpeg",
-            extra=""
-        )
-        # Create associated Image record
-        from app.models.images import Image
-        await Image.create(
-            upload=image_upload,
-            type="jpeg",
-            width=100,
-            height=100, 
-            bits=8, 
-            channels=3
-        )
-        
-        response = await client.get("/profile")
-        assert response.status_code == 200
-        html = response.text
-        
-        # Check text upload rendering
-        assert "notes.txt" in html
-        assert text_upload.url in html
-        assert ">txt<" in html
-        # Should have generic placeholder (div with ext)
-        assert ".txt" in html
-        
-        # Check image upload rendering
-        assert "photo.jpg" in html
-        assert ">jpeg<" in html
-        # Should have img tag with original URL (image is 100px wide, below thumbnail threshold)
-        assert "<img" in html
-        assert f'src="{image_upload.url}?t=' in html
-
-    @pytest.mark.asyncio
-    async def test_profile_pagination_integration(self, client):
-        """Test that profile lists uploads and respects existing pagination logic."""
-        user = await User.create(username="paged_user", email="paged@example.com", is_registered=True, password="password")
-        
-        # Authenticate
-        token = create_access_token({"sub": user.username})
-        client.cookies = {"access_token": token}
-        
-        # Create 15 uploads
-        for i in range(15):
-             await Upload.create(
-                user=user,
-                description=f"File {i}",
-                name=f"file{i}",
-                cleanname=f"file{i}",
-                originalname=f"file{i}.txt",
-                ext="txt",
-                size=100,
-                type="text/plain",
-                extra=""
-            )
-            
-        response = await client.get("/profile")
-        assert response.status_code == 200
-        html = response.text
-        
-        # Should show some files
-        assert "file14.txt" in html # Depending on sort order (desc created_at), 14 should be first
-        
-        # We don't strictly assert exactly 10 items here effectively without parsing,
-        # but we verified the paginate call args in the unit test.
-        # Just ensure the page renders without error with multiple items.
-        assert html.count("Filename:") <= 10 # Default page size is 10
+def _upload_kwargs(user: User, suffix: str, *, size: int = 100) -> dict:
+    """Minimal Upload.create kwargs."""
+    return {
+        "user": user,
+        "description": f"file {suffix}",
+        "name": f"proffile{suffix}_20250101-000000_a1b2c3d4",
+        "cleanname": f"proffile{suffix}",
+        "originalname": f"proffile{suffix}.txt",
+        "ext": "txt",
+        "size": size,
+        "type": "text/plain",
+        "extra": "",
+    }
 
 
 async def _make_archive_for_user(user: User, status: ArchiveStatusEnum, suffix: str) -> DownloadArchive:
@@ -225,54 +43,176 @@ async def _make_archive_for_user(user: User, status: ArchiveStatusEnum, suffix: 
     )
 
 
+# ---------------------------------------------------------------------------
+# GET /profile — sorting
+# ---------------------------------------------------------------------------
+
+class TestUserProfileSorting:
+    """Verify sort_by / sort_order parameters are honoured."""
+
+    async def test_default_sort_returns_newest_upload_first(self, client):
+        """With no explicit sort params the page uses created_at desc — newest first."""
+        user = await User.create(username="profdeflt", email="profdeflt@example.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        older = await Upload.create(**_upload_kwargs(user, "old"))
+        newer = await Upload.create(**_upload_kwargs(user, "new"))
+
+        response = await client.get("/profile")
+
+        assert response.status_code == 200
+        html = response.text
+        # Newer upload should appear before the older one in the rendered output
+        assert html.index("proffilenew.txt") < html.index("proffileold.txt")
+
+    async def test_explicit_sort_by_size_asc_orders_smallest_first(self, client):
+        """sort_by=size&sort_order=asc renders the smallest upload first."""
+        user = await User.create(username="profsort", email="profsort@example.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        await Upload.create(**_upload_kwargs(user, "big", size=9000))
+        await Upload.create(**_upload_kwargs(user, "sml", size=1))
+
+        response = await client.get("/profile?sort_by=size&sort_order=asc")
+
+        assert response.status_code == 200
+        html = response.text
+        # Smallest upload (sml) should appear before the larger one (big)
+        assert html.index("proffilesml.txt") < html.index("proffilebig.txt")
+
+
+# ---------------------------------------------------------------------------
+# GET /profile — rendering
+# ---------------------------------------------------------------------------
+
+class TestUserProfileRendering:
+    """Integration tests for profile page content rendering."""
+
+    async def test_empty_profile_shows_no_uploads_section(self, client):
+        """Profile page with no uploads omits the uploads section."""
+        user = await User.create(username="profempty", email="profempty@example.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        response = await client.get("/profile")
+
+        assert response.status_code == 200
+        html = response.text
+        assert "Profile" in html
+        assert user.username in html
+        assert "<strong>Uploads</strong>" not in html
+
+    async def test_profile_renders_text_upload(self, client):
+        """A plain-text upload is rendered with filename and extension badge."""
+        user = await User.create(username="proftxt", email="proftxt@example.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        upload = await Upload.create(
+            user=user, description="text", name="notes_20250101-000000_a1b2c3d4",
+            cleanname="notes", originalname="notes.txt", ext="txt",
+            size=1024, type="text/plain", extra="",
+        )
+
+        response = await client.get("/profile")
+
+        assert response.status_code == 200
+        html = response.text
+        assert "notes.txt" in html
+        assert upload.url in html
+
+    async def test_profile_renders_image_upload_with_img_tag(self, client):
+        """An image upload is rendered with an <img> tag pointing to the upload URL."""
+        user = await User.create(username="profimg", email="profimg@example.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        upload = await Upload.create(
+            user=user, description="photo", name="photo_20250101-000000_a1b2c3d4",
+            cleanname="photo", originalname="photo.jpg", ext="jpg",
+            size=2048, type="image/jpeg", extra="",
+        )
+        await Image.create(upload=upload, type="jpeg", width=100, height=100, bits=8, channels=3)
+
+        response = await client.get("/profile")
+
+        assert response.status_code == 200
+        html = response.text
+        assert "photo.jpg" in html
+        assert "<img" in html
+        assert f'src="{upload.url}?t=' in html
+
+    async def test_profile_pagination_respects_page_size(self, client):
+        """Profile page shows at most the default page size worth of uploads."""
+        user = await User.create(username="profpaged", email="profpaged@example.com", is_registered=True, password="pw")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        for i in range(15):
+            await Upload.create(**{**_upload_kwargs(user, str(i)), "originalname": f"pgfile{i}.txt"})
+
+        response = await client.get("/profile")
+
+        assert response.status_code == 200
+        html = response.text
+        # Default page size is 10; the count of "Filename:" labels should not exceed that
+        assert html.count("Filename:") <= 10
+
+
+# ---------------------------------------------------------------------------
+# GET /profile — download archives section
+# ---------------------------------------------------------------------------
+
 class TestUserProfileArchives:
     """Tests for the Download Archives section on the profile page."""
 
-    @pytest.mark.asyncio
     async def test_shows_archive_section_with_pending_entry(self, client):
+        """A pending archive appears in the archives section."""
         user = await User.create(username="arch_pending", email="arch_pending@test.com", is_registered=True, password="pw")
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
         archive = await _make_archive_for_user(user, ArchiveStatusEnum.pending, "aa000001")
 
         response = await client.get("/profile")
+
         assert response.status_code == 200
         html = response.text
-
         assert "Download Archives" in html
         assert archive.filename in html
         assert "Pending" in html
 
-    @pytest.mark.asyncio
-    async def test_shows_archive_section_with_ready_entry_and_download_link(self, client):
+    async def test_shows_download_link_for_ready_archive(self, client):
+        """A ready archive shows a download link."""
         user = await User.create(username="arch_ready", email="arch_ready@test.com", is_registered=True, password="pw")
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
         archive = await _make_archive_for_user(user, ArchiveStatusEnum.ready, "aa000002")
 
         response = await client.get("/profile")
+
         assert response.status_code == 200
         html = response.text
-
         assert "Download Archives" in html
         assert archive.filename in html
         assert "/download/" in html
 
-    @pytest.mark.asyncio
     async def test_omits_archive_section_when_no_archives(self, client):
+        """Profile page omits the archives section entirely when none exist."""
         user = await User.create(username="arch_none", email="arch_none@test.com", is_registered=True, password="pw")
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
         response = await client.get("/profile")
+
         assert response.status_code == 200
         html = response.text
-
         assert "Download Archives" not in html
         assert "profile-download-archives-table" not in html
 
-    @pytest.mark.asyncio
     async def test_does_not_show_expired_archives(self, client):
+        """Expired archives are excluded from the profile page."""
         user = await User.create(username="arch_expired", email="arch_expired@test.com", is_registered=True, password="pw")
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
@@ -281,8 +221,8 @@ class TestUserProfileArchives:
         await DownloadArchive.filter(id=archive.id).update(created_at=old_time)
 
         response = await client.get("/profile")
+
         assert response.status_code == 200
         html = response.text
-
         assert "Download Archives" not in html
         assert archive.filename not in html

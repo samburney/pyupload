@@ -11,7 +11,6 @@ Acceptance Criteria:
 - Middleware validates refresh token before refreshing
 """
 
-import pytest
 import jwt
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, AsyncMock, patch
@@ -51,7 +50,6 @@ def create_expiring_token(username: str, minutes_until_expiry: int) -> str:
 class TestTokenExpirationDetection:
     """Test that middleware correctly detects expiring tokens."""
 
-    @pytest.mark.asyncio
     async def test_detects_token_expiring_in_4_minutes(self, monkeypatch):
         """Test that token expiring in 4 minutes is detected."""
         app = FastAPI()
@@ -93,7 +91,6 @@ class TestTokenExpirationDetection:
                         assert response.status_code == 200
                         assert refresh_attempted is True
 
-    @pytest.mark.asyncio
     async def test_detects_token_expiring_in_1_minute(self, monkeypatch):
         """Test that token expiring in 1 minute is detected."""
         app = FastAPI()
@@ -132,7 +129,6 @@ class TestTokenExpirationDetection:
                         assert response.status_code == 200
                         assert refresh_attempted is True
 
-    @pytest.mark.asyncio
     async def test_ignores_token_expiring_in_10_minutes(self, monkeypatch):
         """Test that token expiring in 10 minutes is not refreshed."""
         app = FastAPI()
@@ -167,7 +163,6 @@ class TestTokenExpirationDetection:
 class TestTokenRefresh:
     """Test that middleware correctly refreshes tokens."""
 
-    @pytest.mark.asyncio
     async def test_refreshes_with_valid_refresh_token(self, db):
         """Test that valid refresh token triggers token refresh."""
         app = FastAPI()
@@ -211,7 +206,6 @@ class TestTokenRefresh:
         
         await user.delete()
 
-    @pytest.mark.asyncio
     async def test_doesnt_refresh_without_refresh_token(self):
         """Test that missing refresh token prevents refresh."""
         app = FastAPI()
@@ -244,7 +238,6 @@ class TestTokenRefresh:
                 assert response.status_code == 200
                 assert refresh_attempted is False
 
-    @pytest.mark.asyncio
     async def test_doesnt_refresh_with_invalid_refresh_token(self):
         """Test that invalid refresh token prevents refresh."""
         app = FastAPI()
@@ -288,7 +281,6 @@ class TestTokenRefresh:
 class TestErrorHandling:
     """Test that middleware handles errors gracefully."""
 
-    @pytest.mark.asyncio
     async def test_handles_invalid_jwt_gracefully(self):
         """Test that invalid JWT doesn't break request."""
         app = FastAPI()
@@ -307,7 +299,6 @@ class TestErrorHandling:
         assert response.status_code == 200
         assert response.json() == {"message": "success"}
 
-    @pytest.mark.asyncio
     async def test_handles_expired_jwt_gracefully(self):
         """Test that expired JWT doesn't break request."""
         app = FastAPI()
@@ -328,7 +319,6 @@ class TestErrorHandling:
         # Request should succeed
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_handles_missing_exp_claim(self):
         """Test that token without exp claim is handled gracefully."""
         app = FastAPI()
@@ -352,7 +342,6 @@ class TestErrorHandling:
         
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_continues_on_user_lookup_failure(self):
         """Test that failed user lookup doesn't break request."""
         app = FastAPI()
@@ -381,7 +370,6 @@ class TestErrorHandling:
 class TestPassThrough:
     """Test that middleware doesn't interfere with normal requests."""
 
-    @pytest.mark.asyncio
     async def test_passes_through_unauthenticated_requests(self):
         """Test that requests without tokens pass through normally."""
         app = FastAPI()
@@ -397,7 +385,6 @@ class TestPassThrough:
         assert response.status_code == 200
         assert response.json() == {"message": "success"}
 
-    @pytest.mark.asyncio
     async def test_passes_through_fresh_tokens(self):
         """Test that fresh tokens don't trigger refresh."""
         app = FastAPI()
@@ -425,7 +412,6 @@ class TestPassThrough:
             assert response.status_code == 200
             assert refresh_attempted is False
 
-    @pytest.mark.asyncio
     async def test_preserves_response_content(self):
         """Test that middleware doesn't modify response content."""
         app = FastAPI()
@@ -453,7 +439,6 @@ class TestPassThrough:
 class TestEdgeCases:
     """Test edge cases in middleware behavior."""
 
-    @pytest.mark.asyncio
     async def test_handles_non_user_object_from_token(self):
         """Test that non-User object from token lookup is handled."""
         app = FastAPI()
@@ -474,7 +459,6 @@ class TestEdgeCases:
             
             assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_handles_boundary_time_exactly_5_minutes(self):
         """Test behavior at exactly 5 minute threshold."""
         app = FastAPI()

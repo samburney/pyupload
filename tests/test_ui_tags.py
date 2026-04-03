@@ -15,7 +15,6 @@ Tests verify:
   accessible; private uploads owned by other users are silently excluded
 """
 
-import pytest
 
 from app.models.users import User
 from app.models.uploads import Upload
@@ -48,14 +47,12 @@ def _tag_upload_data(user, suffix: str = "") -> dict:
 class TestTagSuggestionsEndpoint:
     """Tests for POST /tags/suggestions."""
 
-    @pytest.mark.asyncio
     async def test_redirects_to_login_when_unauthenticated(self, client):
         """Unauthenticated requests redirect to /login."""
         response = await client.post("/tags/suggestions", data={"tag_search": "foo"}, follow_redirects=False)
         assert response.status_code == 303
         assert "/login" in response.headers.get("location", "")
 
-    @pytest.mark.asyncio
     async def test_returns_204_for_empty_tag_search(self, client):
         """An empty tag_search returns 204 No Content without querying the database."""
         user = await User.create(username="tsugmt204", email="tsugmt204@example.com", password="pw", is_registered=True)
@@ -65,7 +62,6 @@ class TestTagSuggestionsEndpoint:
         response = await client.post("/tags/suggestions", data={"tag_search": ""})
         assert response.status_code == 204
 
-    @pytest.mark.asyncio
     async def test_any_authenticated_user_can_get_suggestions(self, client):
         """Any authenticated user may request tag suggestions."""
         user = await User.create(username="tsugmtany", email="tsugmtany@example.com", password="pw", is_registered=True)
@@ -75,7 +71,6 @@ class TestTagSuggestionsEndpoint:
         response = await client.post("/tags/suggestions", data={"tag_search": "foo"})
         assert response.status_code == 200
 
-    @pytest.mark.asyncio
     async def test_returns_suggestions_matching_query(self, client):
         """Returns tags matching the query string; non-matching tags are excluded."""
         from app.models.tags import Tag
@@ -94,7 +89,6 @@ class TestTagSuggestionsEndpoint:
         assert "pyupload" in response.text
         assert "unrelated" not in response.text
 
-    @pytest.mark.asyncio
     async def test_excludes_provided_tag_names(self, client):
         """Tags whose names are in the tag_name list are excluded from suggestions."""
         from app.models.tags import Tag
@@ -122,14 +116,12 @@ class TestTagSuggestionsEndpoint:
 class TestTagUpdateEndpoint:
     """Tests for POST /tags/update."""
 
-    @pytest.mark.asyncio
     async def test_redirects_to_login_when_unauthenticated(self, client):
         """Unauthenticated requests redirect to /login."""
         response = await client.post("/tags/update", data={"tag_name": "foo"}, follow_redirects=False)
         assert response.status_code == 303
         assert "/login" in response.headers.get("location", "")
 
-    @pytest.mark.asyncio
     async def test_adds_tag_to_upload_and_returns_200(self, client):
         """Successfully adding a tag returns 200 with HTML."""
         user = await User.create(username="tupdtsucc", email="tupdtsucc@example.com", password="pw", is_registered=True)
@@ -142,7 +134,6 @@ class TestTagUpdateEndpoint:
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
-    @pytest.mark.asyncio
     async def test_tag_persisted_in_database(self, client):
         """The added tag is saved in the database and associated with the upload."""
         user = await User.create(username="tupdtdb", email="tupdtdb@example.com", password="pw", is_registered=True)
@@ -156,7 +147,6 @@ class TestTagUpdateEndpoint:
         await upload.fetch_related("tags")
         assert any(t.name == "persisted" for t in upload.tags)
 
-    @pytest.mark.asyncio
     async def test_adds_tag_to_multiple_uploads(self, client):
         """Tag is added to all uploads in selected_ids."""
         user = await User.create(username="tupdtmulti", email="tupdtmulti@example.com", password="pw", is_registered=True)
@@ -177,7 +167,6 @@ class TestTagUpdateEndpoint:
         assert any(t.name == "shared-tag" for t in upload_a.tags)
         assert any(t.name == "shared-tag" for t in upload_b.tags)
 
-    @pytest.mark.asyncio
     async def test_any_authenticated_user_can_tag_public_upload(self, client):
         """Any authenticated user may add a tag to a public upload."""
         owner = await User.create(username="tupdtowner", email="tupdtowner@example.com", password="pw", is_registered=True)
@@ -193,7 +182,6 @@ class TestTagUpdateEndpoint:
         await upload.fetch_related("tags")
         assert any(t.name == "tagged-by-other" for t in upload.tags)
 
-    @pytest.mark.asyncio
     async def test_silently_ignores_private_upload_of_another_user(self, client):
         """Private uploads owned by another user are filtered out; response is 200 with no tags."""
         owner = await User.create(username="tupdtpriv", email="tupdtpriv@example.com", password="pw", is_registered=True)
@@ -209,7 +197,6 @@ class TestTagUpdateEndpoint:
         await private_upload.fetch_related("tags")
         assert all(t.name != "foo" for t in private_upload.tags)
 
-    @pytest.mark.asyncio
     async def test_returns_400_for_invalid_tag_name(self, client):
         """An invalid tag name (all special characters) returns 400 Bad Request."""
         user = await User.create(username="tupdtbad", email="tupdtbad@example.com", password="pw", is_registered=True)
@@ -229,14 +216,12 @@ class TestTagUpdateEndpoint:
 class TestTagDeleteEndpoint:
     """Tests for POST /tags/delete."""
 
-    @pytest.mark.asyncio
     async def test_redirects_to_login_when_unauthenticated(self, client):
         """Unauthenticated requests redirect to /login."""
         response = await client.post("/tags/delete", data={"tag_name": "foo"}, follow_redirects=False)
         assert response.status_code == 303
         assert "/login" in response.headers.get("location", "")
 
-    @pytest.mark.asyncio
     async def test_removes_tag_from_upload_and_returns_200(self, client):
         """Successfully removing a tag returns 200 with HTML."""
         from app.models.tags import Tag
@@ -252,7 +237,6 @@ class TestTagDeleteEndpoint:
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
-    @pytest.mark.asyncio
     async def test_tag_removed_from_database(self, client):
         """The tag association is removed from the database after deletion."""
         from app.models.tags import Tag
@@ -269,7 +253,6 @@ class TestTagDeleteEndpoint:
         await upload.fetch_related("tags")
         assert all(t.name != "gone" for t in upload.tags)
 
-    @pytest.mark.asyncio
     async def test_removes_tag_from_multiple_uploads(self, client):
         """Tag is removed from all uploads in selected_ids."""
         from app.models.tags import Tag
@@ -294,7 +277,6 @@ class TestTagDeleteEndpoint:
         assert all(t.name != "to-remove" for t in upload_a.tags)
         assert all(t.name != "to-remove" for t in upload_b.tags)
 
-    @pytest.mark.asyncio
     async def test_returns_400_for_invalid_tag_name(self, client):
         """An invalid tag name (all special characters) returns 400 Bad Request."""
         user = await User.create(username="tdeltbad", email="tdeltbad@example.com", password="pw", is_registered=True)

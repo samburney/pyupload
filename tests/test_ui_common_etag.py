@@ -1,11 +1,15 @@
-"""Tests for ETag and cache header utilities."""
+"""Tests for ETag and cache header utilities in app/ui/common/etag.py.
+
+Covers:
+- get_paginated_gallery_etag: weak ETag generation, prefix, stability, context sensitivity
+- get_cache_headers: header names and values
+- check_etag_and_return_304_if_match: If-None-Match matching, wildcard, multiple ETags
+"""
+
 import pytest
 from unittest.mock import Mock
 from fastapi import Request
-from fastapi.testclient import TestClient
-from fastapi.responses import Response
 
-from app.models.uploads import UploadSerializer
 from app.models.common.pagination import PaginationParams
 from app.ui.common.etag import (
     get_paginated_gallery_etag,
@@ -21,18 +25,23 @@ def mock_request():
     return request
 
 
+def _request_with_if_none_match(value: str | None) -> Mock:
+    """Build a mock Request with a specific If-None-Match header value."""
+    request = Mock(spec=Request)
+    request.headers = Mock()
+    request.headers.get = Mock(return_value=value)
+    return request
+
+
 class TestGetPaginatedGalleryEtag:
-    """Tests for get_paginated_gallery_etag function."""
+    """Tests for get_paginated_gallery_etag."""
 
     def test_returns_weak_etag_string(self, mock_request):
-        """ETag should be a weak ETag formatted string."""
-        uploads = []
-        pagination = PaginationParams(page=1, page_size=24, count=0)
-
+        """ETag is a weak ETag formatted string."""
         etag = get_paginated_gallery_etag(
             request=mock_request,
-            uploads=uploads,
-            pagination=pagination,
+            uploads=[],
+            pagination=PaginationParams(page=1, page_size=24, count=0),
             user_id=None,
         )
 
@@ -40,290 +49,169 @@ class TestGetPaginatedGalleryEtag:
         assert etag.startswith('W/"')
         assert etag.endswith('"')
 
-    def test_etag_includes_prefix(self, mock_request):
-        """ETag should include the specified prefix."""
-        uploads = []
-        pagination = PaginationParams(page=1, page_size=24, count=0)
-
+    def test_default_prefix_is_gallery(self, mock_request):
+        """ETag includes 'gallery-' prefix by default."""
         etag = get_paginated_gallery_etag(
             request=mock_request,
-            uploads=uploads,
-            pagination=pagination,
+            uploads=[],
+            pagination=PaginationParams(page=1, page_size=24, count=0),
             user_id=None,
-            etag_prefix="gallery",
         )
 
-        assert 'gallery-' in etag
+        assert "gallery-" in etag
 
-    def test_etag_custom_prefix(self, mock_request):
-        """ETag should use custom prefix if provided."""
-        uploads = []
-        pagination = PaginationParams(page=1, page_size=24, count=0)
-
+    def test_custom_prefix_is_included(self, mock_request):
+        """A custom etag_prefix is included in the ETag value."""
         etag = get_paginated_gallery_etag(
             request=mock_request,
-            uploads=uploads,
-            pagination=pagination,
+            uploads=[],
+            pagination=PaginationParams(page=1, page_size=24, count=0),
             user_id=None,
             etag_prefix="custom",
         )
 
-        assert 'custom-' in etag
+        assert "custom-" in etag
 
     def test_etag_changes_with_user(self, mock_request):
-        """ETag should change when user context changes."""
-        uploads = []
+        """ETag differs when user_id changes."""
         pagination = PaginationParams(page=1, page_size=24, count=0)
 
-        etag_user1 = get_paginated_gallery_etag(
-            request=mock_request, uploads=uploads, pagination=pagination, user_id=1
-        )
-        etag_user2 = get_paginated_gallery_etag(
-            request=mock_request, uploads=uploads, pagination=pagination, user_id=2
-        )
+        etag_user1 = get_paginated_gallery_etag(request=mock_request, uploads=[], pagination=pagination, user_id=1)
+        etag_user2 = get_paginated_gallery_etag(request=mock_request, uploads=[], pagination=pagination, user_id=2)
 
         assert etag_user1 != etag_user2
 
     def test_etag_changes_with_pagination(self, mock_request):
-        """ETag should change when pagination changes."""
-        uploads = []
-
+        """ETag differs when page number changes."""
         etag_page1 = get_paginated_gallery_etag(
-            request=mock_request,
-            uploads=uploads,
-            pagination=PaginationParams(page=1, page_size=24, count=100),
-            user_id=None,
+            request=mock_request, uploads=[],
+            pagination=PaginationParams(page=1, page_size=24, count=100), user_id=None,
         )
         etag_page2 = get_paginated_gallery_etag(
-            request=mock_request,
-            uploads=uploads,
-            pagination=PaginationParams(page=2, page_size=24, count=100),
-            user_id=None,
+            request=mock_request, uploads=[],
+            pagination=PaginationParams(page=2, page_size=24, count=100), user_id=None,
         )
 
         assert etag_page1 != etag_page2
 
-    def test_etag_stable_same_inputs(self, mock_request):
-        """ETag should be stable for identical inputs."""
-        uploads = []
+    def test_etag_is_stable_for_identical_inputs(self, mock_request):
+        """Same inputs produce the same ETag."""
         pagination = PaginationParams(page=1, page_size=24, count=0)
+        kwargs = dict(request=mock_request, uploads=[], pagination=pagination, user_id=None)
 
-        etag1 = get_paginated_gallery_etag(
-            request=mock_request, uploads=uploads, pagination=pagination, user_id=None
-        )
-        etag2 = get_paginated_gallery_etag(
-            request=mock_request, uploads=uploads, pagination=pagination, user_id=None
-        )
+        assert get_paginated_gallery_etag(**kwargs) == get_paginated_gallery_etag(**kwargs)
 
-        assert etag1 == etag2
-
-    def test_etag_includes_upload_ids(self, mock_request):
-        """ETag should include upload IDs in signature."""
+    def test_etag_changes_with_upload_content(self, mock_request):
+        """ETag differs when the upload list changes."""
         pagination = PaginationParams(page=1, page_size=24, count=2)
 
-        upload1 = Mock()
-        upload1.id = 1
-        upload1.updated_at = None
-        upload1.image = None
+        upload = Mock()
+        upload.id = 1
+        upload.updated_at = None
+        upload.image = None
 
-        etag_with_upload = get_paginated_gallery_etag(
-            request=mock_request, uploads=[upload1], pagination=pagination, user_id=None
-        )
-        etag_without_upload = get_paginated_gallery_etag(
-            request=mock_request, uploads=[], pagination=pagination, user_id=None
-        )
+        etag_with = get_paginated_gallery_etag(request=mock_request, uploads=[upload], pagination=pagination, user_id=None)
+        etag_without = get_paginated_gallery_etag(request=mock_request, uploads=[], pagination=pagination, user_id=None)
 
-        assert etag_with_upload != etag_without_upload
+        assert etag_with != etag_without
 
-    def test_etag_changes_with_flashes(self, mock_request):
-        """ETag should change when session flash messages are present."""
-        uploads = []
+    def test_etag_changes_with_flash_messages(self, mock_request):
+        """ETag differs when session flash messages are present."""
         pagination = PaginationParams(page=1, page_size=24, count=0)
 
-        etag_no_flashes = get_paginated_gallery_etag(
-            request=mock_request, uploads=uploads, pagination=pagination, user_id=None
-        )
+        etag_no_flashes = get_paginated_gallery_etag(request=mock_request, uploads=[], pagination=pagination, user_id=None)
 
         mock_request.session["_flashes"] = [["info", "Something happened"]]
-        etag_with_flashes = get_paginated_gallery_etag(
-            request=mock_request, uploads=uploads, pagination=pagination, user_id=None
-        )
+        etag_with_flashes = get_paginated_gallery_etag(request=mock_request, uploads=[], pagination=pagination, user_id=None)
 
         assert etag_no_flashes != etag_with_flashes
 
 
 class TestGetCacheHeaders:
-    """Tests for get_cache_headers function."""
+    """Tests for get_cache_headers."""
 
-    def test_returns_dict_with_required_headers(self):
-        """Should return dict with Cache-Control, ETag, and Vary headers."""
-        etag = 'W/"test-123"'
+    def test_returns_all_required_headers(self):
+        """Result contains Cache-Control, ETag, and Vary keys."""
+        headers = get_cache_headers(etag='W/"test-123"')
 
-        headers = get_cache_headers(etag=etag)
-
-        assert isinstance(headers, dict)
         assert "Cache-Control" in headers
         assert "ETag" in headers
         assert "Vary" in headers
 
     def test_cache_control_value(self):
-        """Cache-Control should be set for private, must-revalidate with 60s max-age."""
-        etag = 'W/"test-123"'
-
-        headers = get_cache_headers(etag=etag)
+        """Cache-Control is set for private, must-revalidate with 60s max-age."""
+        headers = get_cache_headers(etag='W/"test-123"')
 
         assert headers["Cache-Control"] == "private, max-age=60, must-revalidate"
 
-    def test_etag_header_value(self):
-        """ETag header should contain the provided etag value."""
+    def test_etag_header_matches_input(self):
+        """ETag header value matches the etag argument."""
         etag = 'W/"custom-abc123"'
 
-        headers = get_cache_headers(etag=etag)
+        assert get_cache_headers(etag=etag)["ETag"] == etag
 
-        assert headers["ETag"] == etag
-
-    def test_vary_header_value(self):
-        """Vary header should be set to Cookie since cache varies by user."""
-        etag = 'W/"test-123"'
-
-        headers = get_cache_headers(etag=etag)
+    def test_vary_header_is_cookie(self):
+        """Vary header is set to Cookie since cache varies by user."""
+        headers = get_cache_headers(etag='W/"test-123"')
 
         assert headers["Vary"] == "Cookie"
 
 
 class TestCheckEtagAndReturn304IfMatch:
-    """Tests for check_etag_and_return_304_if_match function."""
+    """Tests for check_etag_and_return_304_if_match."""
 
     def test_returns_none_without_if_none_match_header(self):
-        """Should return None if If-None-Match header is not present."""
-        from fastapi import FastAPI
-        from httpx import AsyncClient
+        """Returns None when no If-None-Match header is present."""
+        request = _request_with_if_none_match(None)
 
-        app = FastAPI()
+        assert check_etag_and_return_304_if_match(request, 'W/"abc123"') is None
 
-        @app.get("/test")
-        async def test_endpoint(request: Request):
-            result = check_etag_and_return_304_if_match(request, 'W/"test-123"')
-            return {"result": result}
+    def test_returns_none_when_etag_does_not_match(self):
+        """Returns None when If-None-Match header contains a different ETag."""
+        request = _request_with_if_none_match('W/"xyz789"')
 
-        client = TestClient(app)
-        response = client.get("/test")
+        assert check_etag_and_return_304_if_match(request, 'W/"abc123"') is None
 
-        assert response.status_code == 200
+    def test_returns_304_when_etag_matches(self):
+        """Returns a 304 response when the ETag matches If-None-Match."""
+        request = _request_with_if_none_match('W/"abc123"')
 
-    def test_returns_none_with_non_matching_etag(self):
-        """Should return None if If-None-Match doesn't match ETag."""
-        from fastapi import FastAPI
+        response = check_etag_and_return_304_if_match(request, 'W/"abc123"')
 
-        app = FastAPI()
-
-        @app.get("/test")
-        async def test_endpoint(request: Request):
-            result = check_etag_and_return_304_if_match(request, 'W/"abc123"')
-            if result is not None:
-                return result
-            return {"result": None}
-
-        client = TestClient(app)
-        response = client.get("/test", headers={"If-None-Match": 'W/"xyz789"'})
-
-        assert response.status_code == 200
-        assert response.json() == {"result": None}
-
-    def test_returns_304_with_matching_etag(self):
-        """Should return 304 response if If-None-Match matches ETag."""
-        from fastapi import FastAPI
-
-        app = FastAPI()
-
-        @app.get("/test")
-        async def test_endpoint(request: Request):
-            result = check_etag_and_return_304_if_match(request, 'W/"abc123"')
-            if result is not None:
-                return result
-            return {"result": "not modified"}
-
-        client = TestClient(app)
-        response = client.get("/test", headers={"If-None-Match": 'W/"abc123"'})
-
+        assert response is not None
         assert response.status_code == 304
 
-    def test_returns_304_with_wildcard_etag(self):
-        """Should return 304 if If-None-Match contains wildcard."""
-        from fastapi import FastAPI
+    def test_returns_304_for_wildcard_if_none_match(self):
+        """Returns a 304 response when If-None-Match is the wildcard '*'."""
+        request = _request_with_if_none_match("*")
 
-        app = FastAPI()
+        response = check_etag_and_return_304_if_match(request, 'W/"abc123"')
 
-        @app.get("/test")
-        async def test_endpoint(request: Request):
-            result = check_etag_and_return_304_if_match(request, 'W/"abc123"')
-            if result is not None:
-                return result
-            return {"result": "not modified"}
-
-        client = TestClient(app)
-        response = client.get("/test", headers={"If-None-Match": "*"})
-
+        assert response is not None
         assert response.status_code == 304
 
     def test_304_response_includes_cache_headers(self):
-        """304 response should include Cache-Control and ETag headers."""
-        from fastapi import FastAPI
+        """304 response includes ETag and Cache-Control headers."""
+        etag = 'W/"abc123"'
+        request = _request_with_if_none_match(etag)
 
-        app = FastAPI()
-
-        @app.get("/test")
-        async def test_endpoint(request: Request):
-            result = check_etag_and_return_304_if_match(request, 'W/"abc123"')
-            if result is not None:
-                return result
-            return {"result": "not modified"}
-
-        client = TestClient(app)
-        response = client.get("/test", headers={"If-None-Match": 'W/"abc123"'})
+        response = check_etag_and_return_304_if_match(request, etag)
 
         assert response.status_code == 304
-        assert "ETag" in response.headers
+        assert response.headers["ETag"] == etag
         assert "Cache-Control" in response.headers
-        assert response.headers["ETag"] == 'W/"abc123"'
 
-    def test_handles_multiple_etags_in_if_none_match(self):
-        """Should match if any ETag in If-None-Match header matches."""
-        from fastapi import FastAPI
+    def test_matches_any_etag_in_comma_separated_list(self):
+        """Returns 304 if any ETag in a comma-separated If-None-Match matches."""
+        request = _request_with_if_none_match('W/"other1", W/"target123", W/"other2"')
 
-        app = FastAPI()
+        response = check_etag_and_return_304_if_match(request, 'W/"target123"')
 
-        @app.get("/test")
-        async def test_endpoint(request: Request):
-            result = check_etag_and_return_304_if_match(request, 'W/"target123"')
-            if result is not None:
-                return result
-            return {"result": "not modified"}
-
-        client = TestClient(app)
-        response = client.get(
-            "/test",
-            headers={"If-None-Match": 'W/"other1", W/"target123", W/"other2"'},
-        )
-
+        assert response is not None
         assert response.status_code == 304
 
     def test_etag_comparison_is_exact(self):
-        """ETag comparison should be exact, not partial match."""
-        from fastapi import FastAPI
+        """A similar but non-identical ETag does not trigger 304."""
+        request = _request_with_if_none_match('W/"abc124"')
 
-        app = FastAPI()
-
-        @app.get("/test")
-        async def test_endpoint(request: Request):
-            result = check_etag_and_return_304_if_match(request, 'W/"abc123"')
-            if result is not None:
-                return result
-            return {"result": "not modified"}
-
-        client = TestClient(app)
-        # Similar but not matching ETag should not return 304
-        response = client.get("/test", headers={"If-None-Match": 'W/"abc124"'})
-
-        assert response.status_code == 200
-        assert response.json() == {"result": "not modified"}
+        assert check_etag_and_return_304_if_match(request, 'W/"abc123"') is None

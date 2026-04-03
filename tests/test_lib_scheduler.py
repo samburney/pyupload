@@ -72,7 +72,6 @@ async def test_user(db):
 class TestCleanupTokensFunction:
     """Test cleanup_tokens_job() function."""
 
-    @pytest.mark.asyncio
     async def test_cleanup_deletes_expired_tokens(self, test_user):
         """Test that cleanup deletes expired tokens."""
         # Create expired token
@@ -106,7 +105,6 @@ class TestCleanupTokensFunction:
         
         await valid_token.delete()
 
-    @pytest.mark.asyncio
     async def test_cleanup_preserves_valid_tokens(self, test_user):
         """Test that cleanup preserves valid non-revoked tokens."""
         # Create multiple valid tokens
@@ -133,7 +131,6 @@ class TestCleanupTokensFunction:
         for token in valid_tokens:
             await token.delete()
 
-    @pytest.mark.asyncio
     async def test_cleanup_with_mixed_tokens(self, test_user):
         """Test cleanup with mix of expired, valid, and revoked tokens."""
         # Create expired token
@@ -179,7 +176,6 @@ class TestCleanupTokensFunction:
         await valid.delete()
         await revoked.delete()
 
-    @pytest.mark.asyncio
     async def test_cleanup_with_no_tokens(self, test_user):
         """Test that cleanup works when no tokens exist."""
         # Ensure no tokens for user
@@ -192,7 +188,6 @@ class TestCleanupTokensFunction:
         count = await RefreshToken.filter(user=test_user).count()
         assert count == 0
 
-    @pytest.mark.asyncio
     async def test_cleanup_multiple_expired_tokens(self, test_user):
         """Test that cleanup deletes multiple expired tokens."""
         # Create multiple expired tokens
@@ -215,7 +210,6 @@ class TestCleanupTokensFunction:
             found = await RefreshToken.get_or_none(id=token.id)
             assert found is None
 
-    @pytest.mark.asyncio
     async def test_cleanup_can_be_run_manually(self, test_user):
         """Test that cleanup_tokens_job() can be called manually (not just scheduled)."""
         # Create expired token
@@ -234,7 +228,6 @@ class TestCleanupTokensFunction:
         found = await RefreshToken.get_or_none(id=expired.id)
         assert found is None
 
-    @pytest.mark.asyncio
     async def test_cleanup_with_exactly_expired_token(self, test_user):
         """Test cleanup with token that just expired."""
         # Create token that expired 1 second ago
@@ -253,7 +246,6 @@ class TestCleanupTokensFunction:
         found = await RefreshToken.get_or_none(id=just_expired.id)
         assert found is None
 
-    @pytest.mark.asyncio
     async def test_cleanup_with_token_expiring_soon(self, test_user):
         """Test that cleanup preserves tokens expiring soon but not yet expired."""
         # Create token expiring in 1 second
@@ -278,7 +270,6 @@ class TestCleanupTokensFunction:
 class TestSchedulerIntegration:
     """Test scheduler integration (if scheduler is running)."""
 
-    @pytest.mark.asyncio
     async def test_scheduler_exists(self):
         """Test that scheduler module exists and is importable."""
         from app.lib.scheduler import scheduler, cleanup_tokens_job
@@ -339,7 +330,6 @@ class TestRunArchiveJob:
             filename="archive_archivejobuser_20260328-000000_abcd1234.zip",
         )
 
-    @pytest.mark.asyncio
     async def test_success_transitions_to_ready(self, archive, tmp_path):
         """Successful archive creation transitions status pending → ready."""
         archive_dir = tmp_path / "archives"
@@ -358,7 +348,6 @@ class TestRunArchiveJob:
         refreshed = await DownloadArchive.get(id=archive.id)
         assert refreshed.status == ArchiveStatusEnum.ready
 
-    @pytest.mark.asyncio
     async def test_success_archive_file_exists(self, archive, tmp_path):
         """Successful archive creation leaves the file on disk."""
         archive_dir = tmp_path / "archives"
@@ -376,7 +365,6 @@ class TestRunArchiveJob:
 
         assert (archive_dir / archive.filename).exists()
 
-    @pytest.mark.asyncio
     async def test_create_archive_raises_sets_failed(self, archive, tmp_path):
         """If create_archive raises, status transitions to failed."""
         archive_dir = tmp_path / "archives"
@@ -392,7 +380,6 @@ class TestRunArchiveJob:
         refreshed = await DownloadArchive.get(id=archive.id)
         assert refreshed.status == ArchiveStatusEnum.failed
 
-    @pytest.mark.asyncio
     async def test_create_archive_raises_logs_error(self, archive, tmp_path):
         """If create_archive raises, the error is logged."""
         archive_dir = tmp_path / "archives"
@@ -409,7 +396,6 @@ class TestRunArchiveJob:
         mock_logger.error.assert_called_once()
         assert "disk full" in mock_logger.error.call_args[0][0]
 
-    @pytest.mark.asyncio
     async def test_archive_not_found_returns_early(self, db, tmp_path):
         """Non-existent archive ID logs and returns without raising."""
         with patch("app.lib.scheduler.FileArchive") as MockFileArchive, \
@@ -417,7 +403,6 @@ class TestRunArchiveJob:
             await run_archive_job(uuid.uuid4())
             MockFileArchive.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_non_pending_archive_is_skipped(self, archive, tmp_path):
         """Archive already in processing state is not picked up by the job."""
         archive.status = ArchiveStatusEnum.processing
@@ -430,7 +415,6 @@ class TestRunArchiveJob:
         refreshed = await DownloadArchive.get(id=archive.id)
         assert refreshed.status == ArchiveStatusEnum.processing
 
-    @pytest.mark.asyncio
     async def test_missing_upload_sets_failed(self, user, db):
         """Archive referencing an upload that no longer exists transitions to failed."""
         archive = await DownloadArchive.create(
@@ -448,7 +432,6 @@ class TestRunArchiveJob:
         refreshed = await DownloadArchive.get(id=archive.id)
         assert refreshed.status == ArchiveStatusEnum.failed
 
-    @pytest.mark.asyncio
     async def test_empty_archive_file_sets_failed(self, archive, tmp_path):
         """If create_archive writes an empty file, status transitions to failed."""
         archive_dir = tmp_path / "archives"
@@ -474,7 +457,6 @@ class TestRunArchiveJob:
 
 class TestCleanupArchivesJob:
 
-    @pytest.mark.asyncio
     async def test_calls_cleanup_expired(self, db):
         """cleanup_archives_job calls DownloadArchive.cleanup_expired."""
         with patch("app.lib.scheduler.DownloadArchive.cleanup_expired", return_value=0) as mock_expired, \
@@ -482,7 +464,6 @@ class TestCleanupArchivesJob:
             await cleanup_archives_job()
             mock_expired.assert_called_once()
 
-    @pytest.mark.asyncio
     async def test_calls_cleanup_orphaned_archives(self, db):
         """cleanup_archives_job calls cleanup_orphaned_archives."""
         with patch("app.lib.scheduler.DownloadArchive.cleanup_expired", return_value=0), \
@@ -490,7 +471,6 @@ class TestCleanupArchivesJob:
             await cleanup_archives_job()
             mock_orphans.assert_called_once()
 
-    @pytest.mark.asyncio
     async def test_logs_expired_count(self, db):
         """cleanup_archives_job logs the number of expired archives removed."""
         with patch("app.lib.scheduler.DownloadArchive.cleanup_expired", return_value=3), \
@@ -501,7 +481,6 @@ class TestCleanupArchivesJob:
         log_messages = [call[0][0] for call in mock_logger.info.call_args_list]
         assert any("3" in msg for msg in log_messages)
 
-    @pytest.mark.asyncio
     async def test_logs_orphan_count(self, db):
         """cleanup_archives_job logs the number of orphaned files removed."""
         with patch("app.lib.scheduler.DownloadArchive.cleanup_expired", return_value=0), \

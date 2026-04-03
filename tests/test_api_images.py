@@ -9,7 +9,6 @@ Covers:
   - 200 success - response structure and correct behaviour
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
 
 from app.models.users import User
@@ -39,7 +38,6 @@ async def _create_image_upload(user: User, private: int = 0) -> Upload:
 class TestPostRotateImage:
     """Test POST /api/v1/images/{id}/rotate."""
 
-    @pytest.mark.asyncio
     async def test_invalid_angle_returns_400(self, client):
         """Angles outside [90, 180, 270] must be rejected before any DB access."""
         user = await User.create(username="rotbadangle", email="rotbadangle@example.com", password="pw")
@@ -54,13 +52,11 @@ class TestPostRotateImage:
         assert response.status_code == 400
         assert "angle" in response.json()["detail"].lower()
 
-    @pytest.mark.asyncio
     async def test_unauthenticated_returns_401(self, client):
         """Requests without a valid Bearer token must be rejected."""
         response = await client.post("/api/v1/images/1/rotate", params={"angle": 90})
         assert response.status_code == 401
 
-    @pytest.mark.asyncio
     async def test_upload_not_found_returns_404(self, client):
         """A valid angle for a non-existent upload must return 404."""
         user = await User.create(username="rotnotfound", email="rotnotfound@example.com", password="pw")
@@ -74,7 +70,6 @@ class TestPostRotateImage:
 
         assert response.status_code == 404
 
-    @pytest.mark.asyncio
     async def test_private_upload_non_owner_returns_403(self, client):
         """A private upload must not be rotatable by a different user."""
         owner = await User.create(username="rotowner", email="rotowner@example.com", password="pw")
@@ -91,7 +86,6 @@ class TestPostRotateImage:
 
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_public_upload_non_owner_returns_403(self, client):
         """A public upload must not be rotatable by a different user."""
         owner = await User.create(username="rotpubowner", email="rotpubowner@example.com", password="pw")
@@ -108,7 +102,6 @@ class TestPostRotateImage:
 
         assert response.status_code == 403
 
-    @pytest.mark.asyncio
     async def test_success_returns_200_with_upload_data(self, client):
         """A valid rotation request must return 200 with serialised upload data."""
         user = await User.create(username="rotsuccess", email="rotsuccess@example.com", password="pw")
@@ -128,7 +121,6 @@ class TestPostRotateImage:
         assert data["id"] == upload.id
         assert data["type"] == "image/jpeg"
 
-    @pytest.mark.asyncio
     async def test_success_calls_rotate_image_with_correct_angle(self, client):
         """rotate_image must be called with exactly the angle supplied in the request."""
         user = await User.create(username="rotangle", email="rotangle@example.com", password="pw")
@@ -146,7 +138,6 @@ class TestPostRotateImage:
 
         mock_rotate.assert_awaited_once_with(270)
 
-    @pytest.mark.asyncio
     async def test_success_response_includes_image_metadata(self, client):
         """Response must include an 'image' key with basic image metadata."""
         user = await User.create(username="rotimgmeta", email="rotimgmeta@example.com", password="pw")

@@ -114,7 +114,6 @@ class TestGetFileSize:
         get_file_size(bio)
         assert bio.tell() == 5
 
-    @pytest.mark.asyncio
     async def test_returns_correct_size_for_upload_file(self):
         """Works correctly when given an UploadFile."""
         content = b"Hello, World!"
@@ -129,7 +128,6 @@ class TestGetFileSize:
 class TestGetFileMimeType:
     """Tests for get_file_mime_type()."""
 
-    @pytest.mark.asyncio
     async def test_detects_jpeg_mime_type(self):
         """Detects image/jpeg for a PIL-generated JPEG."""
         from PIL import Image as PILImage
@@ -139,13 +137,11 @@ class TestGetFileMimeType:
         mime = await get_file_mime_type(buf)
         assert mime == "image/jpeg"
 
-    @pytest.mark.asyncio
     async def test_raises_value_error_for_empty_file(self):
         """Raises ValueError when the file is empty."""
         with pytest.raises(ValueError, match="empty"):
             await get_file_mime_type(BytesIO(b""))
 
-    @pytest.mark.asyncio
     async def test_restores_position_after_read(self):
         """Leaves the file at its original position after detection."""
         content = b"Hello, plain text content"
@@ -154,7 +150,6 @@ class TestGetFileMimeType:
         await get_file_mime_type(bio)
         assert bio.tell() == 10
 
-    @pytest.mark.asyncio
     async def test_works_with_upload_file(self):
         """Works correctly when given an UploadFile wrapping a PIL-generated JPEG."""
         from PIL import Image as PILImage
