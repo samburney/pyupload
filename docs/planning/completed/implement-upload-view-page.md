@@ -18,12 +18,12 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 ### Current State
 - `/view/{id}/{filename}` route renders a full upload detail page with sidebar metadata panel and file preview
-- View page fully componentised: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-actions.html.j2`
+- View page fully componentised: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-sidebar-actions.html.j2`
 - File preview in `view-frame.html.j2`: images display inline with loading indicator overlay, server-side cache-busting (`?t={updated_at_timestamp}`), and `id="view-frame-image"` for HTMX targeting; non-images show a file-type icon/link
 - Sidebar metadata panel in `upload-details.html.j2` with all fields and responsive styling
 - Download button in `upload-download-button.html.j2`: dropdown for images (original, JPG, GIF, PNG conversions); plain button for non-images
 - Share button/modal in `upload-share-button.html.j2` for public uploads with copyable direct URLs (image URL, details URL, download URL)
-- Image rotation UI in `upload-actions.html.j2`: owner-only, HTMX-powered rotate dropdown (90° CW, 180°, 90° CCW) with loading indicator and Rotate button disabled during requests
+- Image rotation UI in `upload-sidebar-actions.html.j2`: owner-only, HTMX-powered rotate dropdown (90° CW, 180°, 90° CCW) with loading indicator and Rotate button disabled during requests
 - Privacy toggle in `upload-private-toggle.html.j2`: owner-only, HTMX `PATCH /uploads/{id}/private` checkbox switch with inline state update
 - Modal view variant exists via `?modal=true`
 - `/view/{id}` redirects to `/view/{id}/{cleanname}` with 301 (404 if upload not found); private files return 403 on this route (no user context, prevents information disclosure)
@@ -51,9 +51,9 @@ Implement individual upload detail/view pages that display file metadata, provid
 - Sharing, inline editing, privacy toggle, delete, and all view-page tests remain pending.
 
 ### Review Snapshot (2026-02-22)
-- View page fully refactored into reusable components: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-actions.html.j2`. Steps 2 task 1 and Step 3 task 1 now complete.
+- View page fully refactored into reusable components: `view-frame.html.j2`, `view-sidebar.html.j2`, `upload-details.html.j2`, `upload-download-button.html.j2`, `upload-sidebar-actions.html.j2`. Steps 2 task 1 and Step 3 task 1 now complete.
 - `view-frame.html.j2` adds `id="view-frame-image"` on image for HTMX targeting, server-side cache-busting via `?t={updated_at_timestamp}`, and a loading indicator overlay (Steps 2 task 6 partial — loading state handled, broken image placeholder still pending).
-- `upload-actions.html.j2` implements owner-only image rotation UI: HTMX-powered dropdown with 90° CW, 180°, and 90° CCW options. HTMX swaps `#view-frame-image`, `#upload-details`, and `#messages` in-place after rotation; Rotate button disabled during in-flight requests via `hx-disabled-elt`; loading spinner shown via `hx-indicator`.
+- `upload-sidebar-actions.html.j2` implements owner-only image rotation UI: HTMX-powered dropdown with 90° CW, 180°, and 90° CCW options. HTMX swaps `#view-frame-image`, `#upload-details`, and `#messages` in-place after rotation; Rotate button disabled during in-flight requests via `hx-disabled-elt`; loading spinner shown via `hx-indicator`.
 - `app/ui/images.py` provides the `POST /images/{id}/rotate/{angle}` UI endpoint that rotates the image and returns the full rendered view page for HTMX partial extraction.
 - `app/ui/__init__.py` and `app/main.py` updated to register the new UI images router.
 - Delete functionality implemented: `Upload.delete()` model method added (`await super().delete()` then `asyncio.to_thread(delete_file, self.filepath)`); `DELETE /{id}` UI endpoint in `app/ui/uploads.py` (owner-only, HTMX-powered, 204 + `HX-Redirect: /profile`); `DELETE /api/v1/uploads/{id}` API endpoint in `app/api/uploads.py` (200 + JSON result); confirmation modal in `confirm-modal.html.j2`. `app/lib/file_io.py` created as pure I/O layer; I/O functions moved from `file_storage.py` to `file_io.py`.
@@ -84,7 +84,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 ### Review Snapshot (2026-03-05)
 - Sharing UI implemented for public uploads: new `upload-share-button.html.j2` component with a modal (`modal-basic.html.j2`) that exposes copyable direct URLs for image/details/download links.
 - Sidebar behavior updated in `view-sidebar.html.j2`: share button is rendered only for non-private uploads.
-- Privacy toggle implemented for owners: new `PATCH /uploads/{id}/private` endpoint in `app/ui/uploads.py` and `upload-private-toggle.html.j2` HTMX component rendered from `upload-actions.html.j2`.
+- Privacy toggle implemented for owners: new `PATCH /uploads/{id}/private` endpoint in `app/ui/uploads.py` and `upload-private-toggle.html.j2` HTMX component rendered from `upload-sidebar-actions.html.j2`.
 - `confirm-modal.html.j2` was renamed to `modal-dialog.html.j2`; delete button component updated to use the renamed macro.
 - Tests added: `TestUploadPrivateTogglePatchEndpoint` in `tests/test_ui_uploads.py` and share/private view integration assertions in `tests/test_integration_gallery.py`.
 - Remaining major gap for this plan: title/description inline editing and broader per-route view-page test matrix.
@@ -370,7 +370,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Files**: 
 - `app/ui/uploads.py`
-- `app/ui/templates/components/upload/actions.html.j2`
+- `app/ui/templates/components/upload/sidebar-actions.html.j2`
 - `app/ui/templates/components/upload/private-toggle.html.j2` (new)
 
 **Tasks**:
@@ -415,7 +415,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 
 **Files**: 
 - `app/ui/uploads.py`
-- `app/ui/templates/components/upload/actions.html.j2`
+- `app/ui/templates/components/upload/sidebar-actions.html.j2`
 - `app/ui/templates/components/confirm-modal.html.j2` (new)
 - `app/models/uploads.py`
 - `app/api/uploads.py`
@@ -566,7 +566,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 - `app/ui/templates/components/collections/combo-selector-items.html.j2` (new)
 - `app/ui/templates/components/core/image-rotate-select.html.j2` (new, extracted)
 - `app/ui/templates/components/upload/delete-button.html.j2` (new, extracted)
-- `app/ui/templates/components/upload/actions.html.j2`
+- `app/ui/templates/components/upload/sidebar-actions.html.j2`
 - `app/ui/templates/components/core/tag-input.html.j2`
 - `input.css`
 
@@ -578,7 +578,7 @@ Implement individual upload detail/view pages that display file metadata, provid
 5. [x] Create `PATCH /uploads/{id}/collection` endpoint (HTMX, authenticated, full add/remove reconciliation for current user, returns 202)
 6. [x] Create `collections-combo-selector.html.j2` Alpine.js multi-select combo with search/filter, new collection creation, and checked-state management
 7. [x] Create `collections-combo-selector-items.html.j2` HTMX partial for rendered items list
-8. [x] Restructure `upload-actions.html.j2`: gate interactive tags and collections on `current_user`; show read-only tags for unauthenticated users; keep rotate and delete owner-only
+8. [x] Restructure `upload-sidebar-actions.html.j2`: gate interactive tags and collections on `current_user`; show read-only tags for unauthenticated users; keep rotate and delete owner-only
 9. [x] Add `render_tags_readonly()` macro to `tag-input.html.j2` for unauthenticated users
 10. [x] Add comprehensive `.split-button` CSS system to `input.css`; remove legacy `.dropdown` classes
 11. [x] Update all `prefetch_related` calls to include `"collections"`
