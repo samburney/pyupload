@@ -79,7 +79,7 @@ class TestUploadGetEndpoint:
 
         assert response.status_code == 200
         html = response.text
-        assert "/static/js/store-client-dimensions.js" in html
+        assert "/static/js/app/lib/store-client-dimensions.js" in html
 
     async def test_upload_page_renders_with_authenticated_user(self, client):
         """Test that authenticated user is passed to template."""
