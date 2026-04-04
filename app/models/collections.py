@@ -172,7 +172,7 @@ class Collection(models.Model, TimestampMixin):
 
         if not uploads:
             return []
-        
+
         # Get all available collection IDs
         await user.fetch_related("collections")
         available_collection_ids = set(c.id for c in user.collections) # type: ignore

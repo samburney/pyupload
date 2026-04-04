@@ -7,7 +7,6 @@ from fastapi.responses import Response, HTMLResponse
 from fastapi.exceptions import HTTPException
 
 from app.models.collections import Collection
-from app.models.uploads import UploadSerializer
 from app.models.users import User
 
 from app.ui.common.errors import error_template_response
