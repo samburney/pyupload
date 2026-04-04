@@ -12,37 +12,6 @@ if TYPE_CHECKING:
     from app.models.uploads import Upload, UploadSerializer  # noqa: F401
 
 
-def get_combined_tags_for_uploads(uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
-    """Build combined list of tags from a provided list of Uploads"""
-
-    if not uploads:
-        return []
-
-    combined_tag_names = set()
-    common_tag_names = None
-
-    for upload in uploads:
-        tag_names = set(tag.name for tag in upload.tags)
-        combined_tag_names.update(tag_names)
-        if common_tag_names is None:
-            common_tag_names = set(tag_names)
-        elif common_tag_names:
-            if not tag_names:
-                common_tag_names.clear()
-            else:
-                common_tag_names &= tag_names
-
-    # Make tags list of dicts
-    tags = []
-    for tag_name in combined_tag_names:
-        tags.append({
-            "name": tag_name,
-            "selection_type": "common" if tag_name in common_tag_names else "partial",
-        })
-
-    return tags
-
-
 class Tag(models.Model, TimestampMixin):
     id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255)
@@ -88,6 +57,38 @@ class Tag(models.Model, TimestampMixin):
             await tag.delete()
 
         return True
+
+
+    @classmethod
+    def get_combined_tags_for_uploads(cls, uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
+        """Build combined list of tags from a provided list of Uploads"""
+
+        if not uploads:
+            return []
+
+        combined_tag_names = set()
+        common_tag_names = None
+
+        for upload in uploads:
+            tag_names = set(tag.name for tag in upload.tags)
+            combined_tag_names.update(tag_names)
+            if common_tag_names is None:
+                common_tag_names = set(tag_names)
+            elif common_tag_names:
+                if not tag_names:
+                    common_tag_names.clear()
+                else:
+                    common_tag_names &= tag_names
+
+        # Make tags list of dicts
+        tags = []
+        for tag_name in combined_tag_names:
+            tags.append({
+                "name": tag_name,
+                "selection_type": "common" if tag_name in common_tag_names else "partial",
+            })
+
+        return tags
 
 
 class TagUpload(models.Model):

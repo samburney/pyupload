@@ -10,7 +10,7 @@ from fastapi.exceptions import HTTPException
 
 from app.models.common.pagination import PaginationParams
 from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
-from app.models.tags import get_combined_tags_for_uploads
+from app.models.tags import Tag
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
 
@@ -140,7 +140,7 @@ async def gallery_handle_selected_upload_post(
         "owners": selection_owners,
         "file_types": selection_file_types,
         "file_size": selection_file_size,
-        "tags": get_combined_tags_for_uploads(selected_uploads),
+        "tags": Tag.get_combined_tags_for_uploads(selected_uploads),
     }
 
     # Template context
