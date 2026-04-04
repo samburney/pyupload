@@ -56,6 +56,9 @@
 
 ## Future Enhancements
 
+### Database & ORM
+- [ ] Upgrade to Tortoise ORM 1.x and built-in migrations *(serializer compatibility to confirm)*
+
 ### Authentication
 - [ ] Migrate to pwdlib recommended password hashing
 - [ ] Configurable password complexity requirements
