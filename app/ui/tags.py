@@ -64,7 +64,7 @@ async def upload_add_tag_post(
 ) -> Response:
     """Add a tag to an upload."""
     
-    # Get upload from database
+    # Get uploads from database
     upload_models = await get_readable_selected_upload_models(
         current_user=current_user,
         super_selected=super_selected,
