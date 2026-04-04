@@ -1,4 +1,6 @@
 import re
+import asyncio
+
 from typing import TYPE_CHECKING, Sequence
 
 from tortoise import fields, models
@@ -10,8 +12,8 @@ from app.models.common.base import TimestampMixin
 
 
 if TYPE_CHECKING:
-    from app.models.uploads import Upload  # noqa: F401
-    from app.models.users import User  # noqa: F401
+    from app.models.uploads import Upload, UploadSerializer  # noqa: F401
+    from app.models.users import User, UserSerializer  # noqa: F401
 
 
 class Collection(models.Model, TimestampMixin):
@@ -51,13 +53,18 @@ class Collection(models.Model, TimestampMixin):
 
         return f"{base_slug}-{max_n + 1}"
 
-    @classmethod
-    async def add_or_create_for_upload(cls, upload: "Upload", collection_name: str, user_id: int) -> "Collection":
-        """Add an upload to a collection, creating the collection if it doesn't exist.
 
-        Looks up an existing collection for this user by display name.  If none
-        exists, a new collection is created with a globally unique name_unique slug.
-        """
+    @classmethod
+    async def get_or_create_for_user(cls, collection_name: str, user: "User | UserSerializer | int",) -> "Collection":
+        """Create a collection for a user if it doesn't already exist"""
+
+        # Get user_id
+        if isinstance(user, int):
+            user_id = user
+        else:
+            user_id = user.id  # type: ignore
+
+        # Clean collection_name name
         if not collection_name or not collection_name.strip():
             raise ValueError("Collection name cannot be empty.")
 
@@ -76,9 +83,39 @@ class Collection(models.Model, TimestampMixin):
                 user_id=user_id,
             )
 
-        # Link the upload to the collection.
-        await upload.collections.add(collection)  # type: ignore[union-attr]
         return collection
+
+
+    @classmethod
+    async def add_or_create_for_upload(cls, upload: "Upload", collection_name: str, user_id: int) -> "Collection":
+        """Add an upload to a collection, creating the collection if it doesn't exist.
+
+        Looks up an existing collection for this user by display name.  If none
+        exists, a new collection is created with a globally unique name_unique slug.
+        """
+
+        collection = await Collection.get_or_create_for_user(collection_name=collection_name, user=user_id)
+
+        # Link the upload to the collection.
+        await upload.collections.add(collection)
+
+        return collection
+
+
+    @classmethod
+    async def add_or_create_for_uploads(cls, uploads: list["Upload"], collection_name: str, user_id: int) -> "Collection":
+        """Add multiple uploads to a collection, creating the collection if it doesn't exist.
+
+        Looks up an existing collection for this user by display name.  If none
+        exists, a new collection is created with a globally unique name_unique slug.
+        """
+        collection = await Collection.get_or_create_for_user(collection_name=collection_name, user=user_id)
+
+        # Link the uploads to the collection.
+        await asyncio.gather(*[upload.collections.add(collection) for upload in uploads])
+
+        return collection
+
 
     @classmethod
     async def add_for_upload(cls, upload: "Upload", collection_id: int) -> bool:
@@ -113,6 +150,61 @@ class Collection(models.Model, TimestampMixin):
         if name_filter:
             qs = qs.filter(name__icontains=name_filter)
         return await qs
+
+    @classmethod
+    async def get_combined_ids_for_uploads(cls, user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> set[int]:
+        """Build combined list of collection IDs from a provided list of Uploads"""
+
+        if not uploads:
+            return set()
+
+        # Get all available collection IDs
+        await user.fetch_related("collections")
+        available_collection_ids = set(c.id for c in user.collections) # type: ignore
+        assigned_collection_ids = {c.id for u in uploads for c in u.collections}
+        combined_collection_ids = available_collection_ids & assigned_collection_ids
+
+        return combined_collection_ids
+
+    @classmethod
+    async def get_combined_for_uploads(cls, user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
+        """Build combined list of collections from a provided list of Uploads"""
+
+        if not uploads:
+            return []
+
+        # Get all available collection IDs
+        await user.fetch_related("collections")
+        available_collection_ids = set(c.id for c in user.collections) # type: ignore
+        assigned_collection_ids = {c.id for u in uploads for c in u.collections}
+        combined_collection_ids = available_collection_ids & assigned_collection_ids
+
+        # Determine common set of collection_ids across all provided uploads
+        common_collection_ids = None
+        for upload in uploads:
+            upload_collection_ids = set(c.id for c in upload.collections)
+            if common_collection_ids is None:
+                common_collection_ids = upload_collection_ids
+            elif common_collection_ids:
+                if not upload_collection_ids:
+                    common_collection_ids.clear()
+                else:
+                    common_collection_ids &= upload_collection_ids
+
+        # Make a list of collections
+        collections = []
+        for collection_id in combined_collection_ids:
+            collection_model = [c for c in user.collections if c.id == collection_id][0] # type: ignore
+            collection_dict = CollectionSerializer.model_validate(collection_model, from_attributes=True).model_dump()
+
+            if collection_model.id in common_collection_ids:
+                collection_dict.update(selection_type="common")
+            else:
+                collection_dict.update(selection_type="partial")
+
+            collections.append(collection_dict)
+
+        return sorted(collections, key=lambda c: c["name"])
 
 
 class CollectionUpload(models.Model):

@@ -1,7 +1,7 @@
 {% macro render_combo_selector() %}
 <div id="collections-combo-selector" class="relative input w-full"
     x-data="multiSelectCombo">
-    <label class="text-xs text-gray-700 font-medium" for="collection_name">Collections</label>
+    <label class="text-xs text-gray-700 font-medium" for="collection_search">Collections</label>
     <fieldset class="mt-1 w-full min-w-0">
         <legend class="sr-only">Collections</legend>
         <div class="split-button split-button-neutral max-lg:split-button-md w-full max-w-full">
@@ -26,8 +26,8 @@
                                 x-cloak
                                 x-bind:class="isNewCollection ? 'visible cursor-pointer' : 'invisible cursor-default'"
                                 x-bind:disabled="!isNewCollection"
-                                hx-post="/uploads/{{ upload.id }}/collection"
-                                hx-include="next input[name='collection_name']"
+                                hx-post="/collections"
+                                hx-include="next [name='collection_search'],[name='selected_ids'],[name='super_selected'],[name='deselected_ids']"
                                 hx-select="#collections-combo-selector"
                                 hx-target="#collections-combo-selector"
                                 hx-swap="innerHTML"
@@ -37,11 +37,12 @@
                         </button>
                         <input class="text-sm p-0 m-0 ring-0 bg-transparent border-none field-sizing-content min-w-3xs
                         placeholder:text-gray-500 placeholder:italic"
-                            type="text" id="collection_name" name="collection_name" placeholder="Search existing, or add to a new collection..."
+                            type="text" id="collection_search" name="collection_search" placeholder="Search existing, or add to a new collection..."
                             x-model="search"
                             @keyup.enter="$event.preventDefault(); if (event.target.value.trim() !== '') { htmx.trigger(htmx.find(htmx.find('#collections-combo-selector-search'), 'button'), 'click'); }"
-                            hx-trigger="change, keyup changed delay:200ms"
-                            hx-post="/uploads/{{ upload.id }}/collection-search"
+                            hx-trigger="keyup changed delay:200ms"
+                            hx-include="[name='selected_ids'],[name='super_selected'],[name='deselected_ids']"
+                            hx-post="/collections/suggestions"
                             hx-target="#collections-combo-selector-options">
                     </label>
                 </li>
@@ -59,6 +60,6 @@
 {% endmacro -%}
 
 {# Handle HTMX partial request #}
-{%- if request and request.headers.get('hx-target', '') == 'collections-combo-selector-options' %}
+{%- if request and request.headers.get('hx-target', '') in ('collections-combo-selector', 'collections-combo-selector-options') %}
 {{ render_combo_selector() }}
 {% endif %}

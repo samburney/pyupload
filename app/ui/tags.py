@@ -5,7 +5,7 @@ from fastapi.responses import Response, HTMLResponse
 
 from app.lib.helpers import make_clean_tag
 
-from app.models.tags import Tag, get_combined_tags_for_uploads
+from app.models.tags import Tag
 from app.models.users import User
 
 from app.ui.common.errors import error_template_response
@@ -84,7 +84,7 @@ async def upload_add_tag_post(
     if len(upload_models) == 1:
         tags = upload_models[0].tags
     else:
-        tags = get_combined_tags_for_uploads(upload_models)
+        tags = Tag.get_combined_for_uploads(upload_models)
 
     response = templates.TemplateResponse(
         request,
@@ -126,7 +126,7 @@ async def upload_remove_tag_delete(
     if len(upload_models) == 1:
         tags = upload_models[0].tags
     else:
-        tags = get_combined_tags_for_uploads(upload_models)
+        tags = Tag.get_combined_for_uploads(upload_models)
 
     response = templates.TemplateResponse(
         request,

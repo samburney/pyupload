@@ -1,0 +1,21 @@
+<li class="menu-item {{ 'border-b-2 border-b-blue-300' if is_last_item is defined and is_last_item else '' }}"
+    x-show="'{{ collection.name }}'.toLowerCase().includes(search.toLowerCase())">
+    <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" name="collection_ids" value="{{ collection.id }}" {{ 'checked' if is_selected is defined and is_selected else '' }}
+            x-model="selected"
+            x-ref="collection-{{ collection.id }}"
+            x-effect="$el.indeterminate = $el.dataset.partial == 'true'"
+            {%- if collection.selection_type is defined and collection.selection_type == 'partial' %}
+            data-partial="true"
+            {%- else %}
+            data-partial="false"
+            {%- endif %}
+            hx-patch="/collections"
+            hx-include="[name='selected_ids'],[name='super_selected'],[name='deselected_ids']"
+            hx-vals='js:{"collection_id": this.value, "state": this.checked}'
+            hx-target="#collections-combo-selector-options"
+            hx-sync="this:replace"
+            hx-indicator="#collections-loading" />
+        {{ collection.name }}
+    </label>
+</li>
