@@ -104,7 +104,7 @@ class Collection(models.Model, TimestampMixin):
 
     @classmethod
     async def add_or_create_for_uploads(cls, uploads: list["Upload"], collection_name: str, user_id: int) -> "Collection":
-        """Add an upload to a collection, creating the collection if it doesn't exist.
+        """Add multiple uploads to a collection, creating the collection if it doesn't exist.
 
         Looks up an existing collection for this user by display name.  If none
         exists, a new collection is created with a globally unique name_unique slug.
@@ -165,7 +165,7 @@ class Collection(models.Model, TimestampMixin):
         combined_collection_ids = available_collection_ids & assigned_collection_ids
 
         return combined_collection_ids
-    
+
     @classmethod
     async def get_combined_for_uploads(cls, user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
         """Build combined list of collections from a provided list of Uploads"""
@@ -188,7 +188,8 @@ class Collection(models.Model, TimestampMixin):
             elif common_collection_ids:
                 if not upload_collection_ids:
                     common_collection_ids.clear()
-                else: common_collection_ids &= upload_collection_ids
+                else:
+                    common_collection_ids &= upload_collection_ids
 
         # Make a list of collections
         collections = []
@@ -203,7 +204,7 @@ class Collection(models.Model, TimestampMixin):
 
             collections.append(collection_dict)
 
-        return collections
+        return sorted(collections, key=lambda c: c["name"])
 
 
 class CollectionUpload(models.Model):

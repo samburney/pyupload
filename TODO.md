@@ -89,6 +89,7 @@
 ---
 
 ## Fixes or Minor Enhancements
+- [ ] Investigate potential double-counting of partially-selected collections in the `buttonText` getter of `combo-selector.js` — items in `partially_selected` may also be added to `selected` via `x-model`, inflating the displayed count.
 - [ ] Provide user feedback when some collection IDs are invalid/not owned in `PATCH /uploads/{id}/collection` (currently silently processes valid IDs and discards errors).
 - [ ] Make home gallery page size user-configurable.
 - [ ] Make home gallery private-upload inclusion user-configurable (currently, logged-in users always see their own private uploads mixed into the home page feed).

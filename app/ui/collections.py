@@ -139,11 +139,7 @@ async def update_upload_collections_patch(
     collection = await Collection.get_or_none(id=collection_id).prefetch_related("user")
     if collection is None or collection.user.id != current_user.id:
         error_message = f"Collection with ID {collection_id} not found or insufficient permissions."
-        return templates.TemplateResponse(
-            request, "layout/error.html.j2",
-            status_code=400,
-            context={"error_messages": [error_message]},
-        )
+        return await error_template_response(request, [error_message], status_code=400)
 
     # Get uploads from database including related collections
     upload_qs = build_readable_upload_queryset(
