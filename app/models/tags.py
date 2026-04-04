@@ -60,7 +60,7 @@ class Tag(models.Model, TimestampMixin):
 
 
     @classmethod
-    def get_combined_tags_for_uploads(cls, uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
+    def get_combined_for_uploads(cls, uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
         """Build combined list of tags from a provided list of Uploads"""
 
         if not uploads:

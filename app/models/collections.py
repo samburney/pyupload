@@ -152,30 +152,30 @@ class Collection(models.Model, TimestampMixin):
         return await qs
 
     @classmethod
-    async def get_combined_ids_for_uploads(cls, current_user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> set[int]:
+    async def get_combined_ids_for_uploads(cls, user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> set[int]:
         """Build combined list of collection IDs from a provided list of Uploads"""
 
         if not uploads:
             return set()
-        
+
         # Get all available collection IDs
-        await current_user.fetch_related("collections")
-        available_collection_ids = set(c.id for c in current_user.collections) # type: ignore
+        await user.fetch_related("collections")
+        available_collection_ids = set(c.id for c in user.collections) # type: ignore
         assigned_collection_ids = {c.id for u in uploads for c in u.collections}
         combined_collection_ids = available_collection_ids & assigned_collection_ids
 
         return combined_collection_ids
     
     @classmethod
-    async def get_combined_for_uploads(cls, current_user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
+    async def get_combined_for_uploads(cls, user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
         """Build combined list of collections from a provided list of Uploads"""
 
         if not uploads:
             return []
         
         # Get all available collection IDs
-        await current_user.fetch_related("collections")
-        available_collection_ids = set(c.id for c in current_user.collections) # type: ignore
+        await user.fetch_related("collections")
+        available_collection_ids = set(c.id for c in user.collections) # type: ignore
         assigned_collection_ids = {c.id for u in uploads for c in u.collections}
         combined_collection_ids = available_collection_ids & assigned_collection_ids
 
@@ -193,7 +193,7 @@ class Collection(models.Model, TimestampMixin):
         # Make a list of collections
         collections = []
         for collection_id in combined_collection_ids:
-            collection_model = [c for c in current_user.collections if c.id == collection_id][0] # type: ignore
+            collection_model = [c for c in user.collections if c.id == collection_id][0] # type: ignore
             collection_dict = CollectionSerializer.model_validate(collection_model, from_attributes=True).model_dump()
 
             if collection_model.id in common_collection_ids:

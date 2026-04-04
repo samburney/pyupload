@@ -2,6 +2,8 @@
 {% set tags = selection_details.tags %}
 {% from "components/tags/input.html.j2" import render_tags_input, render_tags_readonly with context %}
 {% include "components/collections/combo-selector.html.j2" %}
+{% set selected_collections = selection_details.selected_collections %}
+{% set filtered_collections = selection_details.filtered_collections %}
 {% from "components/collections/combo-selector.html.j2" import render_combo_selector with context %}
 <div class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
     {%- if current_user %}

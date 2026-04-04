@@ -4,8 +4,15 @@
         <input type="checkbox" name="collection_ids" value="{{ collection.id }}" {{ 'checked' if is_selected is defined and is_selected else '' }}
             x-model="selected"
             x-ref="collection-{{ collection.id }}"
+            x-effect="$el.indeterminate = $el.dataset.partial == 'true'"
+            {%- if collection.selection_type is defined and collection.selection_type == 'partial' %}
+            data-partial="true"
+            {%- else %}
+            data-partial="false"
+            {%- endif %}
             hx-patch="/collections"
-            hx-include="closest fieldset,[name='selected_ids'],[name='super_selected'],[name='deselected_ids']"
+            hx-include="[name='selected_ids'],[name='super_selected'],[name='deselected_ids']"
+            hx-vals='js:{"collection_id": this.value, "state": this.checked}'
             hx-target="#collections-combo-selector-options"
             hx-sync="this:replace"
             hx-indicator="#collections-loading" />

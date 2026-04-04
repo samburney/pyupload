@@ -9,6 +9,7 @@ from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
 
 from app.models.common.pagination import PaginationParams
+from app.models.collections import Collection
 from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
 from app.models.tags import Tag
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
@@ -136,11 +137,22 @@ async def gallery_handle_selected_upload_post(
         selection_file_types.add(upload.type)
         selection_file_size += upload.size
 
+
+    # Get selected collections
+    selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=selected_uploads)
+
+    # Get collections with filter applied, excluding those already linked to the upload
+    selected_collection_ids = set(c['id'] for c in selected_collections)
+    filtered_collections = await Collection.filter(user=current_user) \
+        .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
+
     selection_details = {
         "owners": selection_owners,
         "file_types": selection_file_types,
         "file_size": selection_file_size,
-        "tags": Tag.get_combined_tags_for_uploads(selected_uploads),
+        "tags": Tag.get_combined_for_uploads(selected_uploads),
+        "selected_collections": selected_collections,
+        "filtered_collections": filtered_collections,
     }
 
     # Template context

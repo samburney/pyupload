@@ -2,7 +2,7 @@
 
 - POST /collections/suggestions — search and filter collections for selected uploads
 - POST /collections — create and link a new collection to selected uploads
-- PATCH /collections — update the set of collections linked to selected uploads
+- PATCH /collections — toggle a single collection on or off for selected uploads
 """
 
 from app.models.users import User
@@ -156,11 +156,15 @@ class TestCollectionAddEndpoint:
 
 
 class TestCollectionPatchEndpoint:
-    """Tests for PATCH /collections."""
+    """Tests for PATCH /collections.
+
+    The endpoint toggles a single collection on or off for all selected uploads.
+    Payload must include collection_id (int) and state (bool).
+    """
 
     async def test_redirects_to_login_when_unauthenticated(self, client):
         """Unauthenticated requests redirect to /login."""
-        response = await client.patch("/collections", data={"collection_ids": "1"}, follow_redirects=False)
+        response = await client.patch("/collections", data={"collection_id": "1", "state": "true"}, follow_redirects=False)
         assert response.status_code == 303
         assert "/login" in response.headers.get("location", "")
 
@@ -173,21 +177,21 @@ class TestCollectionPatchEndpoint:
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch("/collections", data={"collection_ids": str(col.id), "selected_ids": "999999"})
+        response = await client.patch("/collections", data={"collection_id": str(col.id), "state": "true", "selected_ids": "999999"})
         assert response.status_code == 404
 
-    async def test_returns_400_when_all_collection_ids_invalid(self, client):
-        """Returns 400 when every supplied collection ID is unknown or not owned."""
+    async def test_returns_400_for_unknown_collection_id(self, client):
+        """Returns 400 when the collection ID is unknown or not owned by the user."""
         user = await User.create(username="cpatch400", email="cpatch400@example.com", password="pw", is_registered=True)
         upload = await Upload.create(**_col_upload_data(user, "patch400"))
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch("/collections", data={"collection_ids": "999999", "selected_ids": str(upload.id)})
+        response = await client.patch("/collections", data={"collection_id": "999999", "state": "true", "selected_ids": str(upload.id)})
         assert response.status_code == 400
 
-    async def test_adds_collection_to_upload(self, client):
-        """Sending a collection ID adds that collection to the upload."""
+    async def test_state_true_adds_collection_to_upload(self, client):
+        """Sending state=True links the collection to all selected uploads."""
         from app.models.collections import Collection
 
         user = await User.create(username="cpatchadd", email="cpatchadd@example.com", password="pw", is_registered=True)
@@ -197,14 +201,14 @@ class TestCollectionPatchEndpoint:
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch("/collections", data={"collection_ids": str(col.id), "selected_ids": str(upload.id)})
+        response = await client.patch("/collections", data={"collection_id": str(col.id), "state": "true", "selected_ids": str(upload.id)})
         assert response.status_code == 202
 
         await upload.fetch_related("collections")
         assert any(c.id == col.id for c in upload.collections)
 
-    async def test_removes_unchecked_collection_from_upload(self, client):
-        """Collections owned by the user that are absent from the payload are removed."""
+    async def test_state_false_removes_collection_from_upload(self, client):
+        """Sending state=False unlinks only the targeted collection; others are untouched."""
         from app.models.collections import Collection
 
         user = await User.create(username="cpatchrm", email="cpatchrm@example.com", password="pw", is_registered=True)
@@ -217,16 +221,15 @@ class TestCollectionPatchEndpoint:
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
-        # Only send col_keep; col_remove should be removed
-        response = await client.patch("/collections", data={"collection_ids": str(col_keep.id), "selected_ids": str(upload.id)})
+        response = await client.patch("/collections", data={"collection_id": str(col_remove.id), "state": "false", "selected_ids": str(upload.id)})
         assert response.status_code == 202
 
         await upload.fetch_related("collections")
         col_ids = [c.id for c in upload.collections]
-        assert col_keep.id in col_ids
         assert col_remove.id not in col_ids
+        assert col_keep.id in col_ids
 
-    async def test_ignores_collections_owned_by_other_users(self, client):
+    async def test_returns_400_for_collection_owned_by_other_user(self, client):
         """Collections owned by another user are rejected and not added."""
         from app.models.collections import Collection
 
@@ -238,26 +241,26 @@ class TestCollectionPatchEndpoint:
         token = create_access_token({"sub": owner.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch("/collections", data={"collection_ids": str(other_col.id), "selected_ids": str(upload.id)})
+        response = await client.patch("/collections", data={"collection_id": str(other_col.id), "state": "true", "selected_ids": str(upload.id)})
         assert response.status_code == 400
 
         await upload.fetch_related("collections")
         assert all(c.id != other_col.id for c in upload.collections)
 
-    async def test_empty_payload_removes_all_user_collections(self, client):
-        """Sending no collection IDs clears all of the current user's collections from the upload."""
+    async def test_state_true_is_idempotent_for_already_linked_collection(self, client):
+        """Sending state=True for an already-linked collection succeeds without error."""
         from app.models.collections import Collection
 
-        user = await User.create(username="cpatchclear", email="cpatchclear@example.com", password="pw", is_registered=True)
-        upload = await Upload.create(**_col_upload_data(user, "patchclear"))
-        col = await Collection.create(user=user, name="Will Be Cleared", name_unique="will-be-cleared")
+        user = await User.create(username="cpatchidem", email="cpatchidem@example.com", password="pw", is_registered=True)
+        upload = await Upload.create(**_col_upload_data(user, "patchidem"))
+        col = await Collection.create(user=user, name="Already Linked", name_unique="already-linked-idem")
         await upload.collections.add(col)
 
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch("/collections", data={"selected_ids": str(upload.id)})
+        response = await client.patch("/collections", data={"collection_id": str(col.id), "state": "true", "selected_ids": str(upload.id)})
         assert response.status_code == 202
 
         await upload.fetch_related("collections")
-        assert all(c.id != col.id for c in upload.collections)
+        assert any(c.id == col.id for c in upload.collections)

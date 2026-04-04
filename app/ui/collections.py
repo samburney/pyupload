@@ -46,7 +46,7 @@ async def get_collection_suggestions_post(
         raise HTTPException(status_code=404, detail="None of the selected uploads provided exist.")
 
     # Get selected collections
-    selected_collections = await Collection.get_combined_for_uploads(current_user=current_user, uploads=upload_models)
+    selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=upload_models)
 
     # Get collections with filter applied, excluding those already linked to the upload
     selected_collection_ids = set(c['id'] for c in selected_collections)
@@ -101,7 +101,7 @@ async def upload_add_collection_post(
     await asyncio.gather(*[upload.fetch_related("collections") for upload in upload_models])
 
     # Get selected collections
-    selected_collections = await Collection.get_combined_for_uploads(current_user=current_user, uploads=upload_models)
+    selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=upload_models)
 
     # Get collections with filter applied, excluding those already linked to the upload
     selected_collection_ids = set(c['id'] for c in selected_collections)
@@ -127,32 +127,22 @@ async def upload_add_collection_post(
 async def update_upload_collections_patch(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    collection_ids: Annotated[list[int], Form()] = [],
+    collection_id: Annotated[int, Form()],
+    state: Annotated[bool, Form()],
     super_selected: Annotated[bool, Form()] = False,
     selected_ids: Annotated[list[int], Form()] = [],
     deselected_ids: Annotated[list[int], Form()] = [],
 ) -> Response:
     """Update the collections linked to an upload based on a list of collection IDs."""
     
-    error_messages = []
-    collections = []
-
-    # Confirm user owns the collections provided
-    for collection_id in collection_ids:
-        collection = await Collection.get_or_none(id=collection_id).prefetch_related("user")
-        if collection is None or collection.user.id != current_user.id:
-            error_message = f"Collection with ID {collection_id} not found or insufficient permissions."
-            error_messages.append(error_message)
-
-        else:
-            collections.append(collection)
-
-    # If all supplied collection IDs were invalid, return error response
-    if error_messages and len(error_messages) == len(collection_ids):
+    # Confirm user owns the collection provided
+    collection = await Collection.get_or_none(id=collection_id).prefetch_related("user")
+    if collection is None or collection.user.id != current_user.id:
+        error_message = f"Collection with ID {collection_id} not found or insufficient permissions."
         return templates.TemplateResponse(
             request, "layout/error.html.j2",
             status_code=400,
-            context={"error_messages": error_messages},
+            context={"error_messages": [error_message]},
         )
 
     # Get uploads from database including related collections
@@ -168,27 +158,19 @@ async def update_upload_collections_patch(
     if not len(upload_models):
         raise HTTPException(status_code=404, detail="None of the selected uploads provided exist.")
 
-    # Iterate through provided upload models
-    for upload_model in upload_models:
-        # Get list of user-owned collections already on the upload
-        user_collection_ids = await upload_model.collections.filter(user=current_user).values_list("id", flat=True)
-
-        # Add new collections to upload
-        collections_to_add = [collection for collection in collections if collection.id not in user_collection_ids]
-        if len(collections_to_add) > 0:
-            await upload_model.collections.add(*collections_to_add)
-
-        # Remove collections that are no longer included
-        collection_ids_to_remove = [collection for collection in user_collection_ids if collection not in collection_ids]
-        if len(collection_ids_to_remove) > 0:
-            collections_to_remove = await Collection.filter(id__in=collection_ids_to_remove)
-            await upload_model.collections.remove(*collections_to_remove)
+    # Add or remove based on state from client
+    if state is True:
+        for upload_model in upload_models:
+            await collection.uploads.add(upload_model) # type: ignore
+    else:
+        for upload_model in upload_models:
+            await collection.uploads.remove(upload_model) # type: ignore
 
     # Refresh relationships
     await asyncio.gather(*[upload.fetch_related("collections") for upload in upload_models])
 
     # Get selected collections
-    selected_collections = await Collection.get_combined_for_uploads(current_user=current_user, uploads=upload_models)
+    selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=upload_models)
 
     # Get collections with filter applied, excluding those already linked to the upload
     selected_collection_ids = set(c['id'] for c in selected_collections)
