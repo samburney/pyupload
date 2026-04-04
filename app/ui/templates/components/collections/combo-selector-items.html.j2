@@ -1,32 +1,12 @@
-{% if upload.user_collections | length > 0 or filtered_collections | length > 0 %}
-{% for collection in upload.user_collections %}
-<li class="menu-item {{ 'border-b-blue-300' if loop.last else '' }}"
-    x-show="'{{ collection.name }}'.toLowerCase().includes(search.toLowerCase())">
-    <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" name="collection_ids" value="{{ collection.id }}" checked
-            x-model="selected"
-            x-ref="collection-{{ collection.id }}"
-            hx-patch="/uploads/{{ upload.id }}/collection"
-            hx-include="closest fieldset"
-            hx-target="#collections-combo-selector-options"
-            hx-indicator="#collections-loading" />
-        {{ collection.name }}
-    </label>
-</li>
+{% if selected_collections | length > 0 or filtered_collections | length > 0 %}
+{% for collection in selected_collections %}
+{% set is_last_item = loop.last %}
+{% set is_selected = true %}
+{% include "components/collections/combo-selector-item.html.j2" %}
 {% endfor %}
 {% for collection in filtered_collections %}
-<li class="menu-item">
-    <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" name="collection_ids" value="{{ collection.id }}"
-            x-model="selected"
-            x-ref="collection-{{ collection.id }}"
-            hx-patch="/uploads/{{ upload.id }}/collection"
-            hx-include="closest fieldset"
-            hx-target="#collections-combo-selector-options"
-            hx-indicator="#collections-loading" />
-        {{ collection.name }}
-    </label>
-</li>
+{% set is_selected = false %}
+{% include "components/collections/combo-selector-item.html.j2" %}
 {% endfor %}
 {% else %}
 <li class="menu-item">
