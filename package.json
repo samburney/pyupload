@@ -3,12 +3,19 @@
   "version": "0.0.1",
   "description": "Modern file/image gallery upload application",
   "scripts": {
+    "copy:vendor": "node ./scripts/copy-vendor.mjs",
+    "postinstall": "npm run copy:vendor",
     "watch:css": "npx @tailwindcss/cli -i ./input.css -o ./app/static/css/tailwind.css --watch=always",
-    "build:css": "npx @tailwindcss/cli -i ./input.css -o ./app/static/css/tailwind.css --minify"
+    "build:css": "npx @tailwindcss/cli -i ./input.css -o ./app/static/css/tailwind.css --minify",
+    "build:js": "npm run copy:vendor"
   },
   "dependencies": {
-    "@tailwindcss/cli": "^4.1",
-    "tailwindcss": "^4.1"
+    "@alpinejs/focus": "^3.15.11",
+    "@tailwindcss/cli": "^4.2",
+    "alpinejs": "^3.15.11",
+    "htmx-ext-response-targets": "^2.0.4",
+    "htmx.org": "^2.0.8",
+    "tailwindcss": "^4.2"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.11"
