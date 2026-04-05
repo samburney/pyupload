@@ -113,8 +113,8 @@ Replace all custom Alpine.js-powered modals and flash message popups with SweetA
 **Tasks**:
 1. [ ] Remove the `{% from "components/core/modal-basic.html.j2" import render_modal with context %}` import
 2. [ ] Remove the `x-data="{ open: false }"` wrapper and `{% call render_modal(...) %}` block
-3. [ ] Change the share button click handler to call `Swal.fire({ title: 'Share upload', html: '...', showConfirmButton: false, showCloseButton: true })`
-4. [ ] Move the URL inputs and copy buttons into the `html` string value, pre-rendered via Jinja2
+3. [ ] Add a `<template id="share-{{ upload.id }}">` element containing the existing share URL markup, rendered naturally via Jinja2
+4. [ ] Change the share button click handler to call `Swal.fire({ template: '#share-{{ upload.id }}' })`
 5. [ ] Replace Alpine `$clipboard(value)` calls with `navigator.clipboard.writeText(value)` in copy button `onclick` handlers
 
 **Tests**:
@@ -129,8 +129,9 @@ Replace all custom Alpine.js-powered modals and flash message popups with SweetA
 - [ ] Clipboard copy works without Alpine.js magic
 
 **Implementation Notes**:
-- Jinja2 conditionals (`{% if not upload.is_private %}`, `{% if upload.is_image %}`) are evaluated server-side and rendered into the `html` string before it reaches the browser
-- Alpine.js magic properties do not function inside SweetAlert2's dynamically injected HTML
+- Using SweetAlert2's declarative `<template>` element — content is inert (not rendered to the page) but Jinja2 still evaluates it server-side, keeping conditionals (`{% if not upload.is_private %}`, `{% if upload.is_image %}`) natural
+- `$clipboard` is an Alpine magic property and only works within an Alpine-managed `x-data` tree; SweetAlert2 injects its popup outside any such tree so Alpine never initialises on it — `navigator.clipboard.writeText()` is the correct replacement
+- Future: a share modal for archive downloads may use HTMX swapping inside the SweetAlert2 popup to load dynamic content — HTMX processes `hx-*` attributes on SweetAlert2-injected nodes via its `MutationObserver`, so this is viable
 
 **Dependencies**:
 - Step 1

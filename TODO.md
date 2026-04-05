@@ -100,3 +100,4 @@
 - [ ] Debug audio file handling.  An MP3 file was identified as `application/octet-stream`.  May just be a one off, but worth checking.
 - [ ] Clean up Pydantic serialisation for Tortiose ORM models.  We originally used the build in serialisation which was clunky and since switched to `tortoise-serializer`.  We should switch everything to `tortoise-serializer` and clean up the dependencies of the old method.
 - [ ] Migrate all hard-coded paths to `request.url_for()`
+- [ ] Add share button for download archives.  Should pop up a modal with a clipboard button for each archive type.  Rather than just copy a URL, the button needs to fire off a archive generation request which then populates the URL box and can be copied to the clipboard (Or is copied automatically).
