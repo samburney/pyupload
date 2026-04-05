@@ -4,16 +4,17 @@ import json
 from datetime import datetime, timezone, timedelta
 from typing import Annotated
 
+from pydantic import BaseModel
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
 
 from app.models.common.pagination import PaginationParams
-from app.models.collections import Collection
+from app.models.collections import Collection, CollectionSerializerSelected
 from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
-from app.models.tags import Tag
+from app.models.tags import Tag, TagSerializerSelected
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
-from app.models.users import User
+from app.models.users import User, UserSerializer
 
 from app.lib.config import get_app_config, logger
 from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
@@ -40,6 +41,19 @@ class GalleryPaginationDefaultParams(PaginationParams):
     sort_order: str = "desc"
     page_size: int = 24
     writable_count: int | None = None
+
+
+class SelectionDetail(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+
+    owners: list[UserSerializer]
+    file_types: set[str]
+    file_size: int
+    tags: list[TagSerializerSelected]
+    selected_collections: list[CollectionSerializerSelected]
+    filtered_collections: list[Collection]
+    is_writable: bool
+    is_image: bool
 
 
 @router.get('/', response_class=Response)
@@ -146,21 +160,23 @@ async def gallery_handle_selected_upload_post(
     filtered_collections = await Collection.filter(user=current_user) \
         .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
 
-    selection_details = {
-        "owners": selection_owners,
-        "file_types": selection_file_types,
-        "file_size": selection_file_size,
-        "tags": Tag.get_combined_for_uploads(selected_uploads),
-        "selected_collections": selected_collections,
-        "filtered_collections": filtered_collections,
-    }
+    selection_detail = SelectionDetail(
+        owners=selection_owners,
+        file_types=selection_file_types,
+        file_size=selection_file_size,
+        tags=Tag.get_combined_for_uploads(selected_uploads),
+        selected_collections=selected_collections,
+        filtered_collections=filtered_collections,
+        is_writable=all(o.id == current_user.id for o in selection_owners),
+        is_image=all(u.is_image for u in selected_uploads),
+    )
 
     # Template context
     context = {
         "current_user": current_user,
         "selected_uploads": selected_uploads,
         "download_archive": download_archive,
-        "selection_details": selection_details,
+        "selection_detail": selection_detail,
     }
     response = templates.TemplateResponse(
         request,

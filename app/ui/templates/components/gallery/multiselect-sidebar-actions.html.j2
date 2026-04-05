@@ -1,9 +1,9 @@
 {% include "components/tags/input.html.j2" %}
-{% set tags = selection_details.tags %}
+{% set tags = selection_detail.tags %}
 {% from "components/tags/input.html.j2" import render_tags_input, render_tags_readonly with context %}
 {% include "components/collections/combo-selector.html.j2" %}
-{% set selected_collections = selection_details.selected_collections %}
-{% set filtered_collections = selection_details.filtered_collections %}
+{% set selected_collections = selection_detail.selected_collections %}
+{% set filtered_collections = selection_detail.filtered_collections %}
 {% from "components/collections/combo-selector.html.j2" import render_combo_selector with context %}
 <div class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
     {%- if current_user %}
@@ -11,5 +11,13 @@
     <div>{{ render_combo_selector() }}</div>
     {%- else %}
     <div>{{ render_tags_readonly() }}</div>
+    {%- endif %}
+    {%- if selection_detail.is_writable %}
+        <p class="mt-2 text-xs text-gray-700 font-medium">Actions</p>
+        <div class="flex flex-col w-full gap-2">
+            {%- if selection_detail.is_image %}
+                {%- include "components/gallery/image-rotate-select.html.j2" %}
+            {%- endif %}
+        </div>
     {%- endif %}
 </div>
