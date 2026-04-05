@@ -39,7 +39,7 @@ Documentation
 -------------
 
 ### Implementation plans
-  1. Individual implementation plans will be kept in `docs/plannings`, named `implement-<feature to implement>.md`.
+  1. Individual implementation plans will be kept in `docs/planning`, named `implement-<feature to implement>.md`.
   2. Feature implementations should usually happen in a branch matching the name or intent of the implementation plan.
   3. Implementation plans must have concise steps, with clear outcomes and acceptance criteria.
   4. They should not contain code snippets or examples unless critical to the implementation of the feature (For example, the formatting of a string or regex could be provided to ensure implementation compliance).
