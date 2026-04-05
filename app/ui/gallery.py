@@ -142,7 +142,7 @@ async def gallery_handle_selected_upload_post(
     selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=selected_uploads)
 
     # Get collections with filter applied, excluding those already linked to the upload
-    selected_collection_ids = set(c['id'] for c in selected_collections)
+    selected_collection_ids = set(c.id for c in selected_collections)
     filtered_collections = await Collection.filter(user=current_user) \
         .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
 

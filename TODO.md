@@ -98,3 +98,4 @@
 - [ ] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`, `/tags`, `/collections`) until their pages are implemented.
 - [x] Handle non-unique original names in archives
 - [ ] Debug audio file handling.  An MP3 file was identified as `application/octet-stream`.  May just be a one off, but worth checking.
+- [ ] Clean up Pydantic serialisation for Tortiose ORM models.  We originally used the build in serialisation which was clunky and since switched to `tortoise-serializer`.  We should switch everything to `tortoise-serializer` and clean up the dependencies of the old method.

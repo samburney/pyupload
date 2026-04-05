@@ -420,8 +420,8 @@ class TestGetCombinedForUploads:
         result = await Collection.get_combined_for_uploads(user, [upload])
 
         assert len(result) == 1
-        assert result[0]["id"] == col.id
-        assert result[0]["selection_type"] == "common"
+        assert result[0].id == col.id
+        assert result[0].selection_type == "common"
 
     async def test_collection_on_all_uploads_is_common(self, db):
         """A collection present on every upload is marked as 'common'."""
@@ -436,7 +436,7 @@ class TestGetCombinedForUploads:
         result = await Collection.get_combined_for_uploads(user, [upload1, upload2])
 
         assert len(result) == 1
-        assert result[0]["selection_type"] == "common"
+        assert result[0].selection_type == "common"
 
     async def test_collection_on_subset_of_uploads_is_partial(self, db):
         """A collection present on only some uploads is marked as 'partial'."""
@@ -451,7 +451,7 @@ class TestGetCombinedForUploads:
         result = await Collection.get_combined_for_uploads(user, [upload1, upload2])
 
         assert len(result) == 1
-        assert result[0]["selection_type"] == "partial"
+        assert result[0].selection_type == "partial"
 
     async def test_excludes_other_users_collections(self, db):
         """Collections not owned by current_user are excluded even if on the upload."""
@@ -476,8 +476,8 @@ class TestGetCombinedForUploads:
 
         assert len(result) == 1
         entry = result[0]
-        assert "id" in entry
-        assert "name" in entry
-        assert "name_unique" in entry
-        assert "user_id" in entry
-        assert "selection_type" in entry
+        assert entry.id is not None
+        assert entry.name is not None
+        assert entry.name_unique is not None
+        assert entry.user_id is not None
+        assert entry.selection_type is not None

@@ -48,7 +48,7 @@ async def get_collection_suggestions_post(
     selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=upload_models)
 
     # Get collections with filter applied, excluding those already linked to the upload
-    selected_collection_ids = set(c['id'] for c in selected_collections)
+    selected_collection_ids = set(c.id for c in selected_collections)
     filtered_collections = await Collection.filter(user=current_user, name__icontains=collection_search) \
         .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
 
@@ -103,7 +103,7 @@ async def upload_add_collection_post(
     selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=upload_models)
 
     # Get collections with filter applied, excluding those already linked to the upload
-    selected_collection_ids = set(c['id'] for c in selected_collections)
+    selected_collection_ids = set(c.id for c in selected_collections)
     filtered_collections = await Collection.filter(user=current_user) \
         .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
 
@@ -168,7 +168,7 @@ async def update_upload_collections_patch(
     selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=upload_models)
 
     # Get collections with filter applied, excluding those already linked to the upload
-    selected_collection_ids = set(c['id'] for c in selected_collections)
+    selected_collection_ids = set(c.id for c in selected_collections)
     filtered_collections = await Collection.filter(user=current_user) \
         .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
 

@@ -1,11 +1,12 @@
-from typing import TYPE_CHECKING
+from datetime import datetime
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from tortoise import fields, models
 from tortoise_serializer import ModelSerializer
 
 from app.lib.helpers import make_clean_tag
 
-from app.models.common.base import TimestampMixin
+from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 
 
 if TYPE_CHECKING:
@@ -60,7 +61,7 @@ class Tag(models.Model, TimestampMixin):
 
 
     @classmethod
-    def get_combined_for_uploads(cls, uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
+    def get_combined_for_uploads(cls, uploads: list["Upload"] | list["UploadSerializer"]) -> list["TagSerializerSelected"]:
         """Build combined list of tags from a provided list of Uploads"""
 
         if not uploads:
@@ -83,12 +84,12 @@ class Tag(models.Model, TimestampMixin):
         # Make tags list of dicts
         tags = []
         for tag_name in combined_tag_names:
-            tags.append({
-                "name": tag_name,
-                "selection_type": "common" if tag_name in common_tag_names else "partial",
-            })
+            tags.append(TagSerializerSelected(
+                name=tag_name,
+                selection_type="common" if tag_name in common_tag_names else "partial",
+            ))
 
-        return tags
+        return sorted(tags, key=lambda t: t.name)
 
 
 class TagUpload(models.Model):
@@ -99,9 +100,47 @@ class TagUpload(models.Model):
         table = "tag_upload"
 
 
-class TagSerializer(ModelSerializer[Tag]):
+class _TagSerializerBase(ModelSerializer[Tag]):
+    """Base model for Serializer including mandatory fields"""
+
+    name: str
+
+
+class TagSerializer(_TagSerializerBase, SerializerTimestampMixin):
     """Serializer for the Tag model."""
 
-    # Model fields
     id: int
-    name: str
+
+
+class TagSerializerSelected(_TagSerializerBase):
+    """Model object for selected tag metadata, built from tag names without a full model lookup."""
+
+    id: int | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    selection_type: Annotated[str, Literal['common', 'partial']]
+
+    async def _populate_lazy_fields(self) -> Tag:
+        """Fetch and cache lazy fields if requested"""
+
+        tag_model = await Tag.get(name=self.name)
+        self.id = tag_model.id
+        self.created_at = tag_model.created_at
+        self.updated_at = tag_model.updated_at
+
+        return tag_model
+
+    async def fetch_id(self) -> int:
+        if self.id is None:
+            await self._populate_lazy_fields()
+        return self.id  # type: ignore[return-value]
+
+    async def fetch_created_at(self) -> datetime:
+        if self.created_at is None:
+            await self._populate_lazy_fields()
+        return self.created_at  # type: ignore[return-value]
+
+    async def fetch_updated_at(self) -> datetime:
+        if self.updated_at is None:
+            await self._populate_lazy_fields()
+        return self.updated_at  # type: ignore[return-value]

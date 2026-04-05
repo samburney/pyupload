@@ -1,14 +1,14 @@
 import re
 import asyncio
 
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Annotated, Sequence, Literal
 
 from tortoise import fields, models
 from tortoise_serializer import ModelSerializer
 
 from app.lib.helpers import clean_text
 
-from app.models.common.base import TimestampMixin
+from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 
 
 if TYPE_CHECKING:
@@ -167,7 +167,7 @@ class Collection(models.Model, TimestampMixin):
         return combined_collection_ids
 
     @classmethod
-    async def get_combined_for_uploads(cls, user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> list[dict[str, str]]:
+    async def get_combined_for_uploads(cls, user: "User", uploads: list["Upload"] | list["UploadSerializer"]) -> list["CollectionSerializerSelected"]:
         """Build combined list of collections from a provided list of Uploads"""
 
         if not uploads:
@@ -195,16 +195,11 @@ class Collection(models.Model, TimestampMixin):
         collections = []
         for collection_id in combined_collection_ids:
             collection_model = [c for c in user.collections if c.id == collection_id][0] # type: ignore
-            collection_dict = CollectionSerializer.model_validate(collection_model, from_attributes=True).model_dump()
+            selection_type = "common" if collection_model.id in common_collection_ids else "partial"
+            collection = CollectionSerializer.model_validate(collection_model, from_attributes=True)
+            collections.append(CollectionSerializerSelected(**collection.model_dump(), selection_type=selection_type))
 
-            if collection_model.id in common_collection_ids:
-                collection_dict.update(selection_type="common")
-            else:
-                collection_dict.update(selection_type="partial")
-
-            collections.append(collection_dict)
-
-        return sorted(collections, key=lambda c: c["name"])
+        return sorted(collections, key=lambda c: c.name)
 
 
 class CollectionUpload(models.Model):
@@ -215,7 +210,7 @@ class CollectionUpload(models.Model):
         table = "collection_upload"
 
 
-class CollectionSerializer(ModelSerializer[Collection]):
+class CollectionSerializer(ModelSerializer[Collection], SerializerTimestampMixin):
     """Serializer for the Collection model."""
 
     # Model fields
@@ -223,3 +218,10 @@ class CollectionSerializer(ModelSerializer[Collection]):
     user_id: int
     name: str
     name_unique: str
+
+
+class CollectionSerializerSelected(CollectionSerializer):
+    """Model object for selected collection metadata"""
+
+    selection_type: Annotated[str, Literal['common', 'partial']]
+    
