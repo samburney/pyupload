@@ -1,8 +1,9 @@
 import html
 
 from typing import Annotated
+from pydantic import HttpUrl
 from tortoise.exceptions import ValidationError
-from fastapi import APIRouter, Request, Depends, UploadFile, Form
+from fastapi import APIRouter, Request, Depends, UploadFile, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.lib.config import get_app_config
@@ -294,9 +295,10 @@ async def get_upload_image_src_get(
 
 @router.delete("/uploads/{id}", response_class=Response)
 async def delete_upload_delete(
-    id: int,
-    current_user: Annotated[User, Depends(get_current_authenticated_user)],
     request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    id: int,
+    redirect: Annotated[HttpUrl, Query()],
 ) -> Response:
     """Delete an uploaded file."""
 
@@ -317,9 +319,8 @@ async def delete_upload_delete(
     # Delete the file
     await upload.delete()
 
-    # Redirect to homepage with success message
     flash_message(request, "Upload deleted successfully.")
-    return Response(status_code=204, headers={"HX-Redirect": "/profile"})
+    return Response(status_code=204, headers={"HX-Redirect": str(redirect)})
 
 
 @router.patch("/uploads/{id}/private", response_class=Response)

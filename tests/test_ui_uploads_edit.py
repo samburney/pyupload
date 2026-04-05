@@ -65,7 +65,7 @@ class TestDeleteUploadPage:
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
-        response = await client.delete("/uploads/999999")
+        response = await client.delete("/uploads/999999?redirect=http://testserver/profile")
         assert response.status_code == 404
 
     async def test_returns_403_for_non_owner(self, client):
@@ -96,7 +96,7 @@ class TestDeleteUploadPage:
         token = create_access_token({"sub": other.username})
         client.cookies = {"access_token": token}
 
-        response = await client.delete(f"/uploads/{upload.id}")
+        response = await client.delete(f"/uploads/{upload.id}?redirect=http://testserver/profile")
         assert response.status_code == 403
 
     async def test_returns_204_with_hx_redirect_on_success(self, client):
@@ -122,10 +122,10 @@ class TestDeleteUploadPage:
         client.cookies = {"access_token": token}
 
         with patch("app.lib.file_io.delete_file"):
-            response = await client.delete(f"/uploads/{upload.id}", follow_redirects=False)
+            response = await client.delete(f"/uploads/{upload.id}?redirect=http://testserver/profile", follow_redirects=False)
 
         assert response.status_code == 204
-        assert response.headers.get("HX-Redirect") == "/profile"
+        assert response.headers.get("HX-Redirect") == "http://testserver/profile"
 
     async def test_removes_upload_from_database_on_success(self, client):
         """Successful delete removes the upload record from the database."""
@@ -151,7 +151,7 @@ class TestDeleteUploadPage:
         client.cookies = {"access_token": token}
 
         with patch("app.lib.file_io.delete_file"):
-            await client.delete(f"/uploads/{upload_id}")
+            await client.delete(f"/uploads/{upload_id}?redirect=http://testserver/profile")
 
         assert await Upload.get_or_none(id=upload_id) is None
 

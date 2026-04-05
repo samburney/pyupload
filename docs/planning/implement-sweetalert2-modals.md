@@ -51,22 +51,24 @@ Replace all custom Alpine.js-powered modals and flash message popups with SweetA
 - `app/ui/templates/components/uploads/delete-button.html.j2`
 
 **Tasks**:
-1. [ ] Remove the `{% from "components/core/modal-dialog.html.j2" import render_dialog %}` import
-2. [ ] Remove the `x-data="{ open: false }"` outer wrapper
-3. [ ] Remove the `{% call render_dialog(...) %}` block and its inner buttons
-4. [ ] Change the Delete button click handler to open a SweetAlert2 confirm dialog, then call `htmx.ajax('DELETE', '/uploads/{{ upload.id }}', { source: $el })` on confirmation
+1. [x] Remove the `{% from "components/core/modal-dialog.html.j2" import render_dialog %}` import
+2. [x] Remove the `x-data="{ open: false }"` outer wrapper
+3. [x] Remove the `{% call render_dialog(...) %}` block and its inner buttons
+4. [x] Change the Delete button click handler to open a SweetAlert2 confirm dialog, then trigger the HTMX delete request on confirmation
 
 **Tests**:
-1. [ ] Clicking Delete opens the SweetAlert2 dialog
-2. [ ] Clicking Cancel in the dialog dismisses it without any request
-3. [ ] Clicking Delete in the dialog sends the HTMX delete request
+1. [x] Clicking Delete opens the SweetAlert2 dialog
+2. [x] Clicking Cancel in the dialog dismisses it without any request
+3. [x] Clicking Delete in the dialog sends the HTMX delete request
 
 **Acceptance Criteria**:
-- [ ] No references to `modal-dialog.html.j2` or `x-data="{ open: false }"` remain in this file
-- [ ] Upload is deleted on confirmation
+- [x] No references to `modal-dialog.html.j2` or `x-data="{ open: false }"` remain in this file
+- [x] Upload is deleted on confirmation
 
 **Implementation Notes**:
-- SweetAlert2 config: `icon: 'warning'`, `showCancelButton: true`, `confirmButtonText: 'Delete'`, `confirmButtonColor: '#dc2626'`
+- A reusable `sweetConfirm(el, config)` helper was added to `app/static/js/app/lib/helpers.js`; it calls `Swal.fire(config)` and dispatches a `confirmed` event on the element if the user confirms
+- The Delete button uses `hx-trigger="confirmed"` and `hx-delete` directly, with `@click="sweetConfirm($el, {...})"` — cleaner than calling `htmx.ajax()` manually and more idiomatic HTMX; `sweetConfirm` is reusable for subsequent steps
+- No `hx-target`/`hx-swap` needed: the server issues an `HX-Redirect` on success; the redirect URL is passed as a query param via `hx-vals`, set to the page's `Referer` header at render time (falling back to the index page), so the user is returned to wherever they came from
 
 ---
 

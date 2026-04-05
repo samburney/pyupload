@@ -74,3 +74,13 @@ function storeClientDimensions() {
 
     document.cookie = `window_dimensions=${cookieData}; path=/; max-age=${365*24*60*60}; samesite=lax`;
 }
+
+// Present sweetalert2 confirmation dialog
+function sweetConfirm(el, config) {
+    Swal.fire(config)
+        .then((result) => {
+            if (result.isConfirmed) {
+                el.dispatchEvent(new Event('confirmed'));
+            }
+        });
+}

@@ -1,21 +1,17 @@
-{% from "components/core/modal-dialog.html.j2" import render_dialog %}
-<div x-data="{ open: false }"
-    class="w-full">
-    <button @click="open = true"
-            type="button"
-            class="px-4 py-2 w-full button button-neutral max-lg:button-md border-red-100 hover:text-red-600 hover:bg-red-200 hover:border-red-500">
+<div class="w-full" x-data>
+    <button type="button"
+            class="px-4 py-2 w-full button button-neutral max-lg:button-md border-red-100 hover:text-red-600 hover:bg-red-200 hover:border-red-500"
+            hx-trigger="confirmed"
+            hx-delete="/uploads/{{ upload.id }}"
+            hx-vals='{ "redirect": {{ request.headers.get("referer", request.url_for("index_get") | string) | tojson }} }'
+            @click="sweetConfirm($el, {
+                title: 'Confirm delete',
+                text: 'Are you sure you wish to permanently delete this file?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Delete',
+                confirmButtonColor: '#fb2c36'
+            });">
         Delete
     </button>
-    {% call render_dialog(title='Confirm delete', content='Are you sure you wish to permanently delete this file?') %}
-    <button hx-delete="/uploads/{{ upload.id }}"
-            type="button"
-            class="button button-alert">
-        Delete
-    </button>
-    <button @click="open = false"
-            type="button"
-            class="button button-outline">
-        Cancel
-    </button>
-    {% endcall %}
 </div>
