@@ -33,15 +33,15 @@ Replace all custom Alpine.js-powered modals and flash message popups with SweetA
 - `app/ui/templates/layout/header-includes.html.j2`
 
 **Tasks**:
-1. [ ] Download `sweetalert2.all.min.js` (combined JS+CSS bundle) from the SweetAlert2 release and place in `app/static/js/vendor/`
-2. [ ] Add script tag to `header-includes.html.j2` before the Alpine.js script tag
+1. [x] Download `sweetalert2.all.min.js` (combined JS+CSS bundle) from the SweetAlert2 release and place in `app/static/js/vendor/`
+2. [x] Add script tag to `header-includes.html.j2` before the Alpine.js script tag
 
 **Tests**:
-1. [ ] `Swal.fire('test')` is callable from browser console on any page without errors
+1. [x] `Swal.fire('test')` is callable from browser console on any page without errors
 
 **Acceptance Criteria**:
-- [ ] SweetAlert2 loads on all pages
-- [ ] No conflicts with Alpine.js or HTMX
+- [x] SweetAlert2 loads on all pages
+- [x] No conflicts with Alpine.js or HTMX
 
 ---
 
