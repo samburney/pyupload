@@ -78,25 +78,27 @@ Replace all custom Alpine.js-powered modals and flash message popups with SweetA
 - `app/ui/templates/components/gallery/delete-button.html.j2`
 
 **Tasks**:
-1. [ ] Remove the `{% from "components/core/modal-dialog.html.j2" import render_dialog %}` import
-2. [ ] Remove the `{% call render_dialog(...) %}` block
-3. [ ] Keep a hidden `<button>` element with the original HTMX attributes (`hx-post`, `hx-include`, `hx-target`, `hx-swap`, `hx-select`, `hx-target-4*`) and `@close-modal="clearSelection();"`, referenced via Alpine `x-ref="deleteBtn"`
-4. [ ] Change the visible Delete button click handler to open a SweetAlert2 confirm dialog, then call `$refs.deleteBtn.click()` on confirmation
+1. [x] Remove the `{% from "components/core/modal-dialog.html.j2" import render_dialog %}` import
+2. [x] Remove the `{% call render_dialog(...) %}` block
+3. [x] Apply the same `sweetConfirm` + `hx-trigger="confirmed"` pattern as Step 2, with `redirect` passed via `hx-vals` as a `Form()` parameter
+4. [x] Add `id="multiselect-chrome"` and `@clear-selection="clearSelection()"` to the multiselect chrome div; server fires `clear-selection` via `HX-Trigger` on success
 
 **Tests**:
-1. [ ] Clicking Delete opens the SweetAlert2 dialog
-2. [ ] Clicking Cancel dismisses the dialog without any request
-3. [ ] Clicking Delete in the dialog posts with correct `hx-include` form values collected
-4. [ ] `clearSelection()` is called after the deletion completes
+1. [x] Clicking Delete opens the SweetAlert2 dialog
+2. [x] Clicking Cancel dismisses the dialog without any request
+3. [x] Clicking Delete in the dialog posts with correct `hx-include` form values collected
+4. [x] `clearSelection()` is called after the deletion completes
 
 **Acceptance Criteria**:
-- [ ] Selected uploads are deleted on confirmation
-- [ ] Selection is cleared after deletion
-- [ ] `hx-include` form value collection still works (HTMX button triggers it)
+- [x] Selected uploads are deleted on confirmation
+- [x] Selection is cleared after deletion
+- [x] `hx-include` form value collection still works
 
 **Implementation Notes**:
-- `hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"` must remain on the hidden HTMX button so HTMX collects values at trigger time
-- The `@close-modal` event listener on the hidden button continues to work as HTMX dispatches the event on that element
+- Same `sweetConfirm` helper used as Step 2; confirmation text is dynamic using `selectedCount`
+- `redirect` is a `Form()` parameter (POST endpoint), passed via `hx-vals` alongside `hx-include` fields
+- Selection is cleared via a `clear-selection` HTMX event fired server-side in `HX-Trigger`, handled by `@clear-selection="clearSelection()"` on `#multiselect-chrome`
+- The gallery delete button is also included in `multiselect-sidebar-actions.html.j2`, enabling bulk delete from the sidebar
 
 **Dependencies**:
 - Step 1

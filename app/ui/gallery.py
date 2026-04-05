@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone, timedelta
 from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
@@ -191,6 +191,7 @@ async def gallery_handle_selected_upload_post(
 async def gallery_delete_selected_post(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    redirect: Annotated[HttpUrl, Form()],
     super_selected: Annotated[bool, Form()] = False,
     selected_ids: Annotated[list[int], Form()] = [],
     deselected_ids: Annotated[list[int], Form()] = [],
@@ -223,21 +224,17 @@ async def gallery_delete_selected_post(
         flash_message(request, f"Deleted {deleted_count} of {len(upload_models)} upload{'s' if deleted_count != 1 else ''} before an error occurred. Please try again.", "error")
         return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=500)
 
-    # Determine redirect URL
-    redirect_url = request.headers.get('referer', None)
-    if not redirect_url:
-        redirect_url = request.url_for('index_get')
-
+    # Prepare response object
     hx_location_dict: dict = {
         "source": request.headers.get('hx-trigger'),
-        "path": redirect_url,
+        "path": str(redirect),
         "target": "#gallery-grid",
         "select": "#gallery-grid > *, #messages",
     }
     hx_location = json.dumps(hx_location_dict)
 
     hx_trigger_dict = {
-        "close-modal": {"target": "#upload-delete-button"},
+        "clear-selection": {"target": "#multiselect-chrome"},
     }
     hx_trigger = json.dumps(hx_trigger_dict)
 

@@ -1,5 +1,7 @@
 {% macro render_multiselect_chrome() %}
-<div x-data="handleSelectedUploads">
+<div id="multiselect-chrome" 
+    x-data="handleSelectedUploads"
+    @clear-selection="clearSelection()">
     <div id="sidebar-request-trigger"
         hx-post="{{ request.url_for('gallery_handle_selected_upload_post') }}"
         hx-trigger="update-sidebar from:body delay:200ms"
