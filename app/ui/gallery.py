@@ -1,32 +1,29 @@
 import random
 import json
 
-from datetime import datetime, timezone, timedelta
 from typing import Annotated
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import HttpUrl
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
 
 from app.models.common.pagination import PaginationParams
-from app.models.collections import Collection, CollectionSerializerSelected
-from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
-from app.models.tags import Tag, TagSerializerSelected
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
-from app.models.users import User, UserSerializer
+from app.models.users import User
 
-from app.lib.config import get_app_config, logger
 from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
+from app.lib.config import get_app_config, logger
 
-from app.ui.common.session import flash_message
-from app.ui.common.templating import templates
-from app.ui.common.uploads import default_readable_query_filter, get_writable_selected_upload_models, get_writable_selected_uploads
 from app.ui.common.etag import (
     get_paginated_gallery_etag,
     get_cache_headers,
     check_etag_and_return_304_if_match,
 )
+from app.ui.common.gallery import render_multiselect_sidebar
+from app.ui.common.session import flash_message
+from app.ui.common.templating import templates
+from app.ui.common.uploads import default_readable_query_filter, get_writable_selected_upload_models, get_writable_selected_uploads
 
 
 config = get_app_config()
@@ -41,19 +38,6 @@ class GalleryPaginationDefaultParams(PaginationParams):
     sort_order: str = "desc"
     page_size: int = 24
     writable_count: int | None = None
-
-
-class SelectionDetail(BaseModel):
-    model_config = {"arbitrary_types_allowed": True}
-
-    owners: list[UserSerializer]
-    file_types: set[str]
-    file_size: int
-    tags: list[TagSerializerSelected]
-    selected_collections: list[CollectionSerializerSelected]
-    filtered_collections: list[Collection]
-    is_writable: bool
-    is_image: bool
 
 
 @router.get('/', response_class=Response)
@@ -115,73 +99,16 @@ async def gallery_handle_selected_upload_post(
 ) -> Response:
     """Render partial page updates when selected items are updated"""
 
-    # Get selected uploads
-    selected_uploads: list[UploadSerializer] = await get_writable_selected_uploads(current_user, selected_ids, super_selected, deselected_ids)
+    # If this isn't a HTMX request, bail out now
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
-    # Match selected uploads against any existing DownloadArchives for this user
-    selected_upload_ids = sorted(upload.id for upload in selected_uploads)
-    download_archive = None
-    download_archive_expires_at = datetime.now(tz=timezone.utc) - timedelta(hours=config.archive_max_age_hours)
-    download_archive_models = await DownloadArchive.filter(user=current_user,
-                                                          created_at__gt=download_archive_expires_at,
-                                                          status__not=ArchiveStatusEnum.failed,
-                                                          upload_ids=selected_upload_ids
-                                                          ) \
-                                                    .order_by("-created_at") \
-                                                    .prefetch_related("user")
-    
-    # If there's multiple, just get the newest one
-    if len(download_archive_models):
-        download_archive_model = download_archive_models[0]
-        download_archive = await DownloadArchiveSerializer.from_tortoise_orm(download_archive_model)
-
-    # Get selection details
-    selection_owners = []
-    seen_owners = set()
-    selection_file_types = set()
-    selection_file_size = 0
-
-    for upload in selected_uploads:
-        # Selection owners
-        if upload.user.id not in seen_owners:
-            seen_owners.add(upload.user.id)
-            selection_owners.append(upload.user)
-
-        # Other computed values
-        selection_file_types.add(upload.type)
-        selection_file_size += upload.size
-
-
-    # Get selected collections
-    selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=selected_uploads)
-
-    # Get collections with filter applied, excluding those already linked to the upload
-    selected_collection_ids = set(c.id for c in selected_collections)
-    filtered_collections = await Collection.filter(user=current_user) \
-        .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
-
-    selection_detail = SelectionDetail(
-        owners=selection_owners,
-        file_types=selection_file_types,
-        file_size=selection_file_size,
-        tags=Tag.get_combined_for_uploads(selected_uploads),
-        selected_collections=selected_collections,
-        filtered_collections=filtered_collections,
-        is_writable=all(o.id == current_user.id for o in selection_owners),
-        is_image=all(u.is_image for u in selected_uploads),
-    )
-
-    # Template context
-    context = {
-        "current_user": current_user,
-        "selected_uploads": selected_uploads,
-        "download_archive": download_archive,
-        "selection_detail": selection_detail,
-    }
-    response = templates.TemplateResponse(
+    response = await render_multiselect_sidebar(
         request,
-        "gallery/partials/sidebar-content.html.j2",
-        context=context
+        current_user,
+        super_selected,
+        selected_ids,
+        deselected_ids,
     )
 
     return response

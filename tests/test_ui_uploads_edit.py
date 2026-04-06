@@ -1,7 +1,7 @@
 """Tests for upload mutation/edit endpoints.
 
 - DELETE /uploads/{id} — delete an upload (owner only)
-- PATCH /uploads/{id}/private — toggle upload privacy (owner only, HTMX)
+- PATCH /uploads/private — toggle upload privacy for a selection (owner only, HTMX)
 - PATCH /uploads/{id}/description — update upload description (owner only, HTMX)
 - Description max-length validation (255 characters)
 """
@@ -157,16 +157,24 @@ class TestDeleteUploadPage:
 
 
 class TestUploadPrivateTogglePatchEndpoint:
-    """Tests for PATCH /uploads/{id}/private."""
+    """Tests for PATCH /uploads/private."""
+
+    def _htmx_upload_sidebar(self) -> dict:
+        return {"HX-Request": "true", "HX-Target": "upload-sidebar"}
 
     async def test_redirects_to_login_when_unauthenticated(self, client):
         """Unauthenticated requests redirect to /login."""
-        response = await client.patch("/uploads/1/private", follow_redirects=False)
+        response = await client.patch(
+            "/uploads/private",
+            data={"selected_ids": [1]},
+            headers=self._htmx_upload_sidebar(),
+            follow_redirects=False,
+        )
         assert response.status_code == 303
         assert "/login" in response.headers.get("location", "")
 
     async def test_returns_404_for_nonexistent_upload(self, client):
-        """Returns 404 when the upload does not exist."""
+        """Returns 404 when none of the selected uploads exist or are writable."""
         user = await User.create(
             username="priv404",
             email="priv404@example.com",
@@ -176,9 +184,12 @@ class TestUploadPrivateTogglePatchEndpoint:
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch("/uploads/999999/private", data={"upload_private": "true"})
+        response = await client.patch(
+            "/uploads/private",
+            data={"selected_ids": [999999], "upload_private": "true"},
+            headers=self._htmx_upload_sidebar(),
+        )
         assert response.status_code == 404
-        assert "Upload not found" in response.text
 
     async def test_owner_can_toggle_public_to_private(self, client, tmp_path, monkeypatch):
         """Owner can set a public upload to private and receives updated toggle HTML."""
@@ -193,11 +204,15 @@ class TestUploadPrivateTogglePatchEndpoint:
         token = create_access_token({"sub": owner.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch(f"/uploads/{upload.id}/private", data={"upload_private": "true"})
+        response = await client.patch(
+            "/uploads/private",
+            data={"selected_ids": [upload.id], "upload_private": "true"},
+            headers=self._htmx_upload_sidebar(),
+        )
         assert response.status_code == 200
         assert "Private" in response.text
         assert "checked" in response.text
-        assert f'hx-patch="/uploads/{upload.id}/private"' in response.text
+        assert 'hx-patch="/uploads/private"' in response.text
 
         await upload.refresh_from_db()
         assert upload.private == 1
@@ -217,7 +232,11 @@ class TestUploadPrivateTogglePatchEndpoint:
         token = create_access_token({"sub": owner.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch(f"/uploads/{upload.id}/private")
+        response = await client.patch(
+            "/uploads/private",
+            data={"selected_ids": [upload.id]},
+            headers=self._htmx_upload_sidebar(),
+        )
         assert response.status_code == 200
         assert "Public" in response.text
         assert 'class="peer sr-only" checked' not in response.text
@@ -226,7 +245,7 @@ class TestUploadPrivateTogglePatchEndpoint:
         assert upload.private == 0
 
     async def test_non_owner_cannot_toggle_privacy(self, client, tmp_path, monkeypatch):
-        """Non-owners receive 403 and the upload privacy flag is unchanged."""
+        """Non-owners receive 404 (upload excluded from writable set) and privacy is unchanged."""
         owner = await User.create(
             username="privowner",
             email="privowner@example.com",
@@ -244,8 +263,12 @@ class TestUploadPrivateTogglePatchEndpoint:
         token = create_access_token({"sub": other.username})
         client.cookies = {"access_token": token}
 
-        response = await client.patch(f"/uploads/{upload.id}/private", data={"upload_private": "true"})
-        assert response.status_code == 403
+        response = await client.patch(
+            "/uploads/private",
+            data={"selected_ids": [upload.id], "upload_private": "true"},
+            headers=self._htmx_upload_sidebar(),
+        )
+        assert response.status_code == 404
 
         await upload.refresh_from_db()
         assert upload.private == 0

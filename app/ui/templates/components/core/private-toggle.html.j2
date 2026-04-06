@@ -1,0 +1,39 @@
+{% if upload is defined %}
+{% set selected_uploads = [upload] %}
+{% set selection_detail = upload %}
+{% endif %}
+{% set private_count = selected_uploads | selectattr('private') | list | length %}
+<div class="flex flex-row mt-1 gap-2 items-center justify-center">
+    <label for="private-upload-toggle" class="relative block h-6 w-12 lg:h-8 lg:w-14 rounded-full
+        {{ 'bg-blue-300' if selection_detail.is_private == 'partial' else 'bg-gray-300' }}
+        transition-colors [-webkit-tap-highlight-color:transparent] has-checked:bg-green-500 cursor-pointer">
+        <input type="checkbox" id="private-upload-toggle" name="upload_private" class="peer sr-only"
+            {{ 'checked' if selection_detail.is_private == True else '' }}
+            hx-patch="/uploads/private"
+            hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+            hx-swap="outerHTML"
+            {%- if selected_uploads | length == 1 %}
+            hx-select="#upload-sidebar"
+            hx-target="#upload-sidebar"
+            {%- else %}
+            hx-select="#gallery-multiselect-sidebar"
+            hx-target="#gallery-multiselect-sidebar"
+            {%- endif %}
+            hx-target-4*="#messages">
+        <span class="absolute inset-y-0
+            {{ 'inset-s-3' if selection_detail.is_private == 'partial' else 'inset-s-0' }}
+            m-1 size-4 lg:size-6 rounded-full bg-white transition-[inset-inline-start] peer-checked:inset-s-6 cursor-pointer">
+        </span>
+    </label>
+    <span class="text-sm lg:text-base">
+        {% if selection_detail.is_private %}
+            {% if selection_detail.is_private == True %}
+                Private
+            {% else %}
+                Partial ({{ private_count }} Private)
+            {% endif %}
+        {% else %}
+            Public
+        {% endif %}
+    </span>
+</div>

@@ -1,6 +1,4 @@
-{%- if request.headers.get('hx-request', None) and request.headers.get('hx-target', None) and request.session.get('_flashes', None) %}
 {%- include "components/core/messages.html.j2" %}
-{%- endif %}
 <div id="archive-download-button" class="flex justify-center items-center">
     <div class="relative" x-data="{ open: false }">
         <div class="split-button split-button-ok md:max-lg:split-button-md">

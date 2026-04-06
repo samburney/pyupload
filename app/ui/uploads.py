@@ -5,6 +5,7 @@ from pydantic import HttpUrl
 from tortoise.exceptions import ValidationError
 from fastapi import APIRouter, Request, Depends, UploadFile, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.exceptions import HTTPException
 
 from app.lib.config import get_app_config
 from app.lib.error_handling import NotAuthorisedError, parse_tortoise_validation_errors
@@ -15,8 +16,9 @@ from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 
 from app.ui.common.errors import error_response_for_get, error_template_response
+from app.ui.common.gallery import render_multiselect_sidebar
 from app.ui.common.templating import templates
-from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_for_update, get_upload_with_relations_or_404
+from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_for_update, get_writable_selected_upload_models
 from app.ui.common.security import get_current_user, get_current_authenticated_user, get_or_create_authenticated_user
 from app.ui.common.session import flash_message, get_client_dimensions, BREAKPOINT_FRAME_PADDING, BREAKPOINT_SIDEBAR_WIDTHS
 
@@ -76,17 +78,14 @@ async def create_upload_post(
     """Handle multiple uploaded files."""
 
     # Handle file uploads
-    error_messages = []
-    info_messages = []
-
     results = await handle_uploaded_files(user=current_user, files=upload_files)
     uploaded_files = []
     for result in results:
         if result.status == "success" and result.metadata is not None:
-            info_messages.append(f"File '{result.metadata.filename}' uploaded successfully.")
+            flash_message(request, f"File '{result.metadata.filename}' uploaded successfully.")
             uploaded_files.append(result)
         else:
-            error_messages.append(f'{result.message}' if result.message else "An unknown error occurred during file upload.")
+            flash_message(request, result.message if result.message else "An unknown error occurred during file upload.", "error")
 
     # Render response
     response = templates.TemplateResponse(
@@ -94,8 +93,6 @@ async def create_upload_post(
         name="uploads/list.html.j2",
         context={
             "current_user": current_user,
-            "info_messages": info_messages,
-            "error_messages": error_messages,
             "uploaded_files": uploaded_files,
         },
     )
@@ -323,21 +320,54 @@ async def delete_upload_delete(
     return Response(status_code=204, headers={"HX-Redirect": str(redirect)})
 
 
-@router.patch("/uploads/{id}/private", response_class=Response)
-async def toggle_upload_private_patch(
-        request: Request,
-        id: int,
-        current_user: Annotated[User, Depends(get_current_authenticated_user)],
-        upload_private: Annotated[bool, Form()] = False,
+@router.patch("/uploads/private", response_class=Response)
+async def toggle_selected_uploads_private_patch(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    upload_private: Annotated[bool, Form()] = False,
+    super_selected: Annotated[bool, Form()] = False,
+    selected_ids: Annotated[list[int], Form()] = [],
+    deselected_ids: Annotated[list[int], Form()] = [],
 ) -> Response:
-    """Update the private status of an upload."""
-    
-    upload_model = await get_upload_or_404_for_update(id, current_user)
+    """Update the private status of a selection of uploads."""
 
-    upload_model.private = upload_private
-    await upload_model.save()
+    # If this isn't a HTMX request, bail out now
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
-    return await _render_upload_component(request, current_user, upload_model, "components/uploads/sidebar-content.html.j2")
+    # Get uploads from database
+    upload_models = await get_writable_selected_upload_models(
+        current_user=current_user,
+        super_selected=super_selected,
+        selected_ids=selected_ids,
+        deselected_ids=deselected_ids,
+    )
+    if not len(upload_models):
+        return await error_template_response(request, ["None of the selected uploads provided exist."], 404, "File(s) not found")
+
+    # Update private status
+    for upload_model in upload_models:
+        upload_model.private = upload_private
+    await Upload.bulk_update(upload_models, fields=['private'])
+
+    # Build response
+    if request.headers.get('hx-target') == 'upload-sidebar':
+        # `#upload-sidebar` only supports one 'selected' item (It's hard coded on the sidebar)
+        flash_message(request, f"Upload privacy status set to {'Private' if upload_private else 'Public'}.")
+        response = await _render_upload_component(request, current_user, upload_models[0], "components/uploads/sidebar-content.html.j2")
+    elif request.headers.get('hx-target') == 'gallery-multiselect-sidebar':
+        flash_message(request, f"Privacy status set to {'Private' if upload_private else 'Public'} for {len(upload_models)} uploads.")
+        response = await render_multiselect_sidebar(
+            request,
+            current_user,
+            super_selected,
+            selected_ids,
+            deselected_ids,
+        )
+    else:
+        response = await error_template_response(request, ["Request was successful, but targeted UI element not supported."], 404, "Request target not supported")
+
+    return response
 
 
 @router.patch("/uploads/{id}/description", response_class=Response)

@@ -535,6 +535,7 @@ class TestMultiselectSidebarRendering:
         response = await client.post(
             "/gallery",
             data={"selected_ids": [u.id for u in uploads]},
+            headers=_htmx(),
         )
         assert response.status_code == 200
         assert "/archives/request/" in response.text
@@ -546,6 +547,7 @@ class TestMultiselectSidebarRendering:
         response = await client.post(
             "/gallery",
             data={"selected_ids": [u.id for u in uploads]},
+            headers=_htmx(),
         )
         assert response.status_code == 200
         # The status component references the archive's status polling endpoint
@@ -559,6 +561,7 @@ class TestMultiselectSidebarRendering:
         response = await client.post(
             "/gallery",
             data={"selected_ids": [u.id for u in uploads]},
+            headers=_htmx(),
         )
         assert response.status_code == 200
         assert str(archive.id) in response.text
@@ -571,6 +574,7 @@ class TestMultiselectSidebarRendering:
         response = await client.post(
             "/gallery",
             data={"selected_ids": [u.id for u in uploads]},
+            headers=_htmx(),
         )
         assert response.status_code == 200
         assert str(archive.id) in response.text
@@ -583,6 +587,7 @@ class TestMultiselectSidebarRendering:
         response = await client.post(
             "/gallery",
             data={"selected_ids": [u.id for u in uploads]},
+            headers=_htmx(),
         )
         assert response.status_code == 200
         assert "/archives/request/" in response.text
@@ -596,6 +601,7 @@ class TestMultiselectSidebarRendering:
         response = await client.post(
             "/gallery",
             data={"selected_ids": [u.id for u in uploads]},
+            headers=_htmx(),
         )
         assert response.status_code == 200
         assert "/archives/request/" in response.text

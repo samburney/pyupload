@@ -40,7 +40,7 @@ async def get_collection_suggestions_post(
     )
     upload_models = await upload_qs.prefetch_related("collections")
 
-    # Get upload from database
+    # Get uploads from database
     if not len(upload_models):
         raise HTTPException(status_code=404, detail="None of the selected uploads provided exist.")
 

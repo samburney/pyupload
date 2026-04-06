@@ -310,10 +310,14 @@ class TestUploadPostEndpoint:
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
-        html = response.text
-
-        # Should contain error message
-        assert "error" in html.lower() or "too large" in html.lower()
+        assert response.status_code == 200
+        # Errors are delivered via flash messages in the session cookie, rendered by
+        # the base layout on full-page responses. Verify the flash was stored in the session.
+        session_cookie = next((v for k, v in response.cookies.items() if "session" in k), None)
+        assert session_cookie is not None
+        import base64
+        session_data = base64.b64decode(session_cookie.split(".")[0] + "==").decode("utf-8", errors="replace")
+        assert "too large" in session_data
 
     async def test_upload_post_handles_partial_failures(self, client, monkeypatch):
         """Test that mixed success/error results are displayed correctly."""
