@@ -1,6 +1,6 @@
 """Tests for upload mutation/edit endpoints.
 
-- DELETE /uploads/{id} — delete an upload (owner only)
+- POST /uploads/delete — delete selected uploads (owner only, HTMX)
 - PATCH /uploads/private — toggle upload privacy for a selection (owner only, HTMX)
 - PATCH /uploads/{id}/description — update upload description (owner only, HTMX)
 - Description max-length validation (255 characters)
@@ -45,49 +45,65 @@ async def _create_tag_upload_with_file(user, suffix: str, tmp_path, monkeypatch)
     return upload
 
 
-class TestDeleteUploadPage:
-    """Tests for DELETE /uploads/{id} UI endpoint."""
+def _htmx_upload_delete() -> dict:
+    return {"HX-Request": "true", "HX-Target": "upload-sidebar"}
+
+
+def _htmx_gallery_delete() -> dict:
+    return {"HX-Request": "true", "HX-Target": "gallery-grid"}
+
+
+class TestDeleteSelectedUploadsPost:
+    """Tests for POST /uploads/delete."""
 
     async def test_redirects_to_login_when_unauthenticated(self, client):
-        """Unauthenticated DELETE requests must redirect to /login."""
-        response = await client.delete("/uploads/1", follow_redirects=False)
+        """Unauthenticated requests must redirect to /login."""
+        response = await client.post(
+            "/uploads/delete",
+            data={"redirect": "http://testserver/profile", "selected_ids": [1]},
+            headers=_htmx_upload_delete(),
+            follow_redirects=False,
+        )
         assert response.status_code == 303
         assert "/login" in response.headers.get("location", "")
 
-    async def test_returns_404_for_nonexistent_upload(self, client):
-        """Returns 404 HTML error when the upload does not exist."""
+    async def test_returns_400_without_htmx_header(self, client):
+        """Non-HTMX requests are rejected with 400."""
         user = await User.create(
-            username="uidel404",
-            email="uidel404@example.com",
+            username="udel400",
+            email="udel400@example.com",
             password="pw",
             is_registered=True,
         )
         token = create_access_token({"sub": user.username})
         client.cookies = {"access_token": token}
 
-        response = await client.delete("/uploads/999999?redirect=http://testserver/profile")
-        assert response.status_code == 404
+        response = await client.post(
+            "/uploads/delete",
+            data={"redirect": "http://testserver/profile", "selected_ids": [1]},
+        )
+        assert response.status_code == 400
 
     async def test_returns_403_for_non_owner(self, client):
-        """Returns 403 when the authenticated user is not the upload owner."""
+        """Returns 403 when no selected uploads are writable by the current user."""
         owner = await User.create(
-            username="uidelowner",
-            email="uidelowner@example.com",
+            username="udelowner",
+            email="udelowner@example.com",
             password="pw",
             is_registered=True,
         )
         other = await User.create(
-            username="uidelother",
-            email="uidelother@example.com",
+            username="udelother",
+            email="udelother@example.com",
             password="pw",
             is_registered=True,
         )
         upload = await Upload.create(
             user=owner,
             description="",
-            name="uideltest_20250101-000000_a1b2c3d4",
-            cleanname="uideltest",
-            originalname="uideltest.txt",
+            name="udeltest_20250101-000000_a1b2c3d4",
+            cleanname="udeltest",
+            originalname="udeltest.txt",
             ext="txt",
             size=10,
             type="text/plain",
@@ -96,23 +112,27 @@ class TestDeleteUploadPage:
         token = create_access_token({"sub": other.username})
         client.cookies = {"access_token": token}
 
-        response = await client.delete(f"/uploads/{upload.id}?redirect=http://testserver/profile")
+        response = await client.post(
+            "/uploads/delete",
+            data={"redirect": "http://testserver/profile", "selected_ids": [upload.id]},
+            headers=_htmx_upload_delete(),
+        )
         assert response.status_code == 403
 
-    async def test_returns_204_with_hx_redirect_on_success(self, client):
-        """Successful delete returns 204 with HX-Redirect header pointing to /profile."""
+    async def test_view_page_returns_204_with_hx_redirect(self, client):
+        """View page context (HX-Target: upload-sidebar) returns HX-Redirect."""
         user = await User.create(
-            username="uidelsucc",
-            email="uidelsucc@example.com",
+            username="udelsucc",
+            email="udelsucc@example.com",
             password="pw",
             is_registered=True,
         )
         upload = await Upload.create(
             user=user,
             description="",
-            name="uisuccfile_20250101-000000_a1b2c3d4",
-            cleanname="uisuccfile",
-            originalname="uisuccfile.txt",
+            name="udelsuccfile_20250101-000000_a1b2c3d4",
+            cleanname="udelsuccfile",
+            originalname="udelsuccfile.txt",
             ext="txt",
             size=10,
             type="text/plain",
@@ -122,25 +142,66 @@ class TestDeleteUploadPage:
         client.cookies = {"access_token": token}
 
         with patch("app.lib.file_io.delete_file"):
-            response = await client.delete(f"/uploads/{upload.id}?redirect=http://testserver/profile", follow_redirects=False)
+            response = await client.post(
+                "/uploads/delete",
+                data={"redirect": "http://testserver/profile", "selected_ids": [upload.id]},
+                headers=_htmx_upload_delete(),
+                follow_redirects=False,
+            )
 
         assert response.status_code == 204
         assert response.headers.get("HX-Redirect") == "http://testserver/profile"
+        assert "HX-Location" not in response.headers
 
-    async def test_removes_upload_from_database_on_success(self, client):
-        """Successful delete removes the upload record from the database."""
+    async def test_gallery_context_returns_204_with_hx_location(self, client):
+        """Gallery context (HX-Target: gallery-grid) returns HX-Location with gallery target."""
         user = await User.create(
-            username="uideldb",
-            email="uideldb@example.com",
+            username="udelgal",
+            email="udelgal@example.com",
             password="pw",
             is_registered=True,
         )
         upload = await Upload.create(
             user=user,
             description="",
-            name="uidbfile_20250101-000000_b2c3d4e5",
-            cleanname="uidbfile",
-            originalname="uidbfile.txt",
+            name="udelgalfile_20250101-000000_a1b2c3d4",
+            cleanname="udelgalfile",
+            originalname="udelgalfile.txt",
+            ext="txt",
+            size=10,
+            type="text/plain",
+            extra="0",
+        )
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+
+        with patch("app.lib.file_io.delete_file"):
+            response = await client.post(
+                "/uploads/delete",
+                data={"redirect": "http://testserver/", "selected_ids": [upload.id]},
+                headers=_htmx_gallery_delete(),
+                follow_redirects=False,
+            )
+
+        assert response.status_code == 204
+        assert "HX-Location" in response.headers
+        assert "HX-Trigger" in response.headers
+        assert "HX-Redirect" not in response.headers
+
+    async def test_removes_upload_from_database_on_success(self, client):
+        """Successful delete removes the upload record from the database."""
+        user = await User.create(
+            username="udeldb",
+            email="udeldb@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await Upload.create(
+            user=user,
+            description="",
+            name="udeldbfile_20250101-000000_b2c3d4e5",
+            cleanname="udeldbfile",
+            originalname="udeldbfile.txt",
             ext="txt",
             size=10,
             type="text/plain",
@@ -151,7 +212,11 @@ class TestDeleteUploadPage:
         client.cookies = {"access_token": token}
 
         with patch("app.lib.file_io.delete_file"):
-            await client.delete(f"/uploads/{upload_id}?redirect=http://testserver/profile")
+            await client.post(
+                "/uploads/delete",
+                data={"redirect": "http://testserver/profile", "selected_ids": [upload_id]},
+                headers=_htmx_upload_delete(),
+            )
 
         assert await Upload.get_or_none(id=upload_id) is None
 

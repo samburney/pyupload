@@ -2,11 +2,16 @@
     <button type="button"
         class="px-4 py-2 w-full button button-neutral max-lg:button-md border-red-100 hover:text-red-600 hover:bg-red-200 hover:border-red-500"
         hx-trigger="confirmed"
-        hx-delete="/uploads/{{ upload.id }}"
+        hx-post="/uploads/delete"
+        hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
+        {%- if sidebar_target == "#gallery-multiselect-sidebar" %}
+        hx-target="#gallery-grid"
+        {%- endif %}
         hx-vals='{ "redirect": {{ request.headers.get("referer", request.url_for("index_get") | string) | tojson }} }'
+        hx-target-4*="#messages"
         @click="sweetConfirm($el, {
             title: 'Confirm delete',
-            text: 'Are you sure you wish to permanently delete this file?',
+            text: 'Are you sure you wish to permanently delete {% if selected_uploads | length > 1 %}{{ selected_uploads | length }} uploads{% else %}this file{% endif %}?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Delete',

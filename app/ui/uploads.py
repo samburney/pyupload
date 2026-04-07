@@ -1,13 +1,14 @@
 import html
+import json
 
 from typing import Annotated
 from pydantic import HttpUrl
 from tortoise.exceptions import ValidationError
-from fastapi import APIRouter, Request, Depends, UploadFile, Form, Query
+from fastapi import APIRouter, Request, Depends, UploadFile, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.exceptions import HTTPException
 
-from app.lib.config import get_app_config
+from app.lib.config import get_app_config, logger
 from app.lib.error_handling import NotAuthorisedError, parse_tortoise_validation_errors
 from app.lib.upload_handler import handle_uploaded_files
 from app.lib.file_serving import serve_file, validate_file_request
@@ -290,33 +291,47 @@ async def get_upload_image_src_get(
 
     return response
 
-@router.delete("/uploads/{id}", response_class=Response)
-async def delete_upload_delete(
+@router.post("/uploads/delete", response_class=Response)
+async def delete_selected_uploads_post(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    id: int,
-    redirect: Annotated[HttpUrl, Query()],
+    redirect: Annotated[HttpUrl, Form()],
+    super_selected: Annotated[bool, Form()] = False,
+    selected_ids: Annotated[list[int], Form()] = [],
+    deselected_ids: Annotated[list[int], Form()] = [],
 ) -> Response:
-    """Delete an uploaded file."""
+    """Delete selected uploads. Uses HX-Target header to determine response shape."""
 
-    upload = await Upload.get_or_none(id=id).prefetch_related("user")
-    if upload is None:
-        return await error_response_for_get(
-            error_title="Error 404: File not found",
-            error_message="The file you are trying to delete does not exist.",
-            filename="",
-            status_code=404,
-            request=request,
-        )
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
-    # Validate user access to this file
-    if not upload.is_owner(current_user):
-        raise NotAuthorisedError("You do not have permission to delete this file.")
+    upload_models: list[Upload] = await get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
+    if not upload_models:
+        flash_message(request, "You do not have permission to delete any of the selected uploads.", "error")
+        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
 
-    # Delete the file
-    await upload.delete()
+    deleted_count = 0
+    try:
+        for upload_model in upload_models:
+            await upload_model.delete()
+            deleted_count += 1
+    except Exception as e:
+        logger.exception("Failed to delete uploads: %s", e)
+        flash_message(request, f"Deleted {deleted_count} of {len(upload_models)} upload{'s' if deleted_count != 1 else ''} before an error occurred. Please try again.", "error")
+        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=500)
 
-    flash_message(request, "Upload deleted successfully.")
+    flash_message(request, f"{deleted_count} upload{'s' if deleted_count != 1 else ''} deleted successfully.")
+
+    if request.headers.get('hx-target') == 'gallery-grid':
+        hx_location = json.dumps({
+            "source": request.headers.get('hx-trigger'),
+            "path": str(redirect),
+            "target": "#gallery-grid",
+            "select": "#gallery-grid > *, #messages",
+        })
+        hx_trigger = json.dumps({"clear-selection": {"target": "#multiselect-chrome"}})
+        return Response(status_code=204, headers={"HX-Location": hx_location, "HX-Trigger": hx_trigger})
+
     return Response(status_code=204, headers={"HX-Redirect": str(redirect)})
 
 

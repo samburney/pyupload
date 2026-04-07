@@ -16,17 +16,11 @@
         <p class="mt-2 text-xs text-gray-700 font-medium">Actions</p>
         <div class="flex flex-col w-full gap-2">
             {%- if upload.is_image %}
-                {%- if request.url.path == '/' or request.url.path.startswith('/gallery') %}
-                    {%- include "components/gallery/image-rotate-select.html.j2" %}
-                {%- else %}
-                    {%- include "components/uploads/image-rotate-select.html.j2" %}
-                {%- endif %}
+                {%- include "components/uploads/image-rotate-select.html.j2" %}
             {%- endif %}
-            {%- if request.url.path == '/' or request.url.path.startswith('/gallery') %}
-                {%- include "components/gallery/delete-button.html.j2" %}
-            {%- else %}
-                {%- include "components/uploads/delete-button.html.j2" %}
-            {%- endif %}
+            {%- include "components/core/delete-button.html.j2" %}
+            {% set selected_uploads = [upload] %}
+            {% set selection_detail = upload %}
             {%- include "components/core/private-toggle.html.j2" %}
         </div>
     {%- endif %}

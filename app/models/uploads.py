@@ -195,6 +195,10 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
     def is_owner(self, user: User) -> bool:
         """Return whether or not this file is owned by the current user."""
         return getattr(self, "user_id") == user.id
+
+    def is_writable(self, user: User) -> bool:
+        """Return whether or not this file is owned by the current user."""
+        return self.is_owner(user=user)
     
     def user_collections(self, user: User) -> "QuerySet[Collection]":
         """Return a queryset of collections that the current user has which include this upload."""
@@ -281,7 +285,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     
     @classmethod
     async def resolve_filtered_collections(cls, instance: Upload, context: ContextType) -> Optional[list[CollectionSerializer]]:
-        """Return collections owned by user that are not already linked to upload."""
+        """Return whether or not this file is owned by the current user."""
         user = context.get("user")
         if user is None:
             return None
@@ -302,6 +306,8 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     is_image: bool
     is_private: bool
     short_type: str
+    is_owner: Optional[bool]
+    is_writable: Optional[bool]
 
     def autoresize_url(self, max_width: int) -> str:
         """Return a resized image URL constrained to max_width, preserving format where possible.
@@ -324,6 +330,21 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
 
         base, _ = split_filename(self.url)
         return f"{base}-{max_width}x0{out_ext}"
+
+    @classmethod
+    def resolve_is_owner(cls, instance: Upload, context: ContextType) -> Optional[bool]:
+        """Return collections owned by user that are not already linked to upload."""
+
+        user = context.get("user")
+        if user is None:
+            return None
+
+        return getattr(instance, "user_id") == user.id
+
+    @classmethod
+    def resolve_is_writable(cls, instance: Upload, context: ContextType) -> Optional[bool]:
+        """Return collections owned by user that are not already linked to upload."""
+        return cls.resolve_is_owner(instance, context)
 
 
 class UploadMetadata(BaseModel):

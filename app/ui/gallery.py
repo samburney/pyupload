@@ -1,9 +1,7 @@
 import random
-import json
 
 from typing import Annotated
 
-from pydantic import HttpUrl
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
@@ -13,7 +11,7 @@ from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
 
 from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
-from app.lib.config import get_app_config, logger
+from app.lib.config import get_app_config
 
 from app.ui.common.etag import (
     get_paginated_gallery_etag,
@@ -21,9 +19,8 @@ from app.ui.common.etag import (
     check_etag_and_return_304_if_match,
 )
 from app.ui.common.gallery import render_multiselect_sidebar
-from app.ui.common.session import flash_message
 from app.ui.common.templating import templates
-from app.ui.common.uploads import default_readable_query_filter, get_writable_selected_upload_models, get_writable_selected_uploads
+from app.ui.common.uploads import default_readable_query_filter
 
 
 config = get_app_config()
@@ -110,68 +107,6 @@ async def gallery_handle_selected_upload_post(
         selected_ids,
         deselected_ids,
     )
-
-    return response
-
-
-@router.post('/delete')
-async def gallery_delete_selected_post(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    redirect: Annotated[HttpUrl, Form()],
-    super_selected: Annotated[bool, Form()] = False,
-    selected_ids: Annotated[list[int], Form()] = [],
-    deselected_ids: Annotated[list[int], Form()] = [],
-    ) -> Response:
-    """
-    Delete selected items and redirect back to requesting page
-    
-    We're using POST instead of DELETE to ensure we don't run out
-    query_string space with a large number of selections.
-    """
-
-    # If this isn't a HTMX request, bail out now
-    if not request.headers.get('hx-request', False):
-        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
-
-    # Filter selected uploads to only those writable by the current_user
-    upload_models: list[Upload] = await get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
-    if not upload_models:
-        flash_message(request, "You do not have permission to delete any of the selected uploads.", "error")
-        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
-
-    # Delete the selected uploads (use model instances to trigger custom delete with filesystem cleanup)
-    deleted_count = 0
-    try:
-        for upload_model in upload_models:
-            await upload_model.delete()
-            deleted_count += 1
-    except Exception as e:
-        logger.exception("Failed to delete uploads: %s", e)
-        flash_message(request, f"Deleted {deleted_count} of {len(upload_models)} upload{'s' if deleted_count != 1 else ''} before an error occurred. Please try again.", "error")
-        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=500)
-
-    # Prepare response object
-    hx_location_dict: dict = {
-        "source": request.headers.get('hx-trigger'),
-        "path": str(redirect),
-        "target": "#gallery-grid",
-        "select": "#gallery-grid > *, #messages",
-    }
-    hx_location = json.dumps(hx_location_dict)
-
-    hx_trigger_dict = {
-        "clear-selection": {"target": "#multiselect-chrome"},
-    }
-    hx_trigger = json.dumps(hx_trigger_dict)
-
-    headers = {
-        "HX-Location": str(hx_location),
-        "HX-Trigger": str(hx_trigger)
-    }
-
-    flash_message(request, f"{deleted_count} upload{'s' if deleted_count != 1 else ''} deleted successfully.")
-    response = Response(status_code=204, headers=headers)
 
     return response
 

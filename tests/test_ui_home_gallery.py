@@ -802,6 +802,95 @@ class TestUploadSerializer:
         assert serialized.created_at is not None
         assert serialized.updated_at is not None
 
+    @pytest.mark.anyio
+    async def test_upload_serializer_is_owner_and_is_writable_when_owner(self, db):
+        """is_owner and is_writable are True when the context user owns the upload."""
+        user = await User.create(
+            password="hashed_password",
+            username="owner_serializer_user",
+            email="ownerser@test.com",
+        )
+        upload = await Upload.create(
+            user=user,
+            description="Owner Upload",
+            name="owner_file",
+            cleanname="owner_file",
+            originalname="owner_file.txt",
+            ext="txt",
+            size=1024,
+            type="text/plain",
+            extra="",
+            private=0,
+        )
+
+        serialized = await UploadSerializer.from_tortoise_orm(
+            await Upload.get_with_relations(upload.id), context={"user": user}
+        )
+
+        assert serialized.is_owner is True
+        assert serialized.is_writable is True
+
+    @pytest.mark.anyio
+    async def test_upload_serializer_is_owner_and_is_writable_when_not_owner(self, db):
+        """is_owner and is_writable are False when the context user does not own the upload."""
+        owner = await User.create(
+            password="hashed_password",
+            username="upload_owner",
+            email="upload_owner@test.com",
+        )
+        other_user = await User.create(
+            password="hashed_password",
+            username="other_user",
+            email="other_user@test.com",
+        )
+        upload = await Upload.create(
+            user=owner,
+            description="Other Upload",
+            name="other_file",
+            cleanname="other_file",
+            originalname="other_file.txt",
+            ext="txt",
+            size=1024,
+            type="text/plain",
+            extra="",
+            private=0,
+        )
+
+        serialized = await UploadSerializer.from_tortoise_orm(
+            await Upload.get_with_relations(upload.id), context={"user": other_user}
+        )
+
+        assert serialized.is_owner is False
+        assert serialized.is_writable is False
+
+    @pytest.mark.anyio
+    async def test_upload_serializer_is_owner_and_is_writable_without_user_context(self, db):
+        """is_owner and is_writable are None when no user is in context."""
+        user = await User.create(
+            password="hashed_password",
+            username="nocontext_user",
+            email="nocontext@test.com",
+        )
+        upload = await Upload.create(
+            user=user,
+            description="No Context Upload",
+            name="nocontext_file",
+            cleanname="nocontext_file",
+            originalname="nocontext_file.txt",
+            ext="txt",
+            size=1024,
+            type="text/plain",
+            extra="",
+            private=0,
+        )
+
+        serialized = await UploadSerializer.from_tortoise_orm(
+            await Upload.get_with_relations(upload.id)
+        )
+
+        assert serialized.is_owner is None
+        assert serialized.is_writable is None
+
 
 class TestUserSerializer:
     """Test UserSerializer produces expected output."""
