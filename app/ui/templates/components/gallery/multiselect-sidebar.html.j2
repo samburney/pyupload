@@ -1,4 +1,5 @@
 {%- include "components/core/messages.html.j2" %}
+{% set upload = selection_detail %}
 <div id="gallery-multiselect-sidebar"
     class="flex flex-col w-full gap-1 lg:gap-2">
     <div class="flex w-full items-center justify-center gap-1 lg:gap-2">
@@ -9,5 +10,5 @@
         {%- endif %}
     </div>
     {%- include "components/gallery/multiselect-sidebar-details.html.j2" %}
-    {%- include "components/gallery/multiselect-sidebar-actions.html.j2" %}
+    {%- include "components/core/sidebar-actions.html.j2" %}
 </div>

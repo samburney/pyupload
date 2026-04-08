@@ -5,12 +5,19 @@
     <input name="angle" type="hidden" value="{{ rd[1] }}" />
     <button hx-post="/images/rotate"
             hx-include="previous [name='angle'],[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
-            hx-target="#gallery-grid"
             hx-swap="outerHTML"
-            hx-select="#gallery-grid,#messages"
             hx-target-4*="#messages"
             hx-disabled-elt="#rotate-toggle"
+            {%- if sidebar_target == "#gallery-multiselect-sidebar" %}
+            hx-target="#gallery-grid"
+            hx-select="#gallery-grid,#messages"
             hx-indicator=".group\/card:has([name='selected_upload_ids']:checked)"
+            {%- else %}
+            hx-target="#view-frame-image"
+            hx-select="#view-frame-image"
+            hx-select-oob="#messages,#upload-details"
+            hx-indicator="#loading-indicator"
+            {%- endif %}
             class="w-full text-left cursor-pointer">
         {{ rd[0] }}
     </button>

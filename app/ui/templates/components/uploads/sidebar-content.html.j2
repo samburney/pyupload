@@ -1,7 +1,9 @@
 {%- include "components/core/messages.html.j2" %}
 {% set sidebar_target = "#upload-sidebar" %}
+{% set selected_uploads = [upload] %}
 <div id="upload-sidebar"
     class="flex flex-col w-full gap-1 lg:gap-2">
+    <input type="hidden" name="selected_ids" value="{{ upload.id }}" />
     <div class="flex w-full items-center justify-center gap-1 lg:gap-2">
         {% include "components/uploads/download-button.html.j2" %}
         {% if not upload.is_private %}

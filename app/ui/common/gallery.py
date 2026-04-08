@@ -28,7 +28,7 @@ class SelectionDetail(BaseModel):
     file_types: set[str]
     file_size: int
     tags: list[TagSerializerSelected]
-    selected_collections: list[CollectionSerializerSelected]
+    collections: list[CollectionSerializerSelected]
     filtered_collections: list[Collection]
     is_writable: bool
     is_private: bool | Literal['partial']
@@ -105,7 +105,7 @@ async def render_multiselect_sidebar(
         file_types=selection_file_types,
         file_size=selection_file_size,
         tags=Tag.get_combined_for_uploads(selected_uploads),
-        selected_collections=selected_collections,
+        collections=selected_collections,
         filtered_collections=filtered_collections,
         is_writable=all(o.id == current_user.id for o in selection_owners),
         is_private=is_private,
