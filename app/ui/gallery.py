@@ -13,6 +13,7 @@ from app.models.users import User
 from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
 from app.lib.config import get_app_config
 
+from app.ui.common.breadcrumbs import Breadcrumbs
 from app.ui.common.etag import (
     get_paginated_gallery_etag,
     get_cache_headers,
@@ -25,6 +26,7 @@ from app.ui.common.uploads import default_readable_query_filter
 
 config = get_app_config()
 router = APIRouter(prefix='/gallery', tags=['gallery'])
+breadcrumb_handler = Breadcrumbs(router=router, route_title="Browse")
 
 
 class GalleryPaginationDefaultParams(PaginationParams):
@@ -37,11 +39,13 @@ class GalleryPaginationDefaultParams(PaginationParams):
     writable_count: int | None = None
 
 
-@router.get('/', response_class=Response)
-@router.get('/index', response_class=Response)
+@router.get("", response_class=Response)
+@router.get("/", response_class=Response)
+@router.get("/index", response_class=Response)
 async def gallery_index_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
     """Render main gallery view"""
 
@@ -63,6 +67,7 @@ async def gallery_index_get(
     # Template context
     context = {
         "current_user": current_user,
+        "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
     }
@@ -111,11 +116,11 @@ async def gallery_handle_selected_upload_post(
     return response
 
 
-
 @router.get('/random', response_class=Response)
 async def gallery_random_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
     """Render random gallery view"""        
 
@@ -139,21 +144,14 @@ async def gallery_random_get(
         .prefetch_related(*UPLOAD_PREFETCH_MODELS)
     uploads = await UploadSerializer.from_queryset(upload_models)
 
-    # Define breadcrumbs
-    # TODO: Needs to be more automated...
-    breadcrumbs = [
-        {"url": "/gallery/random", "title": "Random"}
-    ]
-
     # Template context
+    breadcrumbs.push("Random", request.url_for("gallery_random_get"))
     context = {
         "current_user": current_user,
+        "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
-        "breadcrumbs": breadcrumbs,
     }
     response = templates.TemplateResponse(request, "gallery/random.html.j2", context=context)
 
     return response
-
-

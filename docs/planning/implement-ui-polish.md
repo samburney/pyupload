@@ -42,6 +42,14 @@ Polish the user interface with improved navigation, responsive design refinement
 - Global anchor `<a>` base styles intentionally removed for normalisation; needs re-establishing before merge — relates to Step 9 (form styling) and general UI consistency.
 - All other steps remain open.
 
+### Review Snapshot (2026-04-12)
+- Breadcrumb system fully implemented via `app/ui/common/breadcrumbs.py`
+- `Breadcrumbs` class uses a module-level factory (router + title config); `handle_request` produces a fresh per-request instance — no concurrency hazard
+- URL coercion handled via `TypeAdapter(HttpUrl).validate_python` at module level
+- Breadcrumbs wired to `/gallery/`, `/gallery/index`, `/gallery/random`, and `/` (root delegates to gallery)
+- Template uses filled SVG polygon cap after home icon, stroked SVG chevron for inner separators; current page shown bold and not linked
+- Tests added in `tests/test_ui_common_breadcrumbs.py`
+
 ### Review Snapshot (2026-03-09)
 - Implemented `/random` gallery discovery page with random uploads display
 - Added breadcrumbs template and layout integration (`layout/breadcrumbs.html.j2`, updated `base.html.j2`)
@@ -253,14 +261,14 @@ Polish the user interface with improved navigation, responsive design refinement
 - All deep page templates (upload view, profile, etc.)
 
 **Tasks**:
-1. [ ] Create breadcrumb context processor in `app/ui/common/breadcrumbs.py`
-2. [ ] Implement `get_breadcrumbs(request, **kwargs)` function
+1. [x] Create breadcrumb context processor in `app/ui/common/breadcrumbs.py`
+2. [x] Implement router-level `Breadcrumbs` handler with per-request factory pattern
 3. [x] Create breadcrumb component template
-4. [x] Add breadcrumbs to deep pages only (not home/top-level) *(added to gallery/random endpoint)*
-5. [x] Style breadcrumbs with separators *(implemented with Tailwind + SVG chevrons)*
+4. [x] Add breadcrumbs to deep pages only (not home/top-level) *(gallery/random and gallery/index)*
+5. [x] Style breadcrumbs with separators *(SVG polygon cap for first, stroked chevron for subsequent)*
 6. [ ] Make breadcrumbs responsive (truncate on mobile)
 7. [ ] Add structured data for SEO (schema.org BreadcrumbList)
-8. [ ] Ensure last item is not a link (current page) *(implemented in template)*
+8. [x] Ensure last item is not a link (current page shown bold, not linked)
 
 **Tests**:
 1. [ ] Test breadcrumbs NOT on home page
