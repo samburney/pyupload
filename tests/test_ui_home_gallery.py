@@ -27,7 +27,7 @@ from app.models.uploads import Upload, UploadSerializer
 from app.models.images import Image, ImageSerializer
 from app.models.users import UserSerializer
 from app.models.common.pagination import PaginationParams
-from app.ui.gallery import GalleryPaginationDefaultParams
+from app.ui.common.gallery import GalleryPaginationDefaultParams
 from app.lib.helpers import humanize_bytes
 
 

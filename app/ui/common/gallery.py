@@ -9,6 +9,7 @@ from app.lib.config import get_app_config
 
 from app.models.collections import Collection, CollectionSerializerSelected
 from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
+from app.models.common.pagination import PaginationParams
 from app.models.tags import Tag, TagSerializerSelected
 from app.models.uploads import UploadSerializer
 from app.models.users import User, UserSerializer
@@ -19,6 +20,16 @@ from app.ui.common.uploads import get_writable_selected_uploads
 
 
 config = get_app_config()
+
+
+class GalleryPaginationDefaultParams(PaginationParams):
+    """Default pagination parameters for the home page."""
+
+    # Override default sort_by and sort_order if not specified
+    sort_by: str = "created_at"
+    sort_order: str = "desc"
+    page_size: int = 24
+    writable_count: int | None = None
 
 
 class SelectionDetail(BaseModel):

@@ -7,7 +7,8 @@ from app.lib.config import get_app_config
 
 from app.ui.common.breadcrumbs import Breadcrumbs
 
-from app.ui.gallery import gallery_index_get, GalleryPaginationDefaultParams
+from app.ui.gallery import gallery_index_get
+from app.ui.common.gallery import GalleryPaginationDefaultParams
 
 
 config = get_app_config()

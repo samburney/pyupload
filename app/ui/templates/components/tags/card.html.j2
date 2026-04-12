@@ -1,0 +1,64 @@
+<div id="tag-card-{{ tag.id }}"
+    class="relative group/card rounded-lg p-3 mb-4 border border-gray-100 shadow-sm shadow-gray-300
+            h-min break-inside-avoid-column flex-col justify-center transition-all
+            duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101">
+    <a class="block border border-dashed text-gray-600 hover:text-gray-400 border-gray-600 hover:border-gray-400 rounded-md object-cover w-16 h-16 mx-auto"
+        aria-label="{{ tag.name }}"
+        href="#">
+        <div class="flex items-end justify-end h-full w-full p-2">
+            {{ tag.name }}
+        </div>
+    </a>
+    <div class="mt-2">
+        <dl>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mt-2">
+                <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
+                    <svg class="size-4 text-gray-700" viewBox="0 0 24 24">
+                        <use href="#icon-user-public"></use>
+                    </svg>
+                    <p class="font-medium">&mdash;</p>{# upload count #}
+                </dd>
+                <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
+                    <svg class="size-4 text-gray-500" viewBox="0 0 32 32">
+                        <use href="#icon-file-type"></use>
+                    </svg>
+                    <div class="mt-1.5 sm:mt-0">
+                        <p class="font-medium">&mdash;</p>{# type breakdown #}
+                    </div>
+                </dd>
+                <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
+                    <svg class="size-4 text-gray-500" viewBox="0 0 24 24">
+                        <use href="#icon-file-size"></use>
+                    </svg>
+                    <div class="mt-1.5 sm:mt-0">
+                        <p class="font-medium">&mdash;</p>{# total size #}
+                    </div>
+                </dd>
+                <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
+                    <svg class="size-4 text-gray-500" viewBox="0 0 122.88 68.18">
+                        <use href="#icon-view-count"></use>
+                    </svg>
+                    <div class="mt-1.5 sm:mt-0">
+                        <p class="font-medium">&mdash;</p>{# total views #}
+                    </div>
+                </dd>
+                <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
+                    <svg class="size-4 text-gray-500" viewBox="0 0 122.88 122.88">
+                        <use href="#icon-calendar"></use>
+                    </svg>
+                    <div class="mt-1.5 sm:mt-0">
+                        <p class="font-medium">{{ tag.created_at | ago }}</p>
+                    </div>
+                </dd>
+            </div>
+            <div class="mt-2">
+                <dd class="text-md overflow-hidden overflow-ellipsis whitespace-nowrap"
+                    title="{{ tag.name }}">
+                        <a href="#" class="text-gray-900 hover:underline">
+                            {{ tag.name }}
+                        </a>
+                </dd>
+            </div>
+        </dl>
+    </div>
+</div>

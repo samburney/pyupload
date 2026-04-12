@@ -6,11 +6,10 @@ from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
 
-from app.models.common.pagination import PaginationParams
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
 
-from app.lib.auth import get_current_user_from_request, get_current_authenticated_user
+from app.lib.auth import get_current_user_from_request
 from app.lib.config import get_app_config
 
 from app.ui.common.breadcrumbs import Breadcrumbs
@@ -19,7 +18,8 @@ from app.ui.common.etag import (
     get_cache_headers,
     check_etag_and_return_304_if_match,
 )
-from app.ui.common.gallery import render_multiselect_sidebar
+from app.ui.common.gallery import render_multiselect_sidebar, GalleryPaginationDefaultParams
+from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import default_readable_query_filter
 
@@ -27,16 +27,6 @@ from app.ui.common.uploads import default_readable_query_filter
 config = get_app_config()
 router = APIRouter(prefix='/gallery', tags=['gallery'])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="Browse")
-
-
-class GalleryPaginationDefaultParams(PaginationParams):
-    """Default pagination parameters for the home page."""
-
-    # Override default sort_by and sort_order if not specified
-    sort_by: str = "created_at"
-    sort_order: str = "desc"
-    page_size: int = 24
-    writable_count: int | None = None
 
 
 @router.get("", response_class=Response)
