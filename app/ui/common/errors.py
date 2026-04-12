@@ -15,7 +15,7 @@ async def error_template_response(request: Request, error_messages: list[str], s
 
     return templates.TemplateResponse(
         request=request,
-        name="layout/error.html.j2",
+        name="components/layout/error.html.j2",
         context={
             "current_user": current_user,
             "error_messages": error_messages,

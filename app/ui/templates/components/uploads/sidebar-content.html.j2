@@ -1,4 +1,4 @@
-{%- include "components/core/messages.html.j2" %}
+{%- include "components/common/messages.html.j2" %}
 {% set sidebar_target = "#upload-sidebar" %}
 {% set selected_uploads = [upload] %}
 <div id="upload-sidebar"
@@ -11,5 +11,5 @@
         {% endif %}
     </div>
     {% include "components/uploads/sidebar-details.html.j2" %}
-    {% include "components/core/sidebar-actions.html.j2" %}
+    {% include "components/common/sidebar-actions.html.j2" %}
 </div>

@@ -4,19 +4,19 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ config.app_site_name }}</title>
-        {%- include 'layout/header-includes.html.j2' %}
+        {%- include 'components/layout/header-includes.html.j2' %}
     </head>
     <body id="body" hx-ext="response-targets" class="flex flex-col min-h-screen">
-        {%- include 'components/core/icons-sprite.html.j2' %}
+        {%- include 'components/common/icons-sprite.html.j2' %}
         <section class="sm:mx-2 mb-2">
-        {%- include "layout/navbar.html.j2" %}
+        {%- include "components/layout/navbar.html.j2" %}
         </section>
         <section class="mx-2">
-        {%- include "layout/messages.html.j2" %}
+        {%- include "components/layout/messages.html.j2" %}
         </section>
         <main class="mx-2 mb-2 flex flex-col grow">
             <div class="container mx-auto flex flex-col gap-2">
-            {% include("layout/breadcrumbs.html.j2") %}
+            {% include("components/layout/breadcrumbs.html.j2") %}
                 <div id="content" class="flex flex-col grow">
                 {% block content %}{% endblock %}
                 </div>

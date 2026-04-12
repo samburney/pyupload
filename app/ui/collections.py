@@ -110,7 +110,7 @@ async def upload_add_collection_post(
     # Build response
     response = templates.TemplateResponse(
         request,
-        "components/collections/combo-selector.html.j2",
+        "components/collections/macro_combo-selector.html.j2",
         context={
             "current_user": current_user,
             "selected_collections": selected_collections,

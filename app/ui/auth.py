@@ -101,7 +101,7 @@ async def register_post(request: Request):
 
         response = templates.TemplateResponse(
             request=request,
-            name="components/core/messages.html.j2",
+            name="components/common/messages.html.j2",
             context={"error_messages": error_messages},
             status_code=400,
         )
@@ -114,7 +114,7 @@ async def register_post(request: Request):
         error_message = "Username already exists"
         response = templates.TemplateResponse(
             request=request,
-            name="components/core/messages.html.j2",
+            name="components/common/messages.html.j2",
             context={"error_messages": [error_message]},
             status_code=400,
         )
@@ -127,7 +127,7 @@ async def register_post(request: Request):
         error_message = "Email address already exists"
         response = templates.TemplateResponse(
             request=request,
-            name="components/core/messages.html.j2",
+            name="components/common/messages.html.j2",
             context={"error_messages": [error_message]},
             status_code=400,
         )

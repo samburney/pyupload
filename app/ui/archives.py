@@ -49,13 +49,13 @@ async def request_uploads_archive_post(
         archive_format = ArchiveFormatsEnum(download_format)
     except ValueError:
         flash_message(request, f"An invalid archive format was requested: {download_format}", "error")
-        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=400)
+        return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=400)
 
     # Filter selected uploads to only those readable by the current_user
     upload_models: list[Upload] = await get_readable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
     if not upload_models:
         flash_message(request, "You do not have permission to download any of the selected uploads.", "error")
-        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
+        return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=403)
 
     # Create new DownloadArchive model
     upload_ids = sorted(upload.id for upload in upload_models)
@@ -214,7 +214,7 @@ async def delete_archive_delete(
         flash_message(request, "The requested download archive could not be found.", "error")
         response = templates.TemplateResponse(
             request=request,
-            name="components/core/messages.html.j2",
+            name="components/common/messages.html.j2",
             status_code=404,
         )
         return response
@@ -234,7 +234,7 @@ async def delete_archive_delete(
     if current_url and '/profile' in current_url:
         response = templates.TemplateResponse(
             request=request,
-            name="components/core/messages.html.j2",
+            name="components/common/messages.html.j2",
             status_code=200,
             headers={"HX-Trigger": '{"refresh-profile-download-archives-table": {}}'},
         )
@@ -261,7 +261,7 @@ async def download_archive_get(
         flash_message(request, "The requested download archive could not be found.", "error")
         response = templates.TemplateResponse(
             request=request,
-            name="layout/error.html.j2",
+            name="components/layout/error.html.j2",
             status_code=404,
         )
         return response
@@ -274,7 +274,7 @@ async def download_archive_get(
             flash_message(request, f"Creation of the requested download archive {download_archive_model.status.value}.", "error")
         response = templates.TemplateResponse(
             request=request,
-            name="layout/error.html.j2",
+            name="components/layout/error.html.j2",
             status_code=404,
         )
         return response
@@ -290,7 +290,7 @@ async def download_archive_get(
         flash_message(request, "The requested download archive could not be found.", "error")
         response = templates.TemplateResponse(
             request=request,
-            name="layout/error.html.j2",
+            name="components/layout/error.html.j2",
             status_code=404,
         )
         return response

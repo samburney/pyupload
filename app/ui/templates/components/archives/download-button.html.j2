@@ -1,5 +1,5 @@
 {%- if request.headers.get('hx-request', None) and request.headers.get('hx-target', None) and request.session.get('_flashes', None) %}
-{%- include "components/core/messages.html.j2" %}
+{%- include "components/common/messages.html.j2" %}
 {%- endif %}
 <div id="archive-download-button" class="flex items-center">
     {% if download_archive is defined and download_archive.status != 'failed' %}

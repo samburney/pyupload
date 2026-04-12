@@ -1,7 +1,7 @@
 {%- set ar_decimal = (upload.image.width / upload.image.height) | round(3) %}
 
 <head>
-{% include "layout/header-includes.html.j2" %}
+{% include "components/layout/header-includes.html.j2" %}
 </head>
 
 <div class="modal-image fixed inset-0 z-50 grid place-content-center bg-black/50 sm:p-4" role="dialog" aria-modal="true"
@@ -23,7 +23,7 @@
                 </svg>
             </button>
 
-            {% include "components/core/image-placeholder.html.j2" %}
+            {% include "components/common/image-placeholder.html.j2" %}
 
             <div id="view-modal-image"
                 data-loaded-width="{{ modal_image_width }}"

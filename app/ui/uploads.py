@@ -196,13 +196,13 @@ async def view_upload_page_get(
     if upload_model is None:
         if is_modal:
             return templates.TemplateResponse(
-                request, "components/core/messages.html.j2",
+                request, "components/common/messages.html.j2",
                 status_code=404,
                 context={"error_messages": ["Upload not found"]},
             )
         else:
             return templates.TemplateResponse(
-                request, "layout/error.html.j2",
+                request, "components/layout/error.html.j2",
                 status_code=404,
                 context={"error_messages": ["Upload not found"]},
             )
@@ -274,7 +274,7 @@ async def get_upload_image_src_get(
 
     response = templates.TemplateResponse(
         request,
-        "components/core/image-element.html.j2",
+        "components/common/image-element.html.j2",
         context={
             "upload": upload,
             "width": width,
@@ -308,7 +308,7 @@ async def delete_selected_uploads_post(
     upload_models: list[Upload] = await get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
     if not upload_models:
         flash_message(request, "You do not have permission to delete any of the selected uploads.", "error")
-        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=403)
+        return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=403)
 
     deleted_count = 0
     try:
@@ -318,7 +318,7 @@ async def delete_selected_uploads_post(
     except Exception as e:
         logger.exception("Failed to delete uploads: %s", e)
         flash_message(request, f"Deleted {deleted_count} of {len(upload_models)} upload{'s' if deleted_count != 1 else ''} before an error occurred. Please try again.", "error")
-        return templates.TemplateResponse(request, 'components/core/messages.html.j2', status_code=500)
+        return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=500)
 
     flash_message(request, f"{deleted_count} upload{'s' if deleted_count != 1 else ''} deleted successfully.")
 

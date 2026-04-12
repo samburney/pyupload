@@ -88,7 +88,7 @@ async def upload_add_tag_post(
 
     response = templates.TemplateResponse(
         request,
-        "components/tags/input.html.j2",
+        "components/tags/macro_input.html.j2",
         context={"current_user": current_user, "tags": tags},
         status_code=200,
     )
@@ -130,7 +130,7 @@ async def upload_remove_tag_delete(
 
     response = templates.TemplateResponse(
         request,
-        "components/tags/input.html.j2",
+        "components/tags/macro_input.html.j2",
         context={"current_user": current_user, "tags": tags},
         status_code=200,
     )

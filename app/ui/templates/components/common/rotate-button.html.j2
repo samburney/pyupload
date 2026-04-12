@@ -1,4 +1,4 @@
-{% from "components/core/image-rotate-select.html.j2" import render_image_rotate_select with context %}
+{% from "components/common/macro_image-rotate-select.html.j2" import render_image_rotate_select with context %}
 {% call render_image_rotate_select() %}
 {% for rd in (('Rotate 90° Clockwise', 90), ('Rotate 180°', 180), ('Rotate 90° Counter-clockwise', 270),) %}
 <li role="menuitem">
