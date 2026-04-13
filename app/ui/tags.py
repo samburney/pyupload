@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from tortoise.functions import Count
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response, HTMLResponse
 
@@ -13,7 +14,7 @@ from app.models.users import User
 from app.ui.common.breadcrumbs import Breadcrumbs
 from app.ui.common.etag import get_paginated_gallery_etag, check_etag_and_return_304_if_match, get_cache_headers
 from app.ui.common.errors import error_template_response
-from app.ui.common.gallery import GalleryPaginationDefaultParams
+from app.ui.common.gallery import GalleryPaginationDefaultParams, TagSelectionDetail
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import (
@@ -36,10 +37,8 @@ async def tags_index_get(
 
     current_user = await get_current_user_from_request(request)
 
-    tag_models = Tag.all()
-    tags = await TagSerializer.from_queryset(tag_models)
-
-    
+    tag_models = Tag.all().prefetch_related("uploads").annotate(upload_count=Count("uploads")).filter(upload_count__gt=0)
+    tags = await TagSelectionDetail.from_queryset(tag_models, context={"user": current_user})
 
 #    pagination_query = default_readable_query_filter(current_user)
 #
@@ -59,7 +58,7 @@ async def tags_index_get(
     context = {
         "current_user": current_user,
         "breadcrumbs": breadcrumbs.get_all(),
-        "tags": tags,
+        "stacks": tags,
         "pagination": pagination,
     }
 #

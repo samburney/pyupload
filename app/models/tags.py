@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Annotated, Literal
 
 from tortoise import fields, models
-from tortoise_serializer import ModelSerializer
+from tortoise_serializer import ModelSerializer, ContextType
 
 from app.lib.helpers import make_clean_tag
 
@@ -104,6 +104,17 @@ class _TagSerializerBase(ModelSerializer[Tag]):
     """Base model for Serializer including mandatory fields"""
 
     name: str
+
+
+class _TagSerializerUploadMixin(ModelSerializer[Tag]):
+
+    uploads: "list[UploadSerializer]"
+
+    @classmethod
+    async def resolve_uploads(cls, instance: "Tag", context: ContextType) -> "list[UploadSerializer]":
+        from app.models.uploads import UploadSerializer, UPLOAD_PREFETCH_MODELS
+        queryset = instance.uploads.all().prefetch_related(*UPLOAD_PREFETCH_MODELS)  # type: ignore[no-member]
+        return await UploadSerializer.from_queryset(queryset)
 
 
 class TagSerializer(_TagSerializerBase, SerializerTimestampMixin):

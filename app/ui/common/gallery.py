@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Literal
 
 from pydantic import BaseModel
+from tortoise_serializer import ContextType
 from fastapi import Request
 from fastapi.responses import Response
 
@@ -10,8 +11,8 @@ from app.lib.config import get_app_config
 from app.models.collections import Collection, CollectionSerializerSelected
 from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
 from app.models.common.pagination import PaginationParams
-from app.models.tags import Tag, TagSerializerSelected
-from app.models.uploads import UploadSerializer
+from app.models.tags import Tag, TagSerializer, TagSerializerSelected, _TagSerializerUploadMixin
+from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User, UserSerializer
 
 from app.ui.common.errors import error_template_response
@@ -33,17 +34,98 @@ class GalleryPaginationDefaultParams(PaginationParams):
 
 
 class SelectionDetail(BaseModel):
+    """
+    Detail model for an arbitrary list of Upload models.
+    Mostly follows the API of the Upload model.
+    """
     model_config = {"arbitrary_types_allowed": True}
 
     owners: list[UserSerializer]
     file_types: set[str]
     file_size: int
+    viewed: int
     tags: list[TagSerializerSelected]
     collections: list[CollectionSerializerSelected]
     filtered_collections: list[Collection]
     is_writable: bool
     is_private: bool | Literal['partial']
     is_image: bool
+
+
+async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], user: User | None = None) -> SelectionDetail:
+    """Build a SelectionDetail model from a provided list of Upload objects"""
+
+    # Handle empty list
+    if not len(uploads):
+        raise ValueError("Cannot get selection detail from an empty list.")
+
+    selection_owners = []
+    seen_owners = set()
+    selection_file_types = set()
+    selection_file_size = 0
+    selection_views = 0
+    is_private: bool | Literal['partial'] = bool(uploads[0].private)
+
+    # Get combined upload details
+    for upload in uploads:
+        # Selection owners
+        if upload.user.id not in seen_owners:
+            seen_owners.add(upload.user.id)
+            selection_owners.append(upload.user)
+
+        # Other computed values
+        selection_file_types.add(upload.type)
+        selection_file_size += upload.size
+        selection_views += upload.viewed
+
+        # Handle `is_private` partial logic
+        if is_private != upload.private:
+            is_private = 'partial'
+
+    # If a user has been provided, calculate user-related detail for provided uploads
+    selected_collections = []
+    filtered_collections = []
+    is_writable = False
+    if user:
+        selected_collections = await Collection.get_combined_for_uploads(user=user, uploads=uploads)
+
+        # Get collections with filter applied, excluding those already linked to the upload
+        selected_collection_ids = set(c.id for c in selected_collections)
+        filtered_collections = await Collection.filter(user=user) \
+            .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
+        
+        is_writable = all(o.id == user.id for o in selection_owners)
+
+    selection_detail = SelectionDetail(
+        owners=selection_owners,
+        file_types=selection_file_types,
+        file_size=selection_file_size,
+        viewed=selection_views,
+        tags=Tag.get_combined_for_uploads(uploads),
+        collections=selected_collections,
+        filtered_collections=filtered_collections,
+        is_writable=is_writable,
+        is_private=is_private,
+        is_image=all(u.is_image for u in uploads),
+    )
+
+    return selection_detail
+
+
+class TagSelectionDetail(TagSerializer, _TagSerializerUploadMixin):
+    """A `TagSerializer` with `SelectionDetail` computed"""
+
+    selection_detail: SelectionDetail
+
+    @classmethod
+    async def resolve_selection_detail(cls, instance: Tag, context: ContextType) -> SelectionDetail:
+        """Build a SelectionDetail from the tag's associated uploads."""
+
+        user = context.get("user")
+
+        uploads: list[UploadSerializer] = await cls.resolve_uploads(instance, context)
+
+        return await get_selection_detail(uploads=uploads, user=user)
 
 
 async def render_multiselect_sidebar(
@@ -83,45 +165,7 @@ async def render_multiselect_sidebar(
         download_archive = await DownloadArchiveSerializer.from_tortoise_orm(download_archive_model)
 
     # Get selection details
-    selection_owners = []
-    seen_owners = set()
-    selection_file_types = set()
-    selection_file_size = 0
-    is_private: bool | Literal['partial'] = bool(selected_uploads[0].private)
-
-    for upload in selected_uploads:
-        # Selection owners
-        if upload.user.id not in seen_owners:
-            seen_owners.add(upload.user.id)
-            selection_owners.append(upload.user)
-
-        # Other computed values
-        selection_file_types.add(upload.type)
-        selection_file_size += upload.size
-
-        # Handle `is_private` partial logic
-        if is_private != upload.private:
-            is_private = 'partial'
-
-    # Get selected collections
-    selected_collections = await Collection.get_combined_for_uploads(user=current_user, uploads=selected_uploads)
-
-    # Get collections with filter applied, excluding those already linked to the upload
-    selected_collection_ids = set(c.id for c in selected_collections)
-    filtered_collections = await Collection.filter(user=current_user) \
-        .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
-
-    selection_detail = SelectionDetail(
-        owners=selection_owners,
-        file_types=selection_file_types,
-        file_size=selection_file_size,
-        tags=Tag.get_combined_for_uploads(selected_uploads),
-        collections=selected_collections,
-        filtered_collections=filtered_collections,
-        is_writable=all(o.id == current_user.id for o in selection_owners),
-        is_private=is_private,
-        is_image=all(u.is_image for u in selected_uploads),
-    )
+    selection_detail = await get_selection_detail(selected_uploads, current_user)
 
     # Template context
     context = {
