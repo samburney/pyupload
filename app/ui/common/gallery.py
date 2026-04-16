@@ -11,13 +11,13 @@ from app.lib.config import get_app_config
 from app.models.collections import Collection, CollectionSerializerSelected
 from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
 from app.models.common.pagination import PaginationParams
-from app.models.tags import Tag, TagSerializer, TagSerializerSelected, _TagSerializerUploadMixin
-from app.models.uploads import Upload, UploadSerializer
+from app.models.tags import Tag, TagSerializer, TagSerializerSelected
+from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User, UserSerializer
 
 from app.ui.common.errors import error_template_response
 from app.ui.common.templating import templates
-from app.ui.common.uploads import get_writable_selected_uploads
+from app.ui.common.uploads import default_readable_query_filter, get_writable_selected_uploads
 
 
 config = get_app_config()
@@ -44,12 +44,17 @@ class SelectionDetail(BaseModel):
     file_types: set[str]
     file_size: int
     viewed: int
+    upload_count: int
+    last_updated: datetime | None
     tags: list[TagSerializerSelected]
     collections: list[CollectionSerializerSelected]
     filtered_collections: list[Collection]
     is_writable: bool
     is_private: bool | Literal['partial']
     is_image: bool
+
+    def __len__(self) -> int:
+        return self.upload_count
 
 
 async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], user: User | None = None) -> SelectionDetail:
@@ -59,7 +64,7 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
     if not len(uploads):
         raise ValueError("Cannot get selection detail from an empty list.")
 
-    selection_owners = []
+    selection_owners: list[UserSerializer] = []
     seen_owners = set()
     selection_file_types = set()
     selection_file_size = 0
@@ -68,10 +73,15 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
 
     # Get combined upload details
     for upload in uploads:
+        upload_owner = upload.user
+
         # Selection owners
-        if upload.user.id not in seen_owners:
-            seen_owners.add(upload.user.id)
-            selection_owners.append(upload.user)
+        if upload_owner.id not in seen_owners:
+            seen_owners.add(upload_owner.id)
+            if isinstance(upload_owner, UserSerializer):
+                selection_owners.append(upload_owner)
+            else:
+                selection_owners.append(await UserSerializer.from_tortoise_orm(upload_owner))
 
         # Other computed values
         selection_file_types.add(upload.type)
@@ -101,6 +111,8 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
         file_types=selection_file_types,
         file_size=selection_file_size,
         viewed=selection_views,
+        upload_count=len(uploads),
+        last_updated=max((u.updated_at for u in uploads), default=None),
         tags=Tag.get_combined_for_uploads(uploads),
         collections=selected_collections,
         filtered_collections=filtered_collections,
@@ -112,10 +124,32 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
     return selection_detail
 
 
-class TagSelectionDetail(TagSerializer, _TagSerializerUploadMixin):
+class TagSelectionDetail(TagSerializer):
     """A `TagSerializer` with `SelectionDetail` computed"""
 
     selection_detail: SelectionDetail
+
+    @classmethod
+    async def readable_uploads(cls, instance: Tag, context: ContextType) -> list[Upload]:
+        """Fetch uploads for this tag readable by the current user (public + user's own private)."""
+
+        user = context.get("user")
+        upload_queryset = instance.uploads.filter(default_readable_query_filter(user)).prefetch_related(*UPLOAD_PREFETCH_MODELS)  # type: ignore[no-member]
+        upload_models = await upload_queryset.all()
+
+        return upload_models
+
+    @classmethod
+    async def writable_uploads(cls, instance: Tag, context: ContextType) -> list[Upload]:
+        """Fetch uploads for this tag that are owned by (and thus writable by) the current user."""
+
+        user = context.get("user")
+        if not user:
+            return []
+        upload_queryset = instance.uploads.filter(user=user).prefetch_related(*UPLOAD_PREFETCH_MODELS)  # type: ignore[no-member]
+        upload_models = await upload_queryset.all()
+
+        return upload_models
 
     @classmethod
     async def resolve_selection_detail(cls, instance: Tag, context: ContextType) -> SelectionDetail:
@@ -123,7 +157,7 @@ class TagSelectionDetail(TagSerializer, _TagSerializerUploadMixin):
 
         user = context.get("user")
 
-        uploads: list[UploadSerializer] = await cls.resolve_uploads(instance, context)
+        uploads: list[Upload] = await cls.readable_uploads(instance, context)
 
         return await get_selection_detail(uploads=uploads, user=user)
 

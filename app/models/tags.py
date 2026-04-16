@@ -7,13 +7,14 @@ from tortoise_serializer import ModelSerializer, ContextType
 from app.lib.helpers import make_clean_tag
 
 from app.models.common.base import TimestampMixin, SerializerTimestampMixin
+from app.models.common.pagination import PaginationMixin
 
 
 if TYPE_CHECKING:
     from app.models.uploads import Upload, UploadSerializer  # noqa: F401
 
 
-class Tag(models.Model, TimestampMixin):
+class Tag(models.Model, TimestampMixin, PaginationMixin):
     id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255)
 
@@ -59,7 +60,6 @@ class Tag(models.Model, TimestampMixin):
 
         return True
 
-
     @classmethod
     def get_combined_for_uploads(cls, uploads: list["Upload"] | list["UploadSerializer"]) -> list["TagSerializerSelected"]:
         """Build combined list of tags from a provided list of Uploads"""
@@ -104,17 +104,6 @@ class _TagSerializerBase(ModelSerializer[Tag]):
     """Base model for Serializer including mandatory fields"""
 
     name: str
-
-
-class _TagSerializerUploadMixin(ModelSerializer[Tag]):
-
-    uploads: "list[UploadSerializer]"
-
-    @classmethod
-    async def resolve_uploads(cls, instance: "Tag", context: ContextType) -> "list[UploadSerializer]":
-        from app.models.uploads import UploadSerializer, UPLOAD_PREFETCH_MODELS
-        queryset = instance.uploads.all().prefetch_related(*UPLOAD_PREFETCH_MODELS)  # type: ignore[no-member]
-        return await UploadSerializer.from_queryset(queryset)
 
 
 class TagSerializer(_TagSerializerBase, SerializerTimestampMixin):

@@ -1,6 +1,5 @@
 from typing import Annotated
 
-from tortoise.functions import Count
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response, HTMLResponse
 
@@ -18,7 +17,7 @@ from app.ui.common.gallery import GalleryPaginationDefaultParams, TagSelectionDe
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import (
-    default_readable_query_filter,
+    default_readable_upload_tag_filter,
     get_readable_selected_upload_models,
 )
 
@@ -27,17 +26,30 @@ router = APIRouter(prefix="/tags", tags=["tags"])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="Tags")
 
 
+class TagPaginationDefaultParams(GalleryPaginationDefaultParams):
+    """Default pagination parameters for the home page."""
+
+    # Override default sort_by and sort_order if not specified
+    sort_by: str = "name"
+    sort_order: str = "asc"
+    page_size: int = 12
+
+
 @router.get("", response_class=Response)
 async def tags_index_get(
     request: Request,
-    pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    pagination: Annotated[TagPaginationDefaultParams, Depends()],
     breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
     """Render main gallery view"""
 
     current_user = await get_current_user_from_request(request)
 
-    tag_models = Tag.all().prefetch_related("uploads").annotate(upload_count=Count("uploads")).filter(upload_count__gt=0)
+    readable_tag_filter = default_readable_upload_tag_filter(current_user)
+    tag_ids = await Tag.filter(readable_tag_filter).distinct().values_list('id', flat=True)
+    pagination.count = len(tag_ids)
+
+    tag_models = Tag.paginate(**pagination.page_data(), query=readable_tag_filter).distinct()
     tags = await TagSelectionDetail.from_queryset(tag_models, context={"user": current_user})
 
 #    pagination_query = default_readable_query_filter(current_user)
@@ -74,6 +86,7 @@ async def tags_index_get(
 #    if not_modified:
 #        return not_modified
 #
+
     # Build response with cache headers
     response = templates.TemplateResponse(request, "tags/index.html.j2", context=context)
 #    response.headers.update(get_cache_headers(etag=etag))

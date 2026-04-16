@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 from fastapi import HTTPException
 
@@ -40,15 +40,26 @@ async def get_upload_or_404_for_update(id: int, user: User | None = None) -> Upl
     return upload
 
 
-def default_readable_query_filter(current_user: Optional[User] = None) -> Q:
-    # If user is logged, include their private uploads
-    # TODO: Make this a user configurable option
-    if current_user:
-        query_filter = Q(private=False) | Q(user=current_user)
-    else:
-        query_filter = Q(private=False)
+# If user is logged, include their private uploads
+# TODO: Make this a user configurable option
+def _build_default_readable_filter(current_user: Optional[User] = None, relation_prefix: str = "") -> Q:
+    private_field = f"{relation_prefix}private"
+    public_filter = Q(**cast(Any, {private_field: False}))
 
-    return query_filter
+    if current_user:
+        user_field = f"{relation_prefix}user"
+        return public_filter | Q(**cast(Any, {user_field: current_user}))
+
+    return public_filter
+
+
+def default_readable_query_filter(current_user: Optional[User] = None) -> Q:
+    return _build_default_readable_filter(current_user=current_user)
+
+
+def default_readable_upload_tag_filter(current_user: Optional[User] = None) -> Q:
+    """Filter tags to those with at least one readable upload."""
+    return _build_default_readable_filter(current_user=current_user, relation_prefix="uploads__")
 
 
 def build_readable_upload_queryset(current_user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> QuerySet[Upload]:
