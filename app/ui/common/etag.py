@@ -6,12 +6,13 @@ from fastapi.responses import Response
 
 from app.models.uploads import UploadSerializer
 from app.models.common.pagination import PaginationParams
+from app.ui.common.gallery import SelectionDetail
 
 
 def get_paginated_gallery_etag(
     *,
     request: Request,
-    uploads: list[UploadSerializer],
+    uploads: list[UploadSerializer] | list[SelectionDetail],
     pagination: PaginationParams,
     user_id: int | None,
     etag_prefix: str = "gallery"
@@ -23,6 +24,7 @@ def get_paginated_gallery_etag(
     - Pagination parameters change
     - Upload data changes (id or updated_at)
     """
+
     signature_parts = [
         str(user_id or 0),
         str(pagination.page),
@@ -33,9 +35,12 @@ def get_paginated_gallery_etag(
     # Include this page's upload updated_at timestamps
     for upload in uploads:
         updated_at = upload.updated_at.isoformat() if upload.updated_at else ""
-        if upload.image is not None:
-            updated_at = max(upload.updated_at.isoformat(), upload.image.updated_at.isoformat())
-        signature_parts.append(f"{upload.id}:{updated_at}")
+        if isinstance(upload, UploadSerializer):
+            if upload.image is not None:
+                updated_at = max(updated_at, upload.image.updated_at.isoformat())
+            signature_parts.append(f"{upload.id}:{updated_at}")
+        else:
+            signature_parts.append(updated_at)
 
     # Include messages in request header
     flashes = request.session.get("_flashes", [])

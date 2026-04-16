@@ -45,7 +45,7 @@ class SelectionDetail(BaseModel):
     file_size: int
     viewed: int
     upload_count: int
-    last_updated: datetime | None
+    updated_at: datetime | None
     tags: list[TagSerializerSelected]
     collections: list[CollectionSerializerSelected]
     filtered_collections: list[Collection]
@@ -112,7 +112,7 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
         file_size=selection_file_size,
         viewed=selection_views,
         upload_count=len(uploads),
-        last_updated=max((u.updated_at for u in uploads), default=None),
+        updated_at=max((u.updated_at for u in uploads), default=None),
         tags=Tag.get_combined_for_uploads(uploads),
         collections=selected_collections,
         filtered_collections=filtered_collections,

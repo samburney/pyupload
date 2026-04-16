@@ -6,8 +6,7 @@ from fastapi.responses import Response, HTMLResponse
 from app.lib.auth import get_current_user_from_request
 from app.lib.helpers import make_clean_tag
 
-from app.models.tags import Tag, TagSerializer
-from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
+from app.models.tags import Tag
 from app.models.users import User
 
 from app.ui.common.breadcrumbs import Breadcrumbs
@@ -52,20 +51,6 @@ async def tags_index_get(
     tag_models = Tag.paginate(**pagination.page_data(), query=readable_tag_filter).distinct()
     tags = await TagSelectionDetail.from_queryset(tag_models, context={"user": current_user})
 
-#    pagination_query = default_readable_query_filter(current_user)
-#
-#    # Update item pagination parameter
-#    pagination.count = await Upload.filter(pagination_query).count()
-#
-#    # Get count of uploads owned by the current user, if any
-#    if current_user:
-#        pagination.writable_count = await Upload.filter(pagination_query).filter(user_id=current_user.id).count()
-#
-#    # Get uploads
-#    uploads_models = Upload.paginate(**pagination.page_data(), query=pagination_query) \
-#        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
-#    uploads = await UploadSerializer.from_queryset(uploads_models)
-#
     # Template context
     context = {
         "current_user": current_user,
@@ -73,23 +58,24 @@ async def tags_index_get(
         "stacks": tags,
         "pagination": pagination,
     }
-#
-#    etag = get_paginated_gallery_etag(
-#        request=request,
-#        uploads=uploads,
-#        pagination=pagination,
-#        user_id=current_user.id if current_user else None,
-#    )
-#
-#    # Check if client already has current version
-#    not_modified = check_etag_and_return_304_if_match(request, etag)
-#    if not_modified:
-#        return not_modified
-#
+
+    # Provide list of `selection_detail` as uploads to build a gallery etag
+    uploads = [t.selection_detail for t in tags]
+    etag = get_paginated_gallery_etag(
+        request=request,
+        uploads=uploads,
+        pagination=pagination,
+        user_id=current_user.id if current_user else None,
+    )
+
+    # Check if client already has current version
+    not_modified = check_etag_and_return_304_if_match(request, etag)
+    if not_modified:
+        return not_modified
 
     # Build response with cache headers
     response = templates.TemplateResponse(request, "tags/index.html.j2", context=context)
-#    response.headers.update(get_cache_headers(etag=etag))
+    response.headers.update(get_cache_headers(etag=etag))
 
     return response
 

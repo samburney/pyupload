@@ -102,13 +102,19 @@ class TestGetPaginatedGalleryEtag:
         assert get_paginated_gallery_etag(**kwargs) == get_paginated_gallery_etag(**kwargs)
 
     def test_etag_changes_with_upload_content(self, mock_request):
-        """ETag differs when the upload list changes."""
+        """ETag differs when the SelectionDetail-like upload list changes.
+
+        The Mock object is not an UploadSerializer instance, so it takes the
+        SelectionDetail branch in get_paginated_gallery_etag — only updated_at
+        contributes to the signature. The test verifies that a non-empty list
+        produces a different ETag than an empty list.
+        """
+        from datetime import datetime, timezone
+
         pagination = PaginationParams(page=1, page_size=24, count=2)
 
         upload = Mock()
-        upload.id = 1
-        upload.updated_at = None
-        upload.image = None
+        upload.updated_at = datetime(2025, 3, 1, tzinfo=timezone.utc)
 
         etag_with = get_paginated_gallery_etag(request=mock_request, uploads=[upload], pagination=pagination, user_id=None)
         etag_without = get_paginated_gallery_etag(request=mock_request, uploads=[], pagination=pagination, user_id=None)
@@ -125,6 +131,37 @@ class TestGetPaginatedGalleryEtag:
         etag_with_flashes = get_paginated_gallery_etag(request=mock_request, uploads=[], pagination=pagination, user_id=None)
 
         assert etag_no_flashes != etag_with_flashes
+
+    async def test_etag_changes_with_uploadserializer_id(self, db):
+        """ETag differs for two UploadSerializer items with different IDs (UploadSerializer branch).
+
+        UploadSerializer items include upload.id in the signature, so two uploads
+        with different IDs produce different ETags even when timestamps are equal.
+        """
+        from app.models.users import User
+        from app.models.uploads import Upload, UploadSerializer
+
+        user = await User.create(username="etaguser1", email="etag1@example.com", password="pw")
+        upload_a = await Upload.create(
+            user=user, name="etag_a", cleanname="etag_a", originalname="etag_a.txt",
+            ext="txt", size=10, type="text/plain", extra="0", description="",
+        )
+        upload_b = await Upload.create(
+            user=user, name="etag_b", cleanname="etag_b", originalname="etag_b.txt",
+            ext="txt", size=10, type="text/plain", extra="0", description="",
+        )
+
+        ser_a = (await UploadSerializer.from_queryset(Upload.filter(id=upload_a.id).prefetch_related("user", "images", "tags")))[0]
+        ser_b = (await UploadSerializer.from_queryset(Upload.filter(id=upload_b.id).prefetch_related("user", "images", "tags")))[0]
+
+        mock_req = Mock(spec=Request)
+        mock_req.session = {}
+        pagination = PaginationParams(page=1, page_size=24, count=1)
+
+        etag_a = get_paginated_gallery_etag(request=mock_req, uploads=[ser_a], pagination=pagination, user_id=None)
+        etag_b = get_paginated_gallery_etag(request=mock_req, uploads=[ser_b], pagination=pagination, user_id=None)
+
+        assert etag_a != etag_b
 
 
 class TestGetCacheHeaders:
