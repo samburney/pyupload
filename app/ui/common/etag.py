@@ -40,7 +40,7 @@ def get_paginated_gallery_etag(
                 updated_at = max(updated_at, upload.image.updated_at.isoformat())
             signature_parts.append(f"{upload.id}:{updated_at}")
         else:
-            signature_parts.append(updated_at)
+            signature_parts.append(f"{upload.upload_count}:{upload.file_size}:{updated_at}")
 
     # Include messages in request header
     flashes = request.session.get("_flashes", [])

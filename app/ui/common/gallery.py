@@ -56,6 +56,23 @@ class SelectionDetail(BaseModel):
     def __len__(self) -> int:
         return self.upload_count
 
+    @classmethod
+    def empty(cls) -> "SelectionDetail":
+        return cls(
+            owners=[],
+            file_types=set(),
+            file_size=0,
+            viewed=0,
+            upload_count=0,
+            updated_at=None,
+            tags=[],
+            collections=[],
+            filtered_collections=[],
+            is_writable=False,
+            is_private=False,
+            is_image=False,
+        )
+
 
 async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], user: User | None = None) -> SelectionDetail:
     """Build a SelectionDetail model from a provided list of Upload objects"""
@@ -101,9 +118,13 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
 
         # Get collections with filter applied, excluding those already linked to the upload
         selected_collection_ids = set(c.id for c in selected_collections)
-        filtered_collections = await Collection.filter(user=user) \
-            .exclude(id__in=selected_collection_ids).limit(5).order_by("name")
-        
+        filtered_collections = await (
+            Collection.filter(user=user)
+            .exclude(id__in=selected_collection_ids)
+            .limit(5)
+            .order_by("name")
+        )
+
         is_writable = all(o.id == user.id for o in selection_owners)
 
     selection_detail = SelectionDetail(
@@ -133,7 +154,7 @@ class TagSelectionDetail(TagSerializer):
     
     # Resolve standard `Upload` models here to reduce model bloat
     readable_upload_models: list[Upload]
-    writable_upload_models: list[Upload]
+    writable_upload_models: list[Upload] | None = None
 
     # Allow lazy fetching of full `UploadSerializer` models
     readable_uploads: list[UploadSerializer] | None = None
@@ -144,8 +165,10 @@ class TagSelectionDetail(TagSerializer):
         """Build a SelectionDetail from the tag's associated uploads."""
 
         user = context.get("user")
-
         uploads: list[Upload] = await cls.resolve_readable_upload_models(instance, context)
+
+        if not uploads:
+            return SelectionDetail.empty()
 
         return await get_selection_detail(uploads=uploads, user=user)
 
@@ -159,17 +182,14 @@ class TagSelectionDetail(TagSerializer):
 
         return upload_models
 
-    @classmethod
-    async def resolve_writable_upload_models(cls, instance: Tag, context: ContextType) -> list[Upload]:
-        """Fetch uploads for this tag that are owned by (and thus writable by) the current user."""
+    async def fetch_writable_upload_models(self, user: User) -> list[Upload]:
+        """Fetch and cache Upload models for this tag owned by the given user."""
 
-        user = context.get("user")
-        if not user:
-            return []
-        upload_queryset = instance.uploads.filter(user=user).prefetch_related(*UPLOAD_PREFETCH_MODELS)  # type: ignore[no-member]
-        upload_models = await upload_queryset.all()
+        if self.writable_upload_models is None:
+            qs = Upload.filter(user=user, tags__id=self.id).prefetch_related(*UPLOAD_PREFETCH_MODELS)
+            self.writable_upload_models = await qs.all()
 
-        return upload_models
+        return self.writable_upload_models
 
     async def fetch_readable_uploads(self, user: User | None, pagination: PaginationParams | None = None) -> list[UploadSerializer]:
         """Lazy fetch `UploadSerializer` for this tag readable by the current user (public + user's own private)."""
@@ -187,8 +207,10 @@ class TagSelectionDetail(TagSerializer):
         """Lazy fetch `UploadSerializer` for this tag owned by (and thus writable by) the current user."""
 
         if self.writable_uploads is None:
-            self.writable_uploads = [await UploadSerializer.from_tortoise_orm(u) for u in self.writable_upload_models]
-        
+            self.writable_uploads = []
+            if self.writable_upload_models:
+                self.writable_uploads = [await UploadSerializer.from_tortoise_orm(u) for u in self.writable_upload_models]
+
         return self.writable_uploads
 
 

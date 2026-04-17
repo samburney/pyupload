@@ -50,6 +50,20 @@ Polish the user interface with improved navigation, responsive design refinement
 - Template uses filled SVG polygon cap after home icon, stroked SVG chevron for inner separators; current page shown bold and not linked
 - Tests added in `tests/test_ui_common_breadcrumbs.py`
 
+### Review Snapshot (2026-04-17)
+- Tags gallery index (`GET /tags`) and individual tag upload view (`GET /tags/view/{name}`) implemented in `app/ui/tags.py`
+- `TagSelectionDetail` serializer added to `app/ui/common/gallery.py` — extends `TagSerializer` with `SelectionDetail`, lazy-fetched `UploadSerializer` lists, and readable/writable upload model resolution
+- `get_selection_detail()` extracted from `render_multiselect_sidebar` as a standalone reusable async function; sidebar now delegates to it
+- `default_readable_upload_tag_filter()` added to `app/ui/common/uploads.py` via a shared `_build_default_readable_filter` helper that accepts a `relation_prefix`
+- `GalleryPaginationDefaultParams` moved from `app/ui/gallery.py` to `app/ui/common/gallery.py` for broader reuse
+- `Tag.view_url` property added; `Tag` now mixes in `PaginationMixin`; `TagSerializer` exposes `view_url`
+- New templates: `components/common/stack-card.html.j2`, `components/common/stack-grid.html.j2`, `tags/index.html.j2`
+- New SVG sprite icons: `cards-stack`, `event`, `storage`, `unknown-document`
+- ETag system extended to handle `SelectionDetail` objects alongside `UploadSerializer`
+- `/tags` navbar link is now a valid route — remove from "unimplemented routes" lists in Steps 1 and 2
+- All 1072 tests pass; new test class `TestTagsIndexEndpoint` covers visibility rules, pagination, ETag/304 behavior
+- Planning doc for next tags feature (upload pile preview) added at `docs/planning/implement-upload-pile-preview.md`
+
 ### Review Snapshot (2026-03-09)
 - Implemented `/random` gallery discovery page with random uploads display
 - Added breadcrumbs template and layout integration (`layout/breadcrumbs.html.j2`, updated `base.html.j2`)
@@ -84,7 +98,7 @@ Polish the user interface with improved navigation, responsive design refinement
 3. [ ] Implement outside-click-to-close (click backdrop closes menu)
 4. [ ] Ensure menu closes on link click
 5. [ ] Improve open/close animations
-6. [ ] Remove/fix links to unimplemented pages (/uploads, /search, /tags, /collections)
+6. [ ] Remove/fix links to unimplemented pages (/uploads, /search, /collections) — `/tags` is now implemented
 7. [ ] Ensure keyboard navigation works (Escape to close)
 8. [ ] Add ARIA labels for accessibility
 
@@ -110,7 +124,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - Backdrop: `<div x-show="mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black bg-opacity-50 z-40"></div>`
 - Menu z-index: 50 (above backdrop's 40)
 - Close on Escape: `@keydown.escape.window="mobileMenuOpen = false"`
-- Remove or remap unimplemented route links (`/uploads`, `/search`, `/tags`, `/collections`) until routes are implemented
+- Remove or remap unimplemented route links (`/uploads`, `/search`, `/collections`) until routes are implemented — `/tags` is now a valid route
 - Mobile menu should show same conditional logic as desktop (see Step 2)
 - Ensure smooth slide-in transition from top or side
 
@@ -129,7 +143,7 @@ Polish the user interface with improved navigation, responsive design refinement
 4. [ ] **Registered users** (current_user.is_registered): Show Profile, My Uploads, My Collections, Logout in dropdown
 5. [ ] Remove Login/Register from dropdown for registered users
 6. [ ] Update desktop user dropdown logic
-7. [ ] Remove or remap unimplemented links from navbar (`/uploads`, `/search`, `/tags`, `/collections`)
+7. [ ] Remove or remap unimplemented links from navbar (`/uploads`, `/search`, `/collections`) — `/tags` is now implemented
 8. [ ] Style dropdown menu consistently
 
 **Tests**:
@@ -159,7 +173,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - Remove "Not Logged In ▾" text (confusing for auto-accounts)
 - Dropdown position: `absolute right-0 top-full`
 - Use Alpine.js `x-data` for toggle state
-- Remove or remap unimplemented links from desktop and mobile menus (`/uploads`, `/search`, `/tags`, `/collections`)
+- Remove or remap unimplemented links from desktop and mobile menus (`/uploads`, `/search`, `/collections`) — `/tags` is now a valid route
 
 ---
 

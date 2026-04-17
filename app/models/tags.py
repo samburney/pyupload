@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Annotated, Literal
 
 from tortoise import fields, models
-from tortoise_serializer import ModelSerializer, ContextType
+from tortoise_serializer import ModelSerializer
 
 from app.lib.config import get_app_config
 from app.lib.helpers import make_clean_tag

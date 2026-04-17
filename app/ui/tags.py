@@ -102,7 +102,8 @@ async def tags_view_get(
     # Update pagination count totals
     pagination.count = len(tag.readable_upload_models)
     if current_user:
-        pagination.writable_count = len(tag.writable_upload_models)
+        await tag.fetch_writable_upload_models(current_user)
+        pagination.writable_count = len(tag.writable_upload_models) if tag.writable_upload_models else 0
 
     # Get uploads for this page
     await tag.fetch_readable_uploads(user=current_user, pagination=pagination)
