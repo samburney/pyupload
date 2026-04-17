@@ -4,7 +4,7 @@
             duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101">
     <a class="block border border-dashed text-gray-600 hover:text-gray-400 border-gray-600 hover:border-gray-400 rounded-md object-cover w-16 h-16 mx-auto"
         aria-label="{{ stack.name }}"
-        href="#">
+        href="{{ stack.view_url }}">
         <div class="flex items-end justify-end h-full w-full p-2">
             {{ stack.name }}
         </div>
@@ -53,7 +53,7 @@
             <div class="mt-2">
                 <dd class="text-md overflow-hidden overflow-ellipsis whitespace-nowrap"
                     title="{{ stack.name }}">
-                    <a href="#" class="text-gray-900 hover:underline">
+                    <a href="{{ stack.view_url }}" class="text-gray-900 hover:underline">
                         {{ stack.name }}
                     </a>
                 </dd>

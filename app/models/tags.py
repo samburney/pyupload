@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 from tortoise import fields, models
 from tortoise_serializer import ModelSerializer, ContextType
 
+from app.lib.config import get_app_config
 from app.lib.helpers import make_clean_tag
 
 from app.models.common.base import TimestampMixin, SerializerTimestampMixin
@@ -14,12 +15,20 @@ if TYPE_CHECKING:
     from app.models.uploads import Upload, UploadSerializer  # noqa: F401
 
 
+config = get_app_config()
+
+
 class Tag(models.Model, TimestampMixin, PaginationMixin):
     id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255)
 
     class Meta:  # type: ignore[override]
         table = "tags"
+
+    @property
+    def view_url(self) -> str:
+        url = f'{config.app_base_url}/tags/view/{self.name}'
+        return url
 
     @classmethod
     async def add_or_create_for_upload(cls, upload: "Upload", tag_name: str) -> "Tag":
@@ -110,6 +119,7 @@ class TagSerializer(_TagSerializerBase, SerializerTimestampMixin):
     """Serializer for the Tag model."""
 
     id: int
+    view_url: str
 
 
 class TagSerializerSelected(_TagSerializerBase):

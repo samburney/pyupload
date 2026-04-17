@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from tortoise_serializer import ContextType
 from fastapi import Request
 from fastapi.responses import Response
@@ -127,10 +127,30 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
 class TagSelectionDetail(TagSerializer):
     """A `TagSerializer` with `SelectionDetail` computed"""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     selection_detail: SelectionDetail
+    
+    # Resolve standard `Upload` models here to reduce model bloat
+    readable_upload_models: list[Upload]
+    writable_upload_models: list[Upload]
+
+    # Allow lazy fetching of full `UploadSerializer` models
+    readable_uploads: list[UploadSerializer] | None = None
+    writable_uploads: list[UploadSerializer] | None = None
+    
+    @classmethod
+    async def resolve_selection_detail(cls, instance: Tag, context: ContextType) -> SelectionDetail:
+        """Build a SelectionDetail from the tag's associated uploads."""
+
+        user = context.get("user")
+
+        uploads: list[Upload] = await cls.resolve_readable_upload_models(instance, context)
+
+        return await get_selection_detail(uploads=uploads, user=user)
 
     @classmethod
-    async def readable_uploads(cls, instance: Tag, context: ContextType) -> list[Upload]:
+    async def resolve_readable_upload_models(cls, instance: Tag, context: ContextType) -> list[Upload]:
         """Fetch uploads for this tag readable by the current user (public + user's own private)."""
 
         user = context.get("user")
@@ -140,7 +160,7 @@ class TagSelectionDetail(TagSerializer):
         return upload_models
 
     @classmethod
-    async def writable_uploads(cls, instance: Tag, context: ContextType) -> list[Upload]:
+    async def resolve_writable_upload_models(cls, instance: Tag, context: ContextType) -> list[Upload]:
         """Fetch uploads for this tag that are owned by (and thus writable by) the current user."""
 
         user = context.get("user")
@@ -151,15 +171,25 @@ class TagSelectionDetail(TagSerializer):
 
         return upload_models
 
-    @classmethod
-    async def resolve_selection_detail(cls, instance: Tag, context: ContextType) -> SelectionDetail:
-        """Build a SelectionDetail from the tag's associated uploads."""
+    async def fetch_readable_uploads(self, user: User | None, pagination: PaginationParams | None = None) -> list[UploadSerializer]:
+        """Lazy fetch `UploadSerializer` for this tag readable by the current user (public + user's own private)."""
 
-        user = context.get("user")
+        if self.readable_uploads is None:
+            readable_filter = default_readable_query_filter(user)
+            if pagination:
+                qs = Upload.paginate(**pagination.page_data(), query=readable_filter).filter(tags__id=self.id)
+            else:
+                qs = Upload.filter(readable_filter, tags__id=self.id)
+            self.readable_uploads = await UploadSerializer.from_queryset(qs.prefetch_related(*UPLOAD_PREFETCH_MODELS))
+        return self.readable_uploads
 
-        uploads: list[Upload] = await cls.readable_uploads(instance, context)
+    async def fetch_writable_uploads(self) -> list[UploadSerializer]:
+        """Lazy fetch `UploadSerializer` for this tag owned by (and thus writable by) the current user."""
 
-        return await get_selection_detail(uploads=uploads, user=user)
+        if self.writable_uploads is None:
+            self.writable_uploads = [await UploadSerializer.from_tortoise_orm(u) for u in self.writable_upload_models]
+        
+        return self.writable_uploads
 
 
 async def render_multiselect_sidebar(

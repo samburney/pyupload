@@ -40,7 +40,7 @@ async def tags_index_get(
     pagination: Annotated[TagPaginationDefaultParams, Depends()],
     breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
-    """Render main gallery view"""
+    """Render tags gallery view"""
 
     current_user = await get_current_user_from_request(request)
 
@@ -75,6 +75,67 @@ async def tags_index_get(
 
     # Build response with cache headers
     response = templates.TemplateResponse(request, "tags/index.html.j2", context=context)
+    response.headers.update(get_cache_headers(etag=etag))
+
+    return response
+
+
+@router.get("/view/{name}", response_class=HTMLResponse)
+async def tags_view_get(
+    request: Request,
+    name: str, 
+    pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+) -> Response:
+    """Render individual tag uploads gallery view"""
+
+    current_user = await get_current_user_from_request(request)
+
+    tag_model = Tag.get(name=name)
+    tag = await TagSelectionDetail.from_single_queryset_or_none(tag_model, context={"user": current_user})
+
+    if not tag:
+        return await error_template_response(
+            request, [f"Tag could not be found: {name}"], 404, "Tag not found."
+        )
+
+    # Update pagination count totals
+    pagination.count = len(tag.readable_upload_models)
+    if current_user:
+        pagination.writable_count = len(tag.writable_upload_models)
+
+    # Get uploads for this page
+    await tag.fetch_readable_uploads(user=current_user, pagination=pagination)
+    uploads = tag.readable_uploads
+    if not uploads:
+        return await error_template_response(
+            request, [f"No uploads found for tag: {name}"], 404, "Tag uploads not found."
+        )
+
+    breadcrumbs.push(title=tag.name, url=request.url_for("tags_view_get", name=tag.name))
+
+    # Template context
+    context = {
+        "current_user": current_user,
+        "breadcrumbs": breadcrumbs.get_all(),
+        "uploads": uploads,
+        "pagination": pagination,
+    }
+
+    etag = get_paginated_gallery_etag(
+        request=request,
+        uploads=uploads,
+        pagination=pagination,
+        user_id=current_user.id if current_user else None,
+    )
+
+    # Check if client already has current version
+    not_modified = check_etag_and_return_304_if_match(request, etag)
+    if not_modified:
+        return not_modified
+
+    # Build response with cache headers
+    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
     response.headers.update(get_cache_headers(etag=etag))
 
     return response
