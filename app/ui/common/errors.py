@@ -26,6 +26,24 @@ async def error_template_response(request: Request, error_messages: list[str], s
     )
 
 
+async def info_template_response(request: Request, info_messages: list[str], status_code: int = 200, title: str | None = None):
+    """Render an informational response (green banner) with given messages and status code."""
+
+    current_user = await get_current_user_from_request(request)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="components/layout/error.html.j2",
+        context={
+            "current_user": current_user,
+            "info_messages": info_messages,
+            "empty_content_title": title,
+            "empty_content_message": info_messages[0] if info_messages else "",
+        },
+        status_code=status_code,
+    )
+
+
 async def error_response_for_get(
     *,
     filename: str | None = None,

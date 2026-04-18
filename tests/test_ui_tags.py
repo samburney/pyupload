@@ -1,10 +1,11 @@
 """Tests for app/ui/tags.py - Tag management UI endpoints.
 
 This module tests the FastAPI/Starlette tag endpoints:
-- GET  /tags             - Tags gallery index page
-- POST /tags/suggestions - Get tag suggestions filtered by query string
-- POST /tags/update    - Add a tag to one or more selected uploads
-- POST /tags/delete    - Remove a tag from one or more selected uploads
+- GET  /tags                             - Tags gallery index page
+- POST /tags/suggestions                 - Get tag suggestions filtered by query string
+- POST /tags/update                      - Add a tag to one or more selected uploads
+- POST /tags/delete                      - Remove a tag from one or more selected uploads
+- POST /tags/view/{name}/update-selected - Multiselect sidebar for a tag gallery view
 
 Tests verify:
 - GET /tags returns 200 and filters tags by readable-upload visibility
@@ -19,9 +20,18 @@ Tests verify:
 """
 
 
+from app.models.tags import Tag
 from app.models.users import User
 from app.models.uploads import Upload
 from app.lib.auth import create_access_token
+
+
+def _auth(user) -> dict:
+    return {"access_token": create_access_token({"sub": user.username})}
+
+
+def _htmx() -> dict:
+    return {"hx-request": "true"}
 
 
 # ---------------------------------------------------------------------------
@@ -400,3 +410,103 @@ class TestTagDeleteEndpoint:
 
         response = await client.post("/tags/delete", data={"tag_name": "!@#$", "selected_ids": [upload.id]})
         assert response.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# POST /tags/view/{name}/update-selected
+# ---------------------------------------------------------------------------
+
+class TestTagViewHandleSelectedUploadPost:
+    """Tests for POST /tags/view/{name}/update-selected.
+
+    Access levels verified:
+    - Non-HTMX request → 400
+    - Unauthenticated → redirect to login
+    - Nonexistent tag → 404
+    - Owner with tagged uploads → 200 sidebar
+    - Super-select scoping: only selects uploads belonging to this tag,
+      not all uploads owned by the user
+    """
+
+    async def _make_tagged_upload(self, user, tag, suffix="", private=0) -> Upload:
+        upload = await Upload.create(**_tag_upload_data(user, suffix, private))
+        await upload.tags.add(tag)
+        return upload
+
+    async def test_returns_400_without_htmx_header(self, client):
+        """Non-HTMX requests are rejected with 400."""
+        user = await User.create(username="tvus400", email="tvus400@example.com", password="pw", is_registered=True)
+        tag = await Tag.create(name="tvus-tag-400")
+        await self._make_tagged_upload(user, tag, "tvus400a")
+        client.cookies = _auth(user)
+        response = await client.post(f"/tags/view/{tag.name}/update-selected", data={"selected_ids": []})
+        assert response.status_code == 400
+
+    async def test_redirects_to_login_when_unauthenticated(self, client):
+        """Unauthenticated requests redirect to /login."""
+        tag = await Tag.create(name="tvus-tag-unauth")
+        response = await client.post(
+            f"/tags/view/{tag.name}/update-selected",
+            data={"selected_ids": []},
+            headers=_htmx(),
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        assert "/login" in response.headers.get("location", "")
+
+    async def test_returns_404_for_nonexistent_tag(self, client):
+        """A tag name that does not exist returns 404."""
+        user = await User.create(username="tvus404", email="tvus404@example.com", password="pw", is_registered=True)
+        client.cookies = _auth(user)
+        response = await client.post(
+            "/tags/view/no-such-tag/update-selected",
+            data={"selected_ids": [999]},
+            headers=_htmx(),
+        )
+        assert response.status_code == 404
+
+    async def test_owner_with_tagged_upload_receives_sidebar(self, client):
+        """Owner selecting their tagged upload gets a 200 sidebar response."""
+        user = await User.create(username="tvus200", email="tvus200@example.com", password="pw", is_registered=True)
+        tag = await Tag.create(name="tvus-tag-200")
+        upload = await self._make_tagged_upload(user, tag, "tvus200a")
+        client.cookies = _auth(user)
+        response = await client.post(
+            f"/tags/view/{tag.name}/update-selected",
+            data={"selected_ids": [upload.id]},
+            headers=_htmx(),
+        )
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+    async def test_super_select_scoped_to_tag_excludes_untagged_uploads(self, client):
+        """Super-select only includes uploads belonging to the tag, not all user uploads."""
+        user = await User.create(username="tvsscope", email="tvsscope@example.com", password="pw", is_registered=True)
+        tag = await Tag.create(name="tvus-scoped-tag")
+        await self._make_tagged_upload(user, tag, "tvussca")
+        await Upload.create(**_tag_upload_data(user, "tvusscb"))
+
+        client.cookies = _auth(user)
+        response = await client.post(
+            f"/tags/view/{tag.name}/update-selected",
+            data={"super_selected": "true"},
+            headers=_htmx(),
+        )
+        assert response.status_code == 200
+        assert "1 Uploads Selected" in response.text
+
+    async def test_super_select_deselected_ids_respected_within_tag_scope(self, client):
+        """Deselected uploads are excluded from super-select, while remaining within tag scope."""
+        user = await User.create(username="tvssdesel", email="tvssdesel@example.com", password="pw", is_registered=True)
+        tag = await Tag.create(name="tvus-desel-tag")
+        upload_a = await self._make_tagged_upload(user, tag, "tvssdesela")
+        upload_b = await self._make_tagged_upload(user, tag, "tvssdeselb")
+
+        client.cookies = _auth(user)
+        response = await client.post(
+            f"/tags/view/{tag.name}/update-selected",
+            data={"super_selected": "true", "deselected_ids": [upload_b.id]},
+            headers=_htmx(),
+        )
+        assert response.status_code == 200
+        assert "1 Uploads Selected" in response.text

@@ -2,15 +2,26 @@ import asyncio
 
 from typing import Annotated
 
+from tortoise.expressions import Q
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response, HTMLResponse
 from fastapi.exceptions import HTTPException
 
+from app.lib.auth import get_current_user_from_request
+
 from app.models.collections import Collection
 from app.models.users import User
 
-from app.ui.common.errors import error_template_response
-from app.ui.common.security import get_current_authenticated_user
+from app.ui.common.breadcrumbs import Breadcrumbs
+from app.ui.common.collections import CollectionSelectionDetail, CollectionPaginationDefaultParams
+from app.ui.common.etag import (
+    get_paginated_gallery_etag,
+    check_etag_and_return_304_if_match,
+    get_cache_headers,
+)
+from app.ui.common.errors import error_template_response, info_template_response
+from app.ui.common.gallery import GalleryPaginationDefaultParams, render_multiselect_sidebar
+from app.ui.common.security import get_current_authenticated_user, get_or_create_authenticated_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import (
     build_readable_upload_queryset,
@@ -18,6 +29,153 @@ from app.ui.common.uploads import (
 
 
 router = APIRouter(prefix="/collections", tags=["collections"])
+breadcrumb_handler = Breadcrumbs(router=router, route_title="Collections")
+
+
+@router.get("", response_class=Response)
+async def collections_index_get(
+    request: Request,
+    pagination: Annotated[CollectionPaginationDefaultParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+) -> Response:
+    """Render collections gallery view"""
+
+    current_user = await get_or_create_authenticated_user(request)
+
+    collection_query = Collection.filter(user=current_user)
+    pagination.count = await collection_query.count()
+
+    collection_models = Collection.paginate(**pagination.page_data(), user=current_user)
+    collections = await CollectionSelectionDetail.from_queryset(
+        collection_models, context={"user": current_user}
+    )
+
+    # Template context
+    context = {
+        "current_user": current_user,
+        "breadcrumbs": breadcrumbs.get_all(),
+        "stacks": collections,
+        "pagination": pagination,
+    }
+
+    # Provide list of `selection_detail` as uploads to build a gallery etag
+    uploads = [t.selection_detail for t in collections]
+    etag = get_paginated_gallery_etag(
+        request=request,
+        uploads=uploads,
+        pagination=pagination,
+        user_id=current_user.id if current_user else None,
+    )
+
+    # Check if client already has current version
+    not_modified = check_etag_and_return_304_if_match(request, etag)
+    if not_modified:
+        return not_modified
+
+    # Build response with cache headers
+    response = templates.TemplateResponse(request, "collections/index.html.j2", context=context)
+    response.headers.update(get_cache_headers(etag=etag))
+
+    return response
+
+
+@router.get("/view/{name}", response_class=HTMLResponse)
+async def collections_view_get(
+    request: Request,
+    name: str, 
+    pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+) -> Response:
+    """Render individual collection uploads gallery view"""
+
+    current_user = await get_current_user_from_request(request)
+
+    collection_model = Collection.get(name_unique=name)
+    collection = await CollectionSelectionDetail.from_single_queryset_or_none(collection_model, context={"user": current_user})
+
+    if not collection:
+        return await error_template_response(
+            request, [f"Collection could not be found: {name}"], 404, "Collection not found."
+        )
+
+    # Update pagination count totals
+    pagination.count = len(collection.readable_upload_models)
+    if current_user:
+        await collection.fetch_writable_upload_models(current_user)
+        pagination.writable_count = len(collection.writable_upload_models) if collection.writable_upload_models else 0
+
+    # Get uploads for this page
+    await collection.fetch_readable_uploads(user=current_user, pagination=pagination)
+    uploads = collection.readable_uploads
+    if not uploads:
+        return await info_template_response(
+            request, ["This collection has no uploads yet."], 200, collection.name
+        )
+
+    breadcrumbs.push(title=collection.name, url=request.url_for("collections_view_get", name=collection.name_unique))
+
+    # Template context
+    context = {
+        "current_user": current_user,
+        "breadcrumbs": breadcrumbs.get_all(),
+        "uploads": uploads,
+        "pagination": pagination,
+        "selection_handler": request.url_for("collections_handle_selected_upload_post", name_unique=collection.name_unique),
+    }
+
+    etag = get_paginated_gallery_etag(
+        request=request,
+        uploads=uploads,
+        pagination=pagination,
+        user_id=current_user.id if current_user else None,
+    )
+
+    # Check if client already has current version
+    not_modified = check_etag_and_return_304_if_match(request, etag)
+    if not_modified:
+        return not_modified
+
+    # Build response with cache headers
+    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+    response.headers.update(get_cache_headers(etag=etag))
+
+    return response
+
+
+@router.post('/view/{name_unique}/update-selected')
+async def collections_handle_selected_upload_post(
+    request: Request,
+    name_unique: str,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    super_selected: Annotated[bool, Form()] = False,
+    selected_ids: Annotated[list[int], Form()] = [],
+    deselected_ids: Annotated[list[int], Form()] = [],
+) -> Response:
+    """Render partial page updates when selected items are updated"""
+
+    # If this isn't a HTMX request, bail out now
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+
+    collection = await Collection.get_or_none(name_unique=name_unique)
+
+    if not collection:
+        return await error_template_response(
+            request, [f"Collection could not be found: {name_unique}"], 404, "Collection not found."
+        )
+
+    context_filter = Q(collections__id=collection.id)
+
+    response = await render_multiselect_sidebar(
+        request=request,
+        context_filter=context_filter,
+        user=current_user,
+        super_selected=super_selected,
+        selected_ids=selected_ids,
+        deselected_ids=deselected_ids,
+    )
+
+    return response
 
 
 @router.post("/suggestions", response_class=HTMLResponse)
@@ -33,7 +191,7 @@ async def get_collection_suggestions_post(
 
     # Get uploads from database including related collections
     upload_qs = build_readable_upload_queryset(
-        current_user=current_user,
+        user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,
@@ -76,7 +234,7 @@ async def upload_add_collection_post(
 
     # Get uploads from database including related collections
     upload_qs = build_readable_upload_queryset(
-        current_user=current_user,
+        user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,
@@ -142,7 +300,7 @@ async def update_upload_collections_patch(
 
     # Get uploads from database including related collections
     upload_qs = build_readable_upload_queryset(
-        current_user=current_user,
+        user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,

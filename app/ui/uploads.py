@@ -352,7 +352,7 @@ async def toggle_selected_uploads_private_patch(
 
     # Get uploads from database
     upload_models = await get_writable_selected_upload_models(
-        current_user=current_user,
+        user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,

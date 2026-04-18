@@ -3,7 +3,7 @@
     x-data="handleSelectedUploads"
     @clear-selection="clearSelection()">
     <div id="sidebar-request-trigger"
-        hx-post="{{ request.url_for('gallery_handle_selected_upload_post') }}"
+        hx-post="{{ selection_handler }}"
         hx-trigger="update-sidebar from:body delay:200ms"
         hx-target="#gallery-sidebar"
         hx-select="#gallery-sidebar"

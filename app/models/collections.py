@@ -6,9 +6,14 @@ from typing import TYPE_CHECKING, Annotated, Sequence, Literal
 from tortoise import fields, models
 from tortoise_serializer import ModelSerializer
 
+from app.lib.config import get_app_config
 from app.lib.helpers import clean_text
 
 from app.models.common.base import TimestampMixin, SerializerTimestampMixin
+from app.models.common.pagination import PaginationMixin
+
+
+config = get_app_config()
 
 
 if TYPE_CHECKING:
@@ -16,7 +21,7 @@ if TYPE_CHECKING:
     from app.models.users import User, UserSerializer  # noqa: F401
 
 
-class Collection(models.Model, TimestampMixin):
+class Collection(models.Model, TimestampMixin, PaginationMixin):
     id = fields.IntField(primary_key=True)
     user = fields.ForeignKeyField("models.User", related_name="collections", on_delete=fields.CASCADE)
     name = fields.CharField(max_length=255)
@@ -24,6 +29,10 @@ class Collection(models.Model, TimestampMixin):
 
     class Meta:  # type: ignore[override]
         table = "collections"
+
+    @property
+    def view_url(self) -> str:
+        return f'{config.app_base_url}/collections/view/{self.name_unique}'
 
     @classmethod
     async def _make_name_unique(cls, base_slug: str) -> str:
@@ -218,6 +227,7 @@ class CollectionSerializer(ModelSerializer[Collection], SerializerTimestampMixin
     user_id: int
     name: str
     name_unique: str
+    view_url: str
 
 
 class CollectionSerializerSelected(CollectionSerializer):

@@ -24,13 +24,13 @@ Polish the user interface with improved navigation, responsive design refinement
 - Footer exists with copyright (needs version info and additional links)
 - No breadcrumbs
 - Forms are functional with HTMX and baseline Tailwind styling, but need consistency and validation polish
-- Navbar links include unimplemented routes that need cleanup (/uploads, /search, /tags, /collections, /random, /popular, /all)
+- Navbar links include unimplemented routes that need cleanup (/uploads, /search, /random, /popular, /all) — `/tags` and `/collections` are now implemented
 
 ### Review Snapshot (2026-02-15)
 - Core Tailwind + Alpine UI scaffolding is in place and functional.
 - Responsive/navbar polish tasks are still largely open.
 - Discovery routes (`/random`, `/popular`, `/all`) and static routes (`/about`, `/privacy`, `/terms`, `/contact`) are still not implemented.
-- Navbar still includes links to unimplemented pages (`/uploads`, `/search`, `/tags`, `/collections`) that should be fixed or removed until routes exist.
+- Navbar still includes links to unimplemented pages (`/uploads`, `/search`) that should be fixed or removed until routes exist — `/tags` and `/collections` are now implemented.
 - Breadcrumbs, footer versioning, and accessibility pass are still pending.
 
 ### Review Snapshot (2026-03-07)
@@ -49,6 +49,18 @@ Polish the user interface with improved navigation, responsive design refinement
 - Breadcrumbs wired to `/gallery/`, `/gallery/index`, `/gallery/random`, and `/` (root delegates to gallery)
 - Template uses filled SVG polygon cap after home icon, stroked SVG chevron for inner separators; current page shown bold and not linked
 - Tests added in `tests/test_ui_common_breadcrumbs.py`
+
+### Review Snapshot (2026-04-18)
+- Collections gallery index (`GET /collections`) and individual collection upload view (`GET /collections/view/{name_unique}`) implemented in `app/ui/collections.py`
+- `CollectionSelectionDetail` serializer extracted to `app/ui/common/collections.py` — mirrors `TagSelectionDetail` pattern with `SelectionDetail`, lazy-fetched `UploadSerializer` lists, and `readable_upload_queryset`/`writable_upload_queryset` base functions
+- `TagSelectionDetail` and `TagPaginationDefaultParams` similarly extracted from `app/ui/common/gallery.py` into `app/ui/common/tags.py`
+- `readable_upload_queryset` and `writable_upload_queryset` base functions added to `app/ui/common/uploads.py`; `context_filter: Q` parameter threads through `build_readable_upload_queryset`, `build_writable_upload_queryset`, and `get_writable_selected_uploads`
+- Per-route `selection_handler` URL now passed as template context variable, decoupling the shared gallery template from route names
+- `POST /collections/view/{name_unique}/update-selected` and `POST /tags/view/{name}/update-selected` multiselect sidebar handlers added
+- `info_template_response` helper added to `app/ui/common/errors.py` — renders green `message-ok` banner via `info_messages` context key (contrasted with `error_messages` → red `message-alert`)
+- `Collection.view_url` property added; `Collection` now mixes in `PaginationMixin`; `CollectionSerializer` exposes `view_url`
+- `/collections` navbar link is now a valid route — remove from "unimplemented routes" lists in Steps 1 and 2
+- All 1106 tests pass; new test classes cover `GET /collections`, `GET /collections/view/{name}`, and `POST /collections/view/{name_unique}/update-selected`
 
 ### Review Snapshot (2026-04-17)
 - Tags gallery index (`GET /tags`) and individual tag upload view (`GET /tags/view/{name}`) implemented in `app/ui/tags.py`
@@ -98,7 +110,7 @@ Polish the user interface with improved navigation, responsive design refinement
 3. [ ] Implement outside-click-to-close (click backdrop closes menu)
 4. [ ] Ensure menu closes on link click
 5. [ ] Improve open/close animations
-6. [ ] Remove/fix links to unimplemented pages (/uploads, /search, /collections) — `/tags` is now implemented
+6. [ ] Remove/fix links to unimplemented pages (/uploads, /search) — `/tags` and `/collections` are now implemented
 7. [ ] Ensure keyboard navigation works (Escape to close)
 8. [ ] Add ARIA labels for accessibility
 
@@ -124,7 +136,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - Backdrop: `<div x-show="mobileMenuOpen" @click="mobileMenuOpen = false" class="fixed inset-0 bg-black bg-opacity-50 z-40"></div>`
 - Menu z-index: 50 (above backdrop's 40)
 - Close on Escape: `@keydown.escape.window="mobileMenuOpen = false"`
-- Remove or remap unimplemented route links (`/uploads`, `/search`, `/collections`) until routes are implemented — `/tags` is now a valid route
+- Remove or remap unimplemented route links (`/uploads`, `/search`) until routes are implemented — `/tags` and `/collections` are now valid routes
 - Mobile menu should show same conditional logic as desktop (see Step 2)
 - Ensure smooth slide-in transition from top or side
 
@@ -143,7 +155,7 @@ Polish the user interface with improved navigation, responsive design refinement
 4. [ ] **Registered users** (current_user.is_registered): Show Profile, My Uploads, My Collections, Logout in dropdown
 5. [ ] Remove Login/Register from dropdown for registered users
 6. [ ] Update desktop user dropdown logic
-7. [ ] Remove or remap unimplemented links from navbar (`/uploads`, `/search`, `/collections`) — `/tags` is now implemented
+7. [ ] Remove or remap unimplemented links from navbar (`/uploads`, `/search`) — `/tags` and `/collections` are now implemented
 8. [ ] Style dropdown menu consistently
 
 **Tests**:
@@ -173,7 +185,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - Remove "Not Logged In ▾" text (confusing for auto-accounts)
 - Dropdown position: `absolute right-0 top-full`
 - Use Alpine.js `x-data` for toggle state
-- Remove or remap unimplemented links from desktop and mobile menus (`/uploads`, `/search`, `/collections`) — `/tags` is now a valid route
+- Remove or remap unimplemented links from desktop and mobile menus (`/uploads`, `/search`) — `/tags` and `/collections` are now valid routes
 
 ---
 

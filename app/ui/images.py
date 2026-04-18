@@ -40,7 +40,7 @@ async def rotate_selected_images_post(
         )
 
     upload_qs = build_writable_upload_queryset(
-        current_user=current_user,
+        user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,

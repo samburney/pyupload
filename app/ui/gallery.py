@@ -21,7 +21,7 @@ from app.ui.common.etag import (
 from app.ui.common.gallery import render_multiselect_sidebar, GalleryPaginationDefaultParams
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.templating import templates
-from app.ui.common.uploads import default_readable_query_filter
+from app.ui.common.uploads import default_readable_query_filter, build_writable_upload_queryset
 
 
 config = get_app_config()
@@ -60,7 +60,9 @@ async def gallery_index_get(
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
+        "selection_handler": request.url_for("gallery_handle_selected_upload_post"),
     }
+    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
 
     etag = get_paginated_gallery_etag(
         request=request,
@@ -74,14 +76,13 @@ async def gallery_index_get(
     if not_modified:
         return not_modified
 
-    # Build response with cache headers
-    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+    # Add cache headers to response
     response.headers.update(get_cache_headers(etag=etag))
 
     return response
 
 
-@router.post('')
+@router.post('/update-selected')
 async def gallery_handle_selected_upload_post(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
@@ -96,11 +97,11 @@ async def gallery_handle_selected_upload_post(
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
     response = await render_multiselect_sidebar(
-        request,
-        current_user,
-        super_selected,
-        selected_ids,
-        deselected_ids,
+        request=request,
+        user=current_user,
+        super_selected=super_selected,
+        selected_ids=selected_ids,
+        deselected_ids=deselected_ids,
     )
 
     return response
@@ -141,6 +142,7 @@ async def gallery_random_get(
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
+        "selection_handler": request.url_for("gallery_handle_selected_upload_post"),
     }
     response = templates.TemplateResponse(request, "gallery/random.html.j2", context=context)
 

@@ -533,7 +533,7 @@ class TestMultiselectSidebarRendering:
         """When no matching archive exists, the format-selection button (hx-post) is shown."""
         client.cookies = _auth(owner)
         response = await client.post(
-            "/gallery",
+            "/gallery/update-selected",
             data={"selected_ids": [u.id for u in uploads]},
             headers=_htmx(),
         )
@@ -545,7 +545,7 @@ class TestMultiselectSidebarRendering:
         archive = await _make_archive(owner, uploads, status=ArchiveStatusEnum.pending, suffix="sb000001")
         client.cookies = _auth(owner)
         response = await client.post(
-            "/gallery",
+            "/gallery/update-selected",
             data={"selected_ids": [u.id for u in uploads]},
             headers=_htmx(),
         )
@@ -559,7 +559,7 @@ class TestMultiselectSidebarRendering:
         archive = await _make_archive(owner, uploads, status=ArchiveStatusEnum.processing, suffix="sb000002")
         client.cookies = _auth(owner)
         response = await client.post(
-            "/gallery",
+            "/gallery/update-selected",
             data={"selected_ids": [u.id for u in uploads]},
             headers=_htmx(),
         )
@@ -572,7 +572,7 @@ class TestMultiselectSidebarRendering:
         archive = await _make_archive(owner, uploads, status=ArchiveStatusEnum.ready, suffix="sb000003")
         client.cookies = _auth(owner)
         response = await client.post(
-            "/gallery",
+            "/gallery/update-selected",
             data={"selected_ids": [u.id for u in uploads]},
             headers=_htmx(),
         )
@@ -585,7 +585,7 @@ class TestMultiselectSidebarRendering:
         await _make_archive(owner, uploads, status=ArchiveStatusEnum.failed, suffix="sb000004")
         client.cookies = _auth(owner)
         response = await client.post(
-            "/gallery",
+            "/gallery/update-selected",
             data={"selected_ids": [u.id for u in uploads]},
             headers=_htmx(),
         )
@@ -599,7 +599,7 @@ class TestMultiselectSidebarRendering:
         await _make_archive(owner, [u3], status=ArchiveStatusEnum.pending, suffix="sb000005")
         client.cookies = _auth(owner)
         response = await client.post(
-            "/gallery",
+            "/gallery/update-selected",
             data={"selected_ids": [u.id for u in uploads]},
             headers=_htmx(),
         )

@@ -44,7 +44,7 @@ async def get_current_user_from_token(token: str) -> User | None:
             config.auth_token_secret_key,
             algorithms=[config.auth_token_algorithm]
         )
-        username: str = payload.get("sub")
+        username: str | None  = payload.get("sub")
         if username is None:
             return None
 
@@ -198,6 +198,11 @@ async def store_refresh_token(token: str, user: User) -> RefreshToken:
             algorithms=[config.auth_token_algorithm]
         )
         exp_timestamp = payload.get("exp")
+
+        # A valid JWT token will have an expiration
+        if not exp_timestamp:
+            raise ValueError("Invalid JWT token provided")
+
         expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
 
         # Calculate token hash
@@ -267,6 +272,11 @@ async def validate_refresh_token(token: str, user: User | int) -> RefreshToken |
             algorithms=[config.auth_token_algorithm]
         )
         exp_timestamp = payload.get("exp")
+
+        # A valid JWT token will have an expiration
+        if not exp_timestamp:
+            raise ValueError("Invalid JWT token provided")
+
         expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
 
         # Check expiration

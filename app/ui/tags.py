@@ -1,7 +1,9 @@
 from typing import Annotated
 
+from tortoise.expressions import Q
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response, HTMLResponse
+from fastapi.exceptions import HTTPException
 
 from app.lib.auth import get_current_user_from_request
 from app.lib.helpers import make_clean_tag
@@ -10,10 +12,15 @@ from app.models.tags import Tag
 from app.models.users import User
 
 from app.ui.common.breadcrumbs import Breadcrumbs
-from app.ui.common.etag import get_paginated_gallery_etag, check_etag_and_return_304_if_match, get_cache_headers
+from app.ui.common.etag import (
+    get_paginated_gallery_etag,
+    check_etag_and_return_304_if_match,
+    get_cache_headers,
+)
 from app.ui.common.errors import error_template_response
-from app.ui.common.gallery import GalleryPaginationDefaultParams, TagSelectionDetail
+from app.ui.common.gallery import GalleryPaginationDefaultParams, render_multiselect_sidebar
 from app.ui.common.security import get_current_authenticated_user
+from app.ui.common.tags import TagSelectionDetail, TagPaginationDefaultParams
 from app.ui.common.templating import templates
 from app.ui.common.uploads import (
     default_readable_upload_tag_filter,
@@ -23,15 +30,6 @@ from app.ui.common.uploads import (
 
 router = APIRouter(prefix="/tags", tags=["tags"])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="Tags")
-
-
-class TagPaginationDefaultParams(GalleryPaginationDefaultParams):
-    """Default pagination parameters for the home page."""
-
-    # Override default sort_by and sort_order if not specified
-    sort_by: str = "name"
-    sort_order: str = "asc"
-    page_size: int = 12
 
 
 @router.get("", response_class=Response)
@@ -121,6 +119,7 @@ async def tags_view_get(
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
+        "selection_handler": request.url_for("tags_view_handle_selected_upload_post", name=tag.name),
     }
 
     etag = get_paginated_gallery_etag(
@@ -138,6 +137,42 @@ async def tags_view_get(
     # Build response with cache headers
     response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
     response.headers.update(get_cache_headers(etag=etag))
+
+    return response
+
+
+@router.post('/view/{name}/update-selected')
+async def tags_view_handle_selected_upload_post(
+    request: Request,
+    name: str,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    super_selected: Annotated[bool, Form()] = False,
+    selected_ids: Annotated[list[int], Form()] = [],
+    deselected_ids: Annotated[list[int], Form()] = [],
+) -> Response:
+    """Render partial page updates when selected items are updated"""
+
+    # If this isn't a HTMX request, bail out now
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+
+    tag = await Tag.get_or_none(name=name)
+
+    if not tag:
+        return await error_template_response(
+            request, [f"Tag could not be found: {name}"], 404, "Tag not found."
+        )
+
+    context_filter = Q(tags__id=tag.id)
+
+    response = await render_multiselect_sidebar(
+        request=request,
+        context_filter=context_filter,
+        user=current_user,
+        super_selected=super_selected,
+        selected_ids=selected_ids,
+        deselected_ids=deselected_ids,
+    )
 
     return response
 
@@ -189,7 +224,7 @@ async def upload_add_tag_post(
     
     # Get uploads from database
     upload_models = await get_readable_selected_upload_models(
-        current_user=current_user,
+        user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,
@@ -232,7 +267,7 @@ async def upload_remove_tag_delete(
     
     # Get upload from database
     upload_models = await get_readable_selected_upload_models(
-        current_user=current_user,
+        user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,

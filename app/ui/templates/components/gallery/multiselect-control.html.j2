@@ -14,14 +14,14 @@
                 <span class="hover:underline"
                     x-show="selectedIds.length > 0 && allVisibleSelected && !superSelected"
                     x-cloak>
-                    (<a href="#"
-                        @click="enableSuperSelect();">Select all {{ pagination.writable_count }} uploads?</a>)
+                    (<button class="cursor-pointer hover:underline"
+                        @click="enableSuperSelect();">Select all {{ pagination.writable_count }} uploads?</button>)
                 </span>
                 <span class="hover:underline"
                     x-show="superSelected"
                     x-cloak>
-                    (<a href="#"
-                        @click="disableSuperSelect();">Undo select all</a>)
+                    (<button class="cursor-pointer hover:underline"
+                        @click="disableSuperSelect();">Undo select all</button>)
                 </span>
             </div>
             <div class="flex gap-2">
