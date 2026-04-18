@@ -19,7 +19,7 @@ from app.ui.common.etag import (
     check_etag_and_return_304_if_match,
     get_cache_headers,
 )
-from app.ui.common.errors import error_template_response, info_template_response
+from app.ui.common.responses import error_template_response, info_template_response
 from app.ui.common.gallery import GalleryPaginationDefaultParams, render_multiselect_sidebar
 from app.ui.common.security import get_current_authenticated_user, get_or_create_authenticated_user
 from app.ui.common.templating import templates

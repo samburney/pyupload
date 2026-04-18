@@ -7,7 +7,7 @@ from app.lib.error_handling import (
     supports_error_image,
     get_error_image_response,
 )
-from app.ui.common.errors import error_response_for_get
+from app.ui.common.responses import error_response_for_get
 
 
 class TestSupportsErrorImage:

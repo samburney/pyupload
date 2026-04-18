@@ -22,7 +22,7 @@ from app.middleware.token_refresh import TokenRefreshMiddleware
 from app.middleware.fingerprint_auto_login import FingerprintAutoLoginMiddleware
 
 from app.ui.common.templating import templates
-from app.ui.common.errors import error_template_response, error_response_for_get
+from app.ui.common.responses import error_template_response, error_response_for_get
 from app.ui.common.security import LoginRequiredException
 
 from app import api

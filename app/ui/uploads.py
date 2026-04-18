@@ -16,7 +16,7 @@ from app.lib.file_serving import serve_file, validate_file_request
 from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 
-from app.ui.common.errors import error_response_for_get, error_template_response
+from app.ui.common.responses import error_response_for_get, error_template_response
 from app.ui.common.gallery import render_multiselect_sidebar
 from app.ui.common.templating import templates
 from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_for_update, get_writable_selected_upload_models

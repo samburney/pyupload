@@ -22,7 +22,7 @@ from app.models.users import (
 )
 
 from app.ui.common.templating import templates
-from app.ui.common.errors import error_template_response
+from app.ui.common.responses import error_template_response
 from app.ui.common.session import flash_message
 
 

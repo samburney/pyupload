@@ -11,7 +11,7 @@ from app.models.users import User
 
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.session import flash_message
-from app.ui.common.errors import error_template_response
+from app.ui.common.responses import error_template_response
 from app.ui.common.uploads import build_writable_upload_queryset
 
 from app.ui.uploads import view_upload_page_get

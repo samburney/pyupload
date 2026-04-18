@@ -15,7 +15,7 @@ from app.models.tags import Tag, TagSerializerSelected
 from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User, UserSerializer
 
-from app.ui.common.errors import error_template_response
+from app.ui.common.responses import error_template_response
 from app.ui.common.templating import templates
 from app.ui.common.uploads import get_writable_selected_uploads
 
