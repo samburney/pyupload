@@ -355,19 +355,23 @@ class TestCollectionsViewGet:
 
 
 # ---------------------------------------------------------------------------
-# POST /collections/view/{name_unique}/update-selected
+# POST /gallery/update-selected (collection context via HX-Current-URL)
 # ---------------------------------------------------------------------------
 
 class TestCollectionsHandleSelectedUploadPost:
-    """Tests for POST /collections/view/{name_unique}/update-selected.
+    """Tests for collection-scoped selection via POST /gallery/update-selected.
+
+    The consolidated selection handler derives context from the HX-Current-URL
+    header. When that URL matches /collections/view/{name_unique}, results are
+    scoped to that collection.
 
     Access levels verified:
     - Non-HTMX request → 400
     - Unauthenticated → redirect to login
-    - Nonexistent collection → 404
+    - Stale collection (deleted after page load) → safe no-op, no uploads matched
     - Owner with uploads in collection → 200 sidebar
-    - Super-select scoping: only selects uploads belonging to this collection
-    - Deselected uploads excluded from super-select within collection scope
+    - Super-select scoping: only uploads in the collection are included
+    - Deselected uploads excluded within collection scope
     """
 
     async def _make_collection_upload(self, user, col, suffix="") -> Upload:
@@ -375,38 +379,41 @@ class TestCollectionsHandleSelectedUploadPost:
         await upload.collections.add(col)
         return upload
 
+    def _htmx_col(self, name_unique: str) -> dict:
+        return {"hx-request": "true", "HX-Current-URL": f"http://test/collections/view/{name_unique}"}
+
     async def test_returns_400_without_htmx_header(self, client):
         """Non-HTMX requests are rejected with 400."""
         user = await User.create(username="cus400", email="cus400@example.com", password="pw", is_registered=True)
-        col = await Collection.create(user=user, name="Col 400", name_unique="col-us-400")
-        await self._make_collection_upload(user, col, "cus400a")
         client.cookies = _auth(user)
-        response = await client.post(f"/collections/view/{col.name_unique}/update-selected", data={"selected_ids": []})
+        response = await client.post("/gallery/update-selected", data={"selected_ids": []})
         assert response.status_code == 400
 
     async def test_redirects_to_login_when_unauthenticated(self, client):
         """Unauthenticated requests redirect to /login."""
-        owner = await User.create(username="cusunauth", email="cusunauth@example.com", password="pw", is_registered=True)
-        col = await Collection.create(user=owner, name="Unauth Col", name_unique="col-us-unauth")
+        col = await Collection.create(
+            user=await User.create(username="cusunauth", email="cusunauth@example.com", password="pw", is_registered=True),
+            name="Unauth Col", name_unique="col-us-unauth",
+        )
         response = await client.post(
-            f"/collections/view/{col.name_unique}/update-selected",
+            "/gallery/update-selected",
             data={"selected_ids": []},
-            headers=_htmx(),
+            headers=self._htmx_col(col.name_unique),
             follow_redirects=False,
         )
         assert response.status_code == 303
         assert "/login" in response.headers.get("location", "")
 
-    async def test_returns_404_for_nonexistent_collection(self, client):
-        """A name_unique that does not exist returns 404."""
+    async def test_stale_collection_returns_no_uploads(self, client):
+        """A collection deleted after page load resolves to an empty selection (safe no-op)."""
         user = await User.create(username="cus404", email="cus404@example.com", password="pw", is_registered=True)
         client.cookies = _auth(user)
         response = await client.post(
-            "/collections/view/no-such-collection/update-selected",
-            data={"selected_ids": [999]},
-            headers=_htmx(),
+            "/gallery/update-selected",
+            data={"super_selected": "true"},
+            headers=self._htmx_col("no-such-collection"),
         )
-        assert response.status_code == 404
+        assert response.status_code == 403
 
     async def test_owner_with_collection_upload_receives_sidebar(self, client):
         """Owner selecting their collection upload gets a 200 sidebar response."""
@@ -415,9 +422,9 @@ class TestCollectionsHandleSelectedUploadPost:
         upload = await self._make_collection_upload(user, col, "cus200a")
         client.cookies = _auth(user)
         response = await client.post(
-            f"/collections/view/{col.name_unique}/update-selected",
+            "/gallery/update-selected",
             data={"selected_ids": [upload.id]},
-            headers=_htmx(),
+            headers=self._htmx_col(col.name_unique),
         )
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
@@ -431,9 +438,9 @@ class TestCollectionsHandleSelectedUploadPost:
 
         client.cookies = _auth(user)
         response = await client.post(
-            f"/collections/view/{col.name_unique}/update-selected",
+            "/gallery/update-selected",
             data={"super_selected": "true"},
-            headers=_htmx(),
+            headers=self._htmx_col(col.name_unique),
         )
         assert response.status_code == 200
         assert "1 Uploads Selected" in response.text
@@ -442,14 +449,14 @@ class TestCollectionsHandleSelectedUploadPost:
         """Deselected uploads are excluded from super-select within collection scope."""
         user = await User.create(username="cusdesel", email="cusdesel@example.com", password="pw", is_registered=True)
         col = await Collection.create(user=user, name="Desel Col", name_unique="col-us-desel")
-        upload_a = await self._make_collection_upload(user, col, "cusdesela")
+        await self._make_collection_upload(user, col, "cusdesela")
         upload_b = await self._make_collection_upload(user, col, "cusdeselb")
 
         client.cookies = _auth(user)
         response = await client.post(
-            f"/collections/view/{col.name_unique}/update-selected",
+            "/gallery/update-selected",
             data={"super_selected": "true", "deselected_ids": [upload_b.id]},
-            headers=_htmx(),
+            headers=self._htmx_col(col.name_unique),
         )
         assert response.status_code == 200
         assert "1 Uploads Selected" in response.text

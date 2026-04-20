@@ -9,6 +9,7 @@ from app.lib.config import logger
 from app.models.uploads import UploadSerializer
 from app.models.users import User
 
+from app.ui.common.gallery import get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.session import flash_message
 from app.ui.common.responses import error_template_response
@@ -39,11 +40,13 @@ async def rotate_selected_images_post(
             status_code=400,
         )
 
+    context_filter = await get_request_context_filter(request)
     upload_qs = build_writable_upload_queryset(
         user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,
+        context_filter=context_filter,
     )
     upload_models = await upload_qs.prefetch_related("images")
     image_models = [u for u in upload_models if u.is_image]

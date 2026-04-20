@@ -17,7 +17,7 @@ from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 
 from app.ui.common.responses import error_response_for_get, error_template_response
-from app.ui.common.gallery import render_multiselect_sidebar
+from app.ui.common.gallery import render_multiselect_sidebar, get_request_context_filter
 from app.ui.common.templating import templates
 from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_for_update, get_writable_selected_upload_models
 from app.ui.common.security import get_current_user, get_current_authenticated_user, get_or_create_authenticated_user
@@ -305,7 +305,8 @@ async def delete_selected_uploads_post(
     if not request.headers.get('hx-request', False):
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
-    upload_models: list[Upload] = await get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
+    context_filter = await get_request_context_filter(request)
+    upload_models: list[Upload] = await get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids, context_filter)
     if not upload_models:
         flash_message(request, "You do not have permission to delete any of the selected uploads.", "error")
         return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=403)
@@ -351,11 +352,13 @@ async def toggle_selected_uploads_private_patch(
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
     # Get uploads from database
+    context_filter = await get_request_context_filter(request)
     upload_models = await get_writable_selected_upload_models(
         user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,
+        context_filter=context_filter,
     )
     if not len(upload_models):
         return await error_template_response(request, ["None of the selected uploads provided exist."], 404, "File(s) not found")
@@ -373,11 +376,12 @@ async def toggle_selected_uploads_private_patch(
     elif request.headers.get('hx-target') == 'gallery-multiselect-sidebar':
         flash_message(request, f"Privacy status set to {'Private' if upload_private else 'Public'} for {len(upload_models)} uploads.")
         response = await render_multiselect_sidebar(
-            request,
-            current_user,
-            super_selected,
-            selected_ids,
-            deselected_ids,
+            request=request,
+            user=current_user,
+            context_filter=context_filter,
+            super_selected=super_selected,
+            selected_ids=selected_ids,
+            deselected_ids=deselected_ids,
         )
     else:
         response = await error_template_response(request, ["Request was successful, but targeted UI element not supported."], 404, "Request target not supported")

@@ -19,6 +19,7 @@ from app.lib.config import get_app_config
 from app.lib.helpers import make_unique_filename, clean_text, sanitise_filename
 from app.lib.scheduler import schedule_archive_job
 
+from app.ui.common.gallery import get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.session import flash_message
 from app.ui.common.templating import templates
@@ -52,7 +53,8 @@ async def request_uploads_archive_post(
         return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=400)
 
     # Filter selected uploads to only those readable by the current_user
-    upload_models: list[Upload] = await get_readable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids)
+    context_filter = await get_request_context_filter(request)
+    upload_models: list[Upload] = await get_readable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids, context_filter)
     if not upload_models:
         flash_message(request, "You do not have permission to download any of the selected uploads.", "error")
         return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=403)

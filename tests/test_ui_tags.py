@@ -413,19 +413,23 @@ class TestTagDeleteEndpoint:
 
 
 # ---------------------------------------------------------------------------
-# POST /tags/view/{name}/update-selected
+# POST /gallery/update-selected (tag context via HX-Current-URL)
 # ---------------------------------------------------------------------------
 
 class TestTagViewHandleSelectedUploadPost:
-    """Tests for POST /tags/view/{name}/update-selected.
+    """Tests for tag-scoped selection via POST /gallery/update-selected.
+
+    The consolidated selection handler derives context from the HX-Current-URL
+    header. When that URL matches /tags/view/{name}, results are scoped to that
+    tag.
 
     Access levels verified:
     - Non-HTMX request → 400
     - Unauthenticated → redirect to login
-    - Nonexistent tag → 404
+    - Stale tag (deleted after page load) → safe no-op, no uploads matched
     - Owner with tagged uploads → 200 sidebar
-    - Super-select scoping: only selects uploads belonging to this tag,
-      not all uploads owned by the user
+    - Super-select scoping: only uploads belonging to the tag are included
+    - Deselected uploads excluded within tag scope
     """
 
     async def _make_tagged_upload(self, user, tag, suffix="", private=0) -> Upload:
@@ -433,37 +437,38 @@ class TestTagViewHandleSelectedUploadPost:
         await upload.tags.add(tag)
         return upload
 
+    def _htmx_tag(self, tag_name: str) -> dict:
+        return {"hx-request": "true", "HX-Current-URL": f"http://test/tags/view/{tag_name}"}
+
     async def test_returns_400_without_htmx_header(self, client):
         """Non-HTMX requests are rejected with 400."""
         user = await User.create(username="tvus400", email="tvus400@example.com", password="pw", is_registered=True)
-        tag = await Tag.create(name="tvus-tag-400")
-        await self._make_tagged_upload(user, tag, "tvus400a")
         client.cookies = _auth(user)
-        response = await client.post(f"/tags/view/{tag.name}/update-selected", data={"selected_ids": []})
+        response = await client.post("/gallery/update-selected", data={"selected_ids": []})
         assert response.status_code == 400
 
     async def test_redirects_to_login_when_unauthenticated(self, client):
         """Unauthenticated requests redirect to /login."""
         tag = await Tag.create(name="tvus-tag-unauth")
         response = await client.post(
-            f"/tags/view/{tag.name}/update-selected",
+            "/gallery/update-selected",
             data={"selected_ids": []},
-            headers=_htmx(),
+            headers=self._htmx_tag(tag.name),
             follow_redirects=False,
         )
         assert response.status_code == 303
         assert "/login" in response.headers.get("location", "")
 
-    async def test_returns_404_for_nonexistent_tag(self, client):
-        """A tag name that does not exist returns 404."""
+    async def test_stale_tag_returns_no_uploads(self, client):
+        """A tag deleted after page load resolves to an empty selection (safe no-op)."""
         user = await User.create(username="tvus404", email="tvus404@example.com", password="pw", is_registered=True)
         client.cookies = _auth(user)
         response = await client.post(
-            "/tags/view/no-such-tag/update-selected",
-            data={"selected_ids": [999]},
-            headers=_htmx(),
+            "/gallery/update-selected",
+            data={"super_selected": "true"},
+            headers=self._htmx_tag("no-such-tag"),
         )
-        assert response.status_code == 404
+        assert response.status_code == 403
 
     async def test_owner_with_tagged_upload_receives_sidebar(self, client):
         """Owner selecting their tagged upload gets a 200 sidebar response."""
@@ -472,9 +477,9 @@ class TestTagViewHandleSelectedUploadPost:
         upload = await self._make_tagged_upload(user, tag, "tvus200a")
         client.cookies = _auth(user)
         response = await client.post(
-            f"/tags/view/{tag.name}/update-selected",
+            "/gallery/update-selected",
             data={"selected_ids": [upload.id]},
-            headers=_htmx(),
+            headers=self._htmx_tag(tag.name),
         )
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
@@ -488,9 +493,9 @@ class TestTagViewHandleSelectedUploadPost:
 
         client.cookies = _auth(user)
         response = await client.post(
-            f"/tags/view/{tag.name}/update-selected",
+            "/gallery/update-selected",
             data={"super_selected": "true"},
-            headers=_htmx(),
+            headers=self._htmx_tag(tag.name),
         )
         assert response.status_code == 200
         assert "1 Uploads Selected" in response.text
@@ -499,14 +504,14 @@ class TestTagViewHandleSelectedUploadPost:
         """Deselected uploads are excluded from super-select, while remaining within tag scope."""
         user = await User.create(username="tvssdesel", email="tvssdesel@example.com", password="pw", is_registered=True)
         tag = await Tag.create(name="tvus-desel-tag")
-        upload_a = await self._make_tagged_upload(user, tag, "tvssdesela")
+        await self._make_tagged_upload(user, tag, "tvssdesela")
         upload_b = await self._make_tagged_upload(user, tag, "tvssdeselb")
 
         client.cookies = _auth(user)
         response = await client.post(
-            f"/tags/view/{tag.name}/update-selected",
+            "/gallery/update-selected",
             data={"super_selected": "true", "deselected_ids": [upload_b.id]},
-            headers=_htmx(),
+            headers=self._htmx_tag(tag.name),
         )
         assert response.status_code == 200
         assert "1 Uploads Selected" in response.text

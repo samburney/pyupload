@@ -1,6 +1,9 @@
+import re
+
 from datetime import datetime, timezone, timedelta
 from typing import Literal
 from pydantic import BaseModel
+from urllib.parse import urlparse
 
 from tortoise.expressions import Q
 from fastapi import Request
@@ -74,14 +77,57 @@ class SelectionDetail(BaseModel):
         )
 
 
-def build_qs_filter(request: Request) -> Q:
+def build_qs_filter(query_string: str) -> Q:
     """Create tortoiseorm compatible query from request query_string"""
 
     # parses ?uploader=alice&private=false&after=2024-01-01 etc.
     # Just a stub for now
 
     return Q()
+
+
+async def _resolve_path_context_filter(path: str) -> Q | None:
+    """Return Q for path-based view context, or Q(id__in=[]) on stale entity."""
     
+    # Tags gallery view
+    if m := re.match(r'^/tags/view/([^/]+)', path):
+        tag = await Tag.get_or_none(name=m.group(1))
+        return Q(tags__id=tag.id) if tag else Q(id__in=[])  # safe no-op if deleted
+    
+    # Collections gallery view
+    if m := re.match(r'^/collections/view/([^/]+)', path):
+        collection = await Collection.get_or_none(name_unique=m.group(1))
+        return Q(collections__id=collection.id) if collection else Q(id__in=[])
+    
+    return None
+    
+
+async def get_request_context_filter(request: Request) -> Q | None:
+    """Build context_filter from HX-Current-URL (path-based + query string)."""
+    url = request.headers.get('hx-current-url')
+    if not url:
+        return None
+
+    parsed = urlparse(url)
+    filters: list[Q] = []
+
+    # Path-based context (tag or collection view)
+    path_filter = await _resolve_path_context_filter(parsed.path)
+    if path_filter is not None:
+        filters.append(path_filter)
+
+    # Query string filters (stub — populates when build_qs_filter is implemented)
+    qs_filter = build_qs_filter(parsed.query)
+    if qs_filter:  # empty Q() is falsy; only append when non-trivial
+        filters.append(qs_filter)
+
+    if not filters:
+        return None
+    result = filters[0]
+    for f in filters[1:]:
+        result &= f
+    return result
+
 
 async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], user: User | None = None) -> SelectionDetail:
     """Build a SelectionDetail model from a provided list of Upload objects"""

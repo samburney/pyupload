@@ -103,9 +103,14 @@ def build_readable_upload_queryset(
         return qs.filter(id__in=selected_ids)
 
 
-async def get_readable_selected_upload_models(user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[Upload]:
+async def get_readable_selected_upload_models(user: User,
+    selected_ids: list[int],
+    super_selected: bool = False,
+    deselected_ids: list[int] = [],
+    context_filter: Q | None = None,
+) -> list[Upload]:
     """Get raw Upload model instances for selected uploads readable by user."""
-    return await build_readable_upload_queryset(user, selected_ids, super_selected, deselected_ids)
+    return await build_readable_upload_queryset(user, selected_ids, super_selected, deselected_ids, context_filter)
 
 
 async def get_readable_selected_uploads(user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[UploadSerializer]:
@@ -130,9 +135,14 @@ def build_writable_upload_queryset(
         return qs.filter(id__in=selected_ids)
 
 
-async def get_writable_selected_upload_models(user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[Upload]:
+async def get_writable_selected_upload_models(user: User,
+    selected_ids: list[int],
+    super_selected: bool = False,
+    deselected_ids: list[int] = [],
+    context_filter: Q | None = None,
+) -> list[Upload]:
     """Get raw Upload model instances for selected uploads owned by user."""
-    return await build_writable_upload_queryset(user, selected_ids, super_selected, deselected_ids)
+    return await build_writable_upload_queryset(user, selected_ids, super_selected, deselected_ids, context_filter)
 
 
 async def get_writable_selected_uploads(

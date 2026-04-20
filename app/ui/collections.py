@@ -20,7 +20,7 @@ from app.ui.common.etag import (
     get_cache_headers,
 )
 from app.ui.common.responses import error_template_response, info_template_response
-from app.ui.common.gallery import GalleryPaginationDefaultParams, render_multiselect_sidebar
+from app.ui.common.gallery import GalleryPaginationDefaultParams, render_multiselect_sidebar, get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user, get_or_create_authenticated_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import (
@@ -120,7 +120,6 @@ async def collections_view_get(
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
-        "selection_handler": request.url_for("collections_handle_selected_upload_post", name_unique=collection.name_unique),
     }
 
     etag = get_paginated_gallery_etag(
@@ -142,42 +141,6 @@ async def collections_view_get(
     return response
 
 
-@router.post('/view/{name_unique}/update-selected')
-async def collections_handle_selected_upload_post(
-    request: Request,
-    name_unique: str,
-    current_user: Annotated[User, Depends(get_current_authenticated_user)],
-    super_selected: Annotated[bool, Form()] = False,
-    selected_ids: Annotated[list[int], Form()] = [],
-    deselected_ids: Annotated[list[int], Form()] = [],
-) -> Response:
-    """Render partial page updates when selected items are updated"""
-
-    # If this isn't a HTMX request, bail out now
-    if not request.headers.get('hx-request', False):
-        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
-
-    collection = await Collection.get_or_none(name_unique=name_unique)
-
-    if not collection:
-        return await error_template_response(
-            request, [f"Collection could not be found: {name_unique}"], 404, "Collection not found."
-        )
-
-    context_filter = Q(collections__id=collection.id)
-
-    response = await render_multiselect_sidebar(
-        request=request,
-        context_filter=context_filter,
-        user=current_user,
-        super_selected=super_selected,
-        selected_ids=selected_ids,
-        deselected_ids=deselected_ids,
-    )
-
-    return response
-
-
 @router.post("/suggestions", response_class=HTMLResponse)
 async def get_collection_suggestions_post(
     request: Request,
@@ -189,12 +152,13 @@ async def get_collection_suggestions_post(
 ) -> Response:
     """Get collection suggestions for current upload, filtered by the current input value."""
 
-    # Get uploads from database including related collections
+    context_filter = await get_request_context_filter(request)
     upload_qs = build_readable_upload_queryset(
         user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,
+        context_filter=context_filter,
     )
     upload_models = await upload_qs.prefetch_related("collections")
 
@@ -232,12 +196,13 @@ async def upload_add_collection_post(
 ) -> Response:
     """Add a collection to an upload."""
 
-    # Get uploads from database including related collections
+    context_filter = await get_request_context_filter(request)
     upload_qs = build_readable_upload_queryset(
         user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,
+        context_filter=context_filter,
     )
     upload_models = await upload_qs.prefetch_related("collections")
 
@@ -298,12 +263,13 @@ async def update_upload_collections_patch(
         error_message = f"Collection with ID {collection_id} not found or insufficient permissions."
         return await error_template_response(request, [error_message], status_code=400)
 
-    # Get uploads from database including related collections
+    context_filter = await get_request_context_filter(request)
     upload_qs = build_readable_upload_queryset(
         user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
         deselected_ids=deselected_ids,
+        context_filter=context_filter,
     )
     upload_models = await upload_qs.prefetch_related("collections")
 

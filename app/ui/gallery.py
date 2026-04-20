@@ -18,7 +18,7 @@ from app.ui.common.etag import (
     get_cache_headers,
     check_etag_and_return_304_if_match,
 )
-from app.ui.common.gallery import render_multiselect_sidebar, GalleryPaginationDefaultParams
+from app.ui.common.gallery import render_multiselect_sidebar, GalleryPaginationDefaultParams, get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import default_readable_query_filter, build_writable_upload_queryset
@@ -96,8 +96,12 @@ async def gallery_handle_selected_upload_post(
     if not request.headers.get('hx-request', False):
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
+    # Get request-based context filter
+    context_filter = await get_request_context_filter(request)
+
     response = await render_multiselect_sidebar(
         request=request,
+        context_filter=context_filter,
         user=current_user,
         super_selected=super_selected,
         selected_ids=selected_ids,
