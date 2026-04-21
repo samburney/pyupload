@@ -1,8 +1,9 @@
+import random
 import re
 
 from datetime import datetime, timezone, timedelta
-from typing import Literal
-from pydantic import BaseModel
+from typing import Any, Literal
+from pydantic import BaseModel, ConfigDict, Field
 from urllib.parse import urlparse
 
 from tortoise.expressions import Q
@@ -34,6 +35,18 @@ class GalleryPaginationDefaultParams(PaginationParams):
     sort_order: str = "desc"
     page_size: int = 24
     writable_count: int | None = None
+
+
+class RandomGalleryPaginationParams(GalleryPaginationDefaultParams):
+    """Pagination parameters for the random gallery view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    seed: int | None = Field(default=None, alias="ps")
+
+    def model_post_init(self, _context: Any) -> None:
+        if self.seed is None:
+            self.seed = random.randint(0, 2**32)
 
 
 class SelectionDetail(BaseModel):

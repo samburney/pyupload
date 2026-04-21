@@ -18,7 +18,7 @@ from app.ui.common.etag import (
     get_cache_headers,
     check_etag_and_return_304_if_match,
 )
-from app.ui.common.gallery import render_multiselect_sidebar, GalleryPaginationDefaultParams, get_request_context_filter
+from app.ui.common.gallery import render_multiselect_sidebar, GalleryPaginationDefaultParams, RandomGalleryPaginationParams, get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import default_readable_query_filter, build_writable_upload_queryset
@@ -60,7 +60,6 @@ async def gallery_index_get(
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
-        "selection_handler": request.url_for("gallery_handle_selected_upload_post"),
     }
     response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
 
@@ -114,7 +113,7 @@ async def gallery_handle_selected_upload_post(
 @router.get('/random', response_class=Response)
 async def gallery_random_get(
     request: Request,
-    pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    pagination: Annotated[RandomGalleryPaginationParams, Depends()],
     breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
     """Render random gallery view"""        
@@ -123,7 +122,7 @@ async def gallery_random_get(
     pagination_query = default_readable_query_filter(current_user)
 
     # Update item pagination parameter
-    upload_ids = await Upload.filter(pagination_query).values_list("id", flat=True)
+    upload_ids = await Upload.filter(pagination_query).limit(100_000).values_list("id", flat=True)
     pagination.count = len(upload_ids)
 
     # Get count of uploads owned by the current user, if any
@@ -131,23 +130,27 @@ async def gallery_random_get(
         pagination.writable_count = await Upload.filter(pagination_query).filter(user_id=current_user.id).count()
 
     # Get random rows
-    row_count = min(pagination.page_size, pagination.count)
-    random_upload_ids = random.sample(upload_ids, row_count)
+    rng = random.Random(pagination.seed)
+    shuffled_ids = list(upload_ids)
+    rng.shuffle(shuffled_ids)
+    start = (pagination.page - 1) * pagination.page_size
+    random_upload_ids = shuffled_ids[start:start + pagination.page_size]
 
     # Get uploads
     upload_models = Upload.filter(id__in=random_upload_ids) \
-        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+        .prefetch_related(*UPLOAD_PREFETCH_MODELS) \
+        .order_by("-created_at")
     uploads = await UploadSerializer.from_queryset(upload_models)
 
     # Template context
+    pagination.infinite_scroll = True
     breadcrumbs.push("Random", request.url_for("gallery_random_get"))
     context = {
         "current_user": current_user,
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
-        "selection_handler": request.url_for("gallery_handle_selected_upload_post"),
     }
-    response = templates.TemplateResponse(request, "gallery/random.html.j2", context=context)
+    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
 
     return response

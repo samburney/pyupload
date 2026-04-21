@@ -27,7 +27,7 @@ from app.models.uploads import Upload, UploadSerializer
 from app.models.images import Image, ImageSerializer
 from app.models.users import UserSerializer
 from app.models.common.pagination import PaginationParams
-from app.ui.common.gallery import GalleryPaginationDefaultParams
+from app.ui.common.gallery import GalleryPaginationDefaultParams, RandomGalleryPaginationParams
 from app.lib.helpers import humanize_bytes
 
 
@@ -1035,6 +1035,11 @@ class TestPaginationParams:
         params = PaginationParams()
         assert params.count == 0
 
+    def test_infinite_scroll_defaults_to_false(self):
+        """Test infinite_scroll defaults to False."""
+        params = PaginationParams()
+        assert params.infinite_scroll is False
+
 
 class TestGalleryPaginationDefaultParams:
     """Test GalleryPaginationDefaultParams overrides."""
@@ -1062,6 +1067,35 @@ class TestGalleryPaginationDefaultParams:
         """Test GalleryPaginationDefaultParams pages calculation with 24 page_size."""
         params = GalleryPaginationDefaultParams(count=50)
         assert params.pages == 3  # ceil(50/24) = 3
+
+
+class TestRandomGalleryPaginationParams:
+    """Test RandomGalleryPaginationParams seed behaviour."""
+
+    def test_seed_generated_when_not_provided(self):
+        """A seed is auto-generated on instantiation when ps is not supplied."""
+        params = RandomGalleryPaginationParams()
+        assert params.seed is not None
+
+    def test_seed_is_integer(self):
+        """Auto-generated seed is an integer within the expected range."""
+        params = RandomGalleryPaginationParams()
+        assert isinstance(params.seed, int)
+        assert 0 <= params.seed <= 2**32
+
+    def test_seed_preserved_when_provided_via_ps(self):
+        """When ps is supplied, seed takes that value."""
+        params = RandomGalleryPaginationParams(**{"ps": 12345})
+        assert params.seed == 12345
+
+    def test_ps_zero_is_respected(self):
+        """ps=0 is a valid seed and must not trigger regeneration."""
+        params = RandomGalleryPaginationParams(**{"ps": 0})
+        assert params.seed == 0
+
+    def test_inherits_gallery_pagination_defaults(self):
+        """RandomGalleryPaginationParams is a subclass of GalleryPaginationDefaultParams."""
+        assert issubclass(RandomGalleryPaginationParams, GalleryPaginationDefaultParams)
 
 
 class TestPaginationMixin:
@@ -1195,3 +1229,96 @@ class TestHumanizeBytes:
         """Test humanize_bytes returns a string."""
         result = humanize_bytes(500)
         assert isinstance(result, str)
+
+
+def _random_upload(user, suffix: str, private: int = 0) -> dict:
+    return {
+        "user": user,
+        "description": f"Random gallery test {suffix}",
+        "name": f"rng_{suffix}",
+        "cleanname": f"rng_{suffix}",
+        "originalname": f"rng_{suffix}.jpg",
+        "ext": "jpg",
+        "size": 1024,
+        "type": "image/jpeg",
+        "extra": "",
+        "private": private,
+    }
+
+
+class TestRandomGalleryRoute:
+    """Test GET /gallery/random endpoint behaviour."""
+
+    @pytest.mark.anyio
+    async def test_empty_gallery_returns_200(self, client):
+        """Returns 200 with an empty grid when no uploads exist."""
+        response = await client.get("/gallery/random")
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_only_public_uploads_shown_to_anonymous_user(self, client):
+        """Anonymous users see only public uploads."""
+        owner = await User.create(password="pw", username="rng_vis_owner", email="rng_vis@test.com")
+        pub = await Upload.create(**_random_upload(owner, "pub", private=0))
+        priv = await Upload.create(**_random_upload(owner, "priv", private=1))
+
+        response = await client.get("/gallery/random")
+        assert response.status_code == 200
+        assert pub.cleanname in response.text
+        assert priv.cleanname not in response.text
+
+    @pytest.mark.anyio
+    async def test_infinite_scroll_trigger_present(self, client):
+        """Response includes the infinite scroll hx-trigger div when multiple pages exist."""
+        owner = await User.create(password="pw", username="rng_scroll_owner", email="rng_scroll@test.com")
+        for i in range(25):
+            await Upload.create(**_random_upload(owner, f"scroll_{i:02d}"))
+
+        response = await client.get("/gallery/random")
+        assert response.status_code == 200
+        assert 'hx-trigger="revealed once"' in response.text
+
+    @pytest.mark.anyio
+    async def test_seed_input_present_in_response(self, client):
+        """Response includes a hidden ps seed input when a seed is active."""
+        owner = await User.create(password="pw", username="rng_seed_owner", email="rng_seed@test.com")
+        for i in range(25):
+            await Upload.create(**_random_upload(owner, f"seed_{i:02d}"))
+
+        response = await client.get("/gallery/random")
+        assert response.status_code == 200
+        assert 'name="ps"' in response.text
+
+    @pytest.mark.anyio
+    async def test_page_2_with_same_seed_does_not_overlap_page_1(self, client):
+        """Pages 1 and 2 with the same ps seed produce non-overlapping upload sets."""
+        owner = await User.create(password="pw", username="rng_overlap_owner", email="rng_overlap@test.com")
+        for i in range(50):
+            await Upload.create(**_random_upload(owner, f"olap_{i:02d}"))
+
+        seed = 99999
+        page1 = await client.get(f"/gallery/random?page=1&ps={seed}")
+        page2 = await client.get(f"/gallery/random?page=2&ps={seed}")
+        assert page1.status_code == 200
+        assert page2.status_code == 200
+
+        def extract_cleannames(text):
+            import re
+            return set(re.findall(r'rng_olap_\d+', text))
+
+        p1_names = extract_cleannames(page1.text)
+        p2_names = extract_cleannames(page2.text)
+        assert len(p1_names) > 0
+        assert len(p2_names) > 0
+        assert p1_names.isdisjoint(p2_names)
+
+    @pytest.mark.anyio
+    async def test_supplied_ps_seed_is_preserved_in_response(self, client):
+        """A ps seed supplied in the request appears in the hidden input of the response."""
+        owner = await User.create(password="pw", username="rng_pspreserve_owner", email="rng_pspreserve@test.com")
+        for i in range(25):
+            await Upload.create(**_random_upload(owner, f"psp_{i:02d}"))
+
+        response = await client.get("/gallery/random?ps=42")
+        assert response.status_code == 200
+        assert 'value="42"' in response.text

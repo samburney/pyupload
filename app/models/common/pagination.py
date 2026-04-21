@@ -1,5 +1,6 @@
 from math import ceil
-from pydantic import BaseModel 
+
+from pydantic import BaseModel
 from typing import TYPE_CHECKING, Any
 from tortoise.queryset import QuerySet
 from tortoise.expressions import Q
@@ -15,6 +16,7 @@ class PaginationParams(BaseModel):
     sort_order: str = "asc"
     sort_by: str = "id"
     count: int = 0
+    infinite_scroll: bool = False
 
     @property
     def pages(self) -> int:
@@ -23,6 +25,7 @@ class PaginationParams(BaseModel):
 
     def page_data(self) -> dict[str, Any]:
         """Return the page data."""
+
         return {
             "page": self.page,
             "page_size": self.page_size,

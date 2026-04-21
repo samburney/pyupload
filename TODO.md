@@ -92,7 +92,7 @@
 - [ ] Wire up `build_qs_filter` stub in `app/ui/common/gallery.py` — parses request query string into a Tortoise `Q` object for use as a `context_filter` (uploader, private, date range, etc.).
 - [ ] Investigate potential double-counting of partially-selected collections in the `buttonText` getter of `combo-selector.js` — items in `partially_selected` may also be added to `selected` via `x-model`, inflating the displayed count.
 - [ ] Provide user feedback when some collection IDs are invalid/not owned in `PATCH /uploads/{id}/collection` (currently silently processes valid IDs and discards errors).
-- [ ] Make home gallery page size user-configurable.
+- [ ] Make home gallery page size user-configurable. *(partial: `infinite_scroll` flag added to `PaginationParams`; pagination component switches between infinite scroll and standard page controls; an "all" option would set `infinite_scroll=True` on the relevant view)*
 - [ ] Make home gallery private-upload inclusion user-configurable (currently, logged-in users always see their own private uploads mixed into the home page feed).
 - [ ] Replace `?modal=true` query parameter on `/view/{id}/{filename}` with HTMX response headers to consolidate modal and full-page view into a single endpoint.
 - [ ] Scheduler: delete files owned by abandoned users when marked private.
