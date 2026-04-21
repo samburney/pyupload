@@ -443,7 +443,9 @@ class TestCollectionsHandleSelectedUploadPost:
             headers=self._htmx_col(col.name_unique),
         )
         assert response.status_code == 200
-        assert "1 Uploads Selected" in response.text
+        # Single selection renders upload detail sidebar (not the "N Uploads Selected" aggregate view)
+        assert "Uploads Selected" not in response.text
+        assert user.username in response.text
 
     async def test_super_select_deselected_ids_respected_within_collection_scope(self, client):
         """Deselected uploads are excluded from super-select within collection scope."""
@@ -459,4 +461,6 @@ class TestCollectionsHandleSelectedUploadPost:
             headers=self._htmx_col(col.name_unique),
         )
         assert response.status_code == 200
-        assert "1 Uploads Selected" in response.text
+        # Single selection renders upload detail sidebar (not the "N Uploads Selected" aggregate view)
+        assert "Uploads Selected" not in response.text
+        assert user.username in response.text

@@ -4,7 +4,7 @@
         hx-trigger="confirmed"
         hx-post="/uploads/delete"
         hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
-        {%- if sidebar_target == "#gallery-multiselect-sidebar" %}
+        {%- if sidebar_target == "gallery-multiselect-sidebar" %}
         hx-target="#gallery-grid"
         {%- endif %}
         hx-vals='{ "redirect": {{ request.headers.get("referer", request.url_for("index_get") | string) | tojson }} }'

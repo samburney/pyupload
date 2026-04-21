@@ -8,8 +8,8 @@
             hx-patch="/uploads/private"
             hx-include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']"
             hx-swap="outerHTML"
-            hx-select="{{ sidebar_target }}"
-            hx-target="{{ sidebar_target }}"
+            hx-select="#{{ sidebar_target }}"
+            hx-target="#{{ sidebar_target }}"
             hx-target-4*="#messages">
         <span class="absolute inset-y-0
             {{ 'inset-s-3' if upload.is_private == 'partial' else 'inset-s-0' }}

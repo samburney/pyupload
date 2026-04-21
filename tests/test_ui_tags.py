@@ -498,7 +498,9 @@ class TestTagViewHandleSelectedUploadPost:
             headers=self._htmx_tag(tag.name),
         )
         assert response.status_code == 200
-        assert "1 Uploads Selected" in response.text
+        # Single selection renders upload detail sidebar (not the "N Uploads Selected" aggregate view)
+        assert "Uploads Selected" not in response.text
+        assert user.username in response.text
 
     async def test_super_select_deselected_ids_respected_within_tag_scope(self, client):
         """Deselected uploads are excluded from super-select, while remaining within tag scope."""
@@ -514,4 +516,6 @@ class TestTagViewHandleSelectedUploadPost:
             headers=self._htmx_tag(tag.name),
         )
         assert response.status_code == 200
-        assert "1 Uploads Selected" in response.text
+        # Single selection renders upload detail sidebar (not the "N Uploads Selected" aggregate view)
+        assert "Uploads Selected" not in response.text
+        assert user.username in response.text

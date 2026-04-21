@@ -1,7 +1,7 @@
 {%- include "components/common/messages.html.j2" %}
-{% set sidebar_target = "#upload-sidebar" %}
+{% if sidebar_target is not defined %}{% set sidebar_target = "upload-sidebar" %}{% endif %}
 {% set selected_uploads = [upload] %}
-<div id="upload-sidebar"
+<div id="{{ sidebar_target }}"
     class="flex flex-col w-full gap-1 lg:gap-2">
     <input type="hidden" name="selected_ids" value="{{ upload.id }}" />
     <div class="flex w-full items-center justify-center gap-1 lg:gap-2">

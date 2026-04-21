@@ -169,7 +169,9 @@ class TestGetRequestContextFilter:
             headers={"hx-request": "true", "HX-Current-URL": f"http://test/tags/view/{tag.name}"},
         )
         assert response.status_code == 200
-        assert "1 Uploads Selected" in response.text
+        # Single selection renders upload detail sidebar (not the "N Uploads Selected" aggregate view)
+        assert "Uploads Selected" not in response.text
+        assert user.username in response.text
 
     async def test_collection_url_scopes_super_select_to_collection(self, client):
         """HX-Current-URL for a collection view scopes super-select to that collection only."""
@@ -185,7 +187,9 @@ class TestGetRequestContextFilter:
             headers={"hx-request": "true", "HX-Current-URL": f"http://test/collections/view/{col.name_unique}"},
         )
         assert response.status_code == 200
-        assert "1 Uploads Selected" in response.text
+        # Single selection renders upload detail sidebar (not the "N Uploads Selected" aggregate view)
+        assert "Uploads Selected" not in response.text
+        assert user.username in response.text
 
     async def test_stale_tag_url_returns_no_uploads(self, client):
         """When HX-Current-URL references a deleted tag, no uploads are matched (safe no-op)."""
