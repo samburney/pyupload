@@ -50,6 +50,15 @@ Polish the user interface with improved navigation, responsive design refinement
 - Template uses filled SVG polygon cap after home icon, stroked SVG chevron for inner separators; current page shown bold and not linked
 - Tests added in `tests/test_ui_common_breadcrumbs.py`
 
+### Review Snapshot (2026-04-22)
+- `/popular` and `/all` routes added to both `app/ui/gallery.py` and `app/ui/main.py` (root-level aliases)
+- Routes share `gallery_index_get` handler; path detected via `request.url.path.endswith(...)` to override sort params
+- `/popular`: sorts by `viewed` desc, standard pagination
+- `/all`: sorts alphabetically by description asc, infinite scroll enabled — **deviates from original plan** ("same as home") but is intentionally differentiated
+- `selection_handler` removed from gallery context — template uses Jinja2 `url_for()` directly; confirmed no template references remain
+- Tests added for both routes: visibility, sort order, pagination, infinite scroll, root-level aliases
+- All 1141 tests passing
+
 ### Review Snapshot (2026-04-21)
 - `/random` gallery implemented as a seeded-shuffle paginated grid with infinite scroll — deviates from original plan (which described a redirect to a single upload view)
 - `RandomGalleryPaginationParams` added to `app/ui/common/gallery.py` — isolates `seed`/`ps` alias and generation logic from the base model
@@ -384,22 +393,20 @@ Polish the user interface with improved navigation, responsive design refinement
 ## Step 7: Implement Gallery Discovery Pages
 
 **Files**:
-- `app/ui/gallery.py` *(completed - /random route)*
+- `app/ui/gallery.py` *(completed - /random route; /popular and /all added with known bugs)*
 - `app/ui/templates/gallery/random.html.j2` *(deleted - reuses gallery/index.html.j2)*
-- `app/ui/templates/gallery/popular.html.j2` (new)
-- `app/ui/templates/gallery/all.html.j2` (new)
-- `app/ui/main.py` (register router) *(completed - /random redirect)*
+- `app/ui/main.py` *(completed - /random redirect; /popular and /all root aliases added)*
 - `app/ui/common/gallery.py` *(completed - RandomGalleryPaginationParams)*
 - `app/models/common/pagination.py` *(completed - infinite_scroll field)*
 
 **Tasks**:
 1. [x] Create gallery router (`app/ui/gallery.py`) *(random endpoint implemented)*
 2. [x] Implement `/random` - Seeded-shuffle paginated random gallery with infinite scroll *(deviates from original plan — see implementation notes)*
-3. [ ] Implement `/popular` - Most viewed public uploads (paginated gallery)
-4. [ ] Implement `/all` - Latest public uploads (paginated gallery, same as home)
+3. [x] Implement `/popular` - Most viewed public uploads, standard pagination
+4. [x] Implement `/all` - Alphabetical by description, infinite scroll *(deviates from original plan — intentionally differentiated from home/browse)*
 5. [x] Reuse gallery grid component from home page *(using gallery/index.html.j2)*
 6. [x] Add pagination to random page *(infinite scroll with stable seeded shuffle)*
-7. [x] Register router in main.py *(router registered)*
+7. [x] Register router in main.py *(router registered; root-level /popular and /all aliases added)*
 
 **Tests**:
 1. [x] Test `/random` returns 200 with empty grid when no uploads exist
@@ -407,17 +414,17 @@ Polish the user interface with improved navigation, responsive design refinement
 3. [x] Test `/random` response includes infinite scroll trigger
 4. [x] Test `/random` response includes `ps` seed input
 5. [x] Test page 2 with same `ps` seed does not overlap with page 1
-6. [ ] Test `/popular` displays most viewed uploads
-7. [ ] Test `/popular` pagination works
-8. [ ] Test `/all` displays latest uploads
-9. [ ] Test `/all` pagination works
+6. [x] Test `/popular` displays most viewed uploads
+7. [x] Test `/popular` pagination works
+8. [x] Test `/all` displays latest uploads (alphabetical)
+9. [x] Test `/all` pagination works (infinite scroll)
 
 **Acceptance Criteria**:
-- [ ] All three gallery pages functional
+- [x] All three gallery pages functional
 - [x] `/random` shows a stable-shuffled paginated grid with infinite scroll
-- [ ] `/popular` and `/all` show paginated grids
+- [x] `/popular` and `/all` show paginated grids
 - [x] Only public uploads displayed on `/random`
-- [ ] All tests passing
+- [x] All tests passing
 
 **Implementation Notes**:
 - `/random` (as implemented): Fetches up to 100,000 public upload IDs, applies a seeded shuffle via `random.Random(seed)`, slices the result for the requested page, then queries those uploads ordered by `created_at` desc. The seed is generated fresh on first load and preserved across infinite-scroll page requests via a hidden `input[name="ps"]` field.

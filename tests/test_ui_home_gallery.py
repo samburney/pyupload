@@ -1322,3 +1322,177 @@ class TestRandomGalleryRoute:
         response = await client.get("/gallery/random?ps=42")
         assert response.status_code == 200
         assert 'value="42"' in response.text
+
+
+def _popular_upload(user, suffix: str, viewed: int = 0, private: int = 0) -> dict:
+    return {
+        "user": user,
+        "description": f"Popular gallery test {suffix}",
+        "name": f"pop_{suffix}",
+        "cleanname": f"pop_{suffix}",
+        "originalname": f"pop_{suffix}.jpg",
+        "ext": "jpg",
+        "size": 1024,
+        "type": "image/jpeg",
+        "extra": "",
+        "viewed": viewed,
+        "private": private,
+    }
+
+
+class TestPopularGalleryRoute:
+    """Test GET /gallery/popular endpoint behaviour."""
+
+    @pytest.mark.anyio
+    async def test_empty_gallery_returns_200(self, client):
+        """Returns 200 with an empty grid when no uploads exist."""
+        response = await client.get("/gallery/popular")
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_root_alias_returns_200(self, client):
+        """Root-level /popular alias returns 200."""
+        response = await client.get("/popular")
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_only_public_uploads_shown_to_anonymous_user(self, client):
+        """Anonymous users see only public uploads."""
+        owner = await User.create(password="pw", username="pop_vis_owner", email="pop_vis@test.com")
+        pub = await Upload.create(**_popular_upload(owner, "pub", viewed=10, private=0))
+        priv = await Upload.create(**_popular_upload(owner, "priv", viewed=99, private=1))
+
+        response = await client.get("/gallery/popular")
+        assert response.status_code == 200
+        assert pub.cleanname in response.text
+        assert priv.cleanname not in response.text
+
+    @pytest.mark.anyio
+    async def test_most_viewed_upload_appears_before_less_viewed(self, client):
+        """Uploads are ordered by view count descending — most viewed first."""
+        owner = await User.create(password="pw", username="pop_sort_owner", email="pop_sort@test.com")
+        low = await Upload.create(**_popular_upload(owner, "low_views", viewed=5))
+        high = await Upload.create(**_popular_upload(owner, "high_views", viewed=500))
+
+        response = await client.get("/gallery/popular")
+        assert response.status_code == 200
+        assert high.cleanname in response.text
+        assert low.cleanname in response.text
+        assert response.text.index(high.cleanname) < response.text.index(low.cleanname)
+
+    @pytest.mark.anyio
+    async def test_standard_pagination_present_when_multiple_pages(self, client):
+        """Popular page uses standard pagination (not infinite scroll) when items exceed page size."""
+        owner = await User.create(password="pw", username="pop_page_owner", email="pop_page@test.com")
+        for i in range(25):
+            await Upload.create(**_popular_upload(owner, f"pg_{i:02d}", viewed=i))
+
+        response = await client.get("/gallery/popular")
+        assert response.status_code == 200
+        assert "?page=2" in response.text
+        assert 'hx-trigger="revealed once"' not in response.text
+
+    @pytest.mark.anyio
+    async def test_page_2_returns_different_uploads(self, client):
+        """Page 2 contains uploads not shown on page 1."""
+        owner = await User.create(password="pw", username="pop_p2_owner", email="pop_p2@test.com")
+        for i in range(25):
+            await Upload.create(**_popular_upload(owner, f"p2_{i:02d}", viewed=i))
+
+        page1 = await client.get("/gallery/popular?page=1")
+        page2 = await client.get("/gallery/popular?page=2")
+        assert page1.status_code == 200
+        assert page2.status_code == 200
+
+        import re
+        p1_names = set(re.findall(r'pop_p2_\d+', page1.text))
+        p2_names = set(re.findall(r'pop_p2_\d+', page2.text))
+        assert len(p1_names) > 0
+        assert len(p2_names) > 0
+        assert p1_names.isdisjoint(p2_names)
+
+
+def _all_upload(user, suffix: str, description: str, private: int = 0) -> dict:
+    return {
+        "user": user,
+        "description": description,
+        "name": f"all_{suffix}",
+        "cleanname": f"all_{suffix}",
+        "originalname": f"all_{suffix}.jpg",
+        "ext": "jpg",
+        "size": 1024,
+        "type": "image/jpeg",
+        "extra": "",
+        "private": private,
+    }
+
+
+class TestAllGalleryRoute:
+    """Test GET /gallery/all endpoint behaviour."""
+
+    @pytest.mark.anyio
+    async def test_empty_gallery_returns_200(self, client):
+        """Returns 200 with an empty grid when no uploads exist."""
+        response = await client.get("/gallery/all")
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_root_alias_returns_200(self, client):
+        """Root-level /all alias returns 200."""
+        response = await client.get("/all")
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_only_public_uploads_shown_to_anonymous_user(self, client):
+        """Anonymous users see only public uploads."""
+        owner = await User.create(password="pw", username="all_vis_owner", email="all_vis@test.com")
+        pub = await Upload.create(**_all_upload(owner, "pub", description="All public upload", private=0))
+        priv = await Upload.create(**_all_upload(owner, "priv", description="All private upload", private=1))
+
+        response = await client.get("/gallery/all")
+        assert response.status_code == 200
+        assert pub.cleanname in response.text
+        assert priv.cleanname not in response.text
+
+    @pytest.mark.anyio
+    async def test_uploads_sorted_alphabetically_by_description(self, client):
+        """Uploads are ordered alphabetically by description ascending."""
+        owner = await User.create(password="pw", username="all_sort_owner", email="all_sort@test.com")
+        zebra = await Upload.create(**_all_upload(owner, "zebra", description="Zebra upload"))
+        apple = await Upload.create(**_all_upload(owner, "apple", description="Apple upload"))
+
+        response = await client.get("/gallery/all")
+        assert response.status_code == 200
+        assert apple.cleanname in response.text
+        assert zebra.cleanname in response.text
+        assert response.text.index(apple.cleanname) < response.text.index(zebra.cleanname)
+
+    @pytest.mark.anyio
+    async def test_infinite_scroll_trigger_present_when_multiple_pages(self, client):
+        """All page uses infinite scroll when items exceed page size."""
+        owner = await User.create(password="pw", username="all_scroll_owner", email="all_scroll@test.com")
+        for i in range(25):
+            await Upload.create(**_all_upload(owner, f"sc_{i:02d}", description=f"Scroll item {i:02d}"))
+
+        response = await client.get("/gallery/all")
+        assert response.status_code == 200
+        assert 'hx-trigger="revealed once"' in response.text
+
+    @pytest.mark.anyio
+    async def test_page_2_returns_different_uploads(self, client):
+        """Page 2 contains uploads not shown on page 1."""
+        owner = await User.create(password="pw", username="all_p2_owner", email="all_p2@test.com")
+        for i in range(25):
+            await Upload.create(**_all_upload(owner, f"p2_{i:02d}", description=f"All page two item {i:02d}"))
+
+        page1 = await client.get("/gallery/all?page=1")
+        page2 = await client.get("/gallery/all?page=2")
+        assert page1.status_code == 200
+        assert page2.status_code == 200
+
+        import re
+        p1_names = set(re.findall(r'all_p2_\d+', page1.text))
+        p2_names = set(re.findall(r'all_p2_\d+', page2.text))
+        assert len(p1_names) > 0
+        assert len(p2_names) > 0
+        assert p1_names.isdisjoint(p2_names)

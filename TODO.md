@@ -10,8 +10,8 @@
 ### Gallery & Discovery Pages (v0.1)
 - [ ] Handle missing/broken image metadata in gallery with placeholder UX *(partial: `/get` now returns handled `422` image/HTML fallback responses with regression tests; gallery-card UX refinement still pending)*
 - [x] Random uploads page (/random)
-- [ ] Popular uploads page (/popular - most viewed)
-- [ ] All uploads page (/all - latest public uploads)
+- [x] Popular uploads page (/popular - most viewed)
+- [x] All uploads page (/all - alphabetical by description, infinite scroll)
 
 ### Static Content Pages (v0.1)
 - [ ] About page

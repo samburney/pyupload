@@ -16,6 +16,8 @@ router = APIRouter(tags=["main"])
 breadcrumb_handler = Breadcrumbs(router=router)
 
 
+@router.get("/popular", response_class=HTMLResponse)
+@router.get("/all", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 async def index_get(
     request: Request,
@@ -24,7 +26,7 @@ async def index_get(
 ) -> Response:
     """Render the main index page."""
     
-    breadcrumbs.push(title="Browse")
+    breadcrumbs.push(title="Browse", url=f"{request.base_url}")
 
     return await gallery_index_get(request, pagination, breadcrumbs)
 

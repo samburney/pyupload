@@ -29,6 +29,8 @@ router = APIRouter(prefix='/gallery', tags=['gallery'])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="Browse")
 
 
+@router.get("/popular", response_class=Response)
+@router.get("/all", response_class=Response)
 @router.get("", response_class=Response)
 @router.get("/", response_class=Response)
 @router.get("/index", response_class=Response)
@@ -38,6 +40,19 @@ async def gallery_index_get(
     breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
     """Render main gallery view"""
+    
+    # If this was accessed as a `/all` route; sort alphabetically and enable infinite scroll
+    if request.url.path.endswith("/all"):
+        pagination.sort_by = "description"
+        pagination.sort_order = "asc"
+        pagination.infinite_scroll = True
+        breadcrumbs.push(title="All", url=f"{request.base_url}all")
+    
+    # If this was accessed as a `/popular` route; sort by view count
+    if request.url.path.endswith("/popular"):
+        pagination.sort_by = "viewed"
+        pagination.sort_order = "desc"
+        breadcrumbs.push(title="Popular", url=f"{request.base_url}popular")
 
     current_user = await get_current_user_from_request(request)
     pagination_query = default_readable_query_filter(current_user)
@@ -52,6 +67,7 @@ async def gallery_index_get(
     # Get uploads
     uploads_models = Upload.paginate(**pagination.page_data(), query=pagination_query) \
         .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+
     uploads = await UploadSerializer.from_queryset(uploads_models)
 
     # Template context
@@ -118,6 +134,8 @@ async def gallery_random_get(
 ) -> Response:
     """Render random gallery view"""        
 
+    pagination.infinite_scroll = True
+
     current_user = await get_current_user_from_request(request)
     pagination_query = default_readable_query_filter(current_user)
 
@@ -143,7 +161,6 @@ async def gallery_random_get(
     uploads = await UploadSerializer.from_queryset(upload_models)
 
     # Template context
-    pagination.infinite_scroll = True
     breadcrumbs.push("Random", request.url_for("gallery_random_get"))
     context = {
         "current_user": current_user,
