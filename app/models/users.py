@@ -91,6 +91,10 @@ class User(models.Model, TimestampMixin):
 
         return allowed_types_list
 
+    @property
+    def is_authenticated(self) -> bool:
+        return True
+
     @classmethod
     async def generate_unique_username(cls, num_words: int = 2) -> str:
         """Generate a unique username not already in the database."""
@@ -117,6 +121,7 @@ class UserSerializer(ModelSerializer, SerializerTimestampMixin):
     is_abandoned: bool
     is_admin: bool
     is_disabled: bool
+    is_authenticated: bool
     fingerprint_hash: Optional[str]
     fingerprint_data: Optional[dict]
     registration_ip: Optional[str]
@@ -141,6 +146,7 @@ class UserPydantic(UserPydanticBase):
             id=user.id,
             username=user.username,
             email=user.email,
+            is_authenticated=user.is_authenticated,
         )
     
     @classmethod
