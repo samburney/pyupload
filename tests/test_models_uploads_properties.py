@@ -63,6 +63,21 @@ class TestMakeUserFilepath:
         assert filepath2.parent.exists()
         assert filepath1.parent == filepath2.parent
 
+    def test_make_user_filepath_rejects_zero_user_id(self):
+        """make_user_filepath raises ValueError for user_id of zero."""
+        with pytest.raises(ValueError):
+            make_user_filepath(0, "file_20250124-063307_abcd1234")
+
+    def test_make_user_filepath_rejects_negative_user_id(self):
+        """make_user_filepath raises ValueError for negative user_id."""
+        with pytest.raises(ValueError):
+            make_user_filepath(-1, "file_20250124-063307_abcd1234")
+
+    def test_make_user_filepath_rejects_non_int_user_id(self):
+        """make_user_filepath raises ValueError for non-integer user_id."""
+        with pytest.raises(ValueError):
+            make_user_filepath("42", "file_20250124-063307_abcd1234")  # type: ignore[arg-type]
+
 
 class TestUploadFilepathProperty:
     """Test Upload model filepath property."""

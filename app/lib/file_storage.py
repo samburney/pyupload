@@ -215,7 +215,10 @@ async def cleanup_orphaned_files():
         if not user_dir.is_dir():
             continue
 
-        user_id = int(user_dir.name.split("_")[1])
+        user_id_str = user_dir.name.split("_")[1]
+        if not user_id_str.isdigit():
+            continue
+        user_id = int(user_id_str)
         user_files = user_dir.glob("*")
 
         for file in user_files:

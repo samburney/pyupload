@@ -41,6 +41,10 @@ UPLOAD_PREFETCH_MODELS = ("user", "images", "tags", "collections")
 
 def make_user_filepath(user_id: int, filename: str) -> Path:
     """Generate a user-specific file path."""
+
+    if not isinstance(user_id, int) or user_id < 1:
+        raise ValueError(f"Cannot create user directory: invalid user_id {user_id!r}")
+
     user_dir = config.storage_path / f"user_{user_id}"
 
     # Ensure user directory exists

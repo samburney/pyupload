@@ -282,6 +282,40 @@ class TestCleanupOrphanedFiles:
         assert unrelated.exists()  # Unrelated cached file must be preserved
         assert orphans_found == 1
 
+    async def test_cleanup_skips_non_numeric_user_directories(self, tmp_path):
+        """Test that directories with non-numeric user IDs are skipped gracefully."""
+        storage_root = tmp_path / "data" / "files"
+
+        # Valid user directory
+        valid_user_dir = storage_root / "user_1"
+        valid_user_dir.mkdir(parents=True)
+        valid_file = valid_user_dir / "test_20240101-120000_abc12345.txt"
+        valid_file.write_text("content")
+
+        # Non-numeric user directory (e.g. left over from a migration or manual creation)
+        bad_user_dir = storage_root / "user_abc"
+        bad_user_dir.mkdir(parents=True)
+        bad_file = bad_user_dir / "test_20240101-120000_abc12345.txt"
+        bad_file.write_text("content")
+
+        import os
+        old_time = time.time() - (25 * 3600)
+        os.utime(valid_file, (old_time, old_time))
+        os.utime(bad_file, (old_time, old_time))
+
+        async def mock_get_or_none(**kwargs):
+            return None
+
+        with patch.object(Upload, "get_or_none", side_effect=mock_get_or_none):
+            with patch.object(config, "storage_path", storage_root):
+                with patch.object(config, "storage_orphaned_max_age_hours", 24):
+                    orphans_found = await cleanup_orphaned_files()
+
+        # Only the valid user directory's file should be processed
+        assert not valid_file.exists()
+        assert bad_file.exists()  # Non-numeric dir was skipped entirely
+        assert orphans_found == 1
+
     async def test_cleanup_returns_correct_count(self, tmp_path):
         """Test that cleanup returns the correct count of orphaned files."""
         # Create user directory
