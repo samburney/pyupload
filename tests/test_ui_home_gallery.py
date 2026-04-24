@@ -152,7 +152,7 @@ class TestHomeRoute:
         )
 
         # Mock current_user as owner
-        with patch("app.ui.gallery.get_current_user_from_request", return_value=owner):
+        with patch("app.ui.common.gallery.get_current_user_from_request", return_value=owner):
             response = await client.get("/")
 
         assert response.status_code == 200

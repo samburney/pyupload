@@ -183,7 +183,7 @@
 }
 
 @utility menu-left {
-    @apply start-0;
+    @apply inset-s-0;
     inset-inline-end: unset;
 }
 

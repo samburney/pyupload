@@ -11,17 +11,20 @@ from fastapi import Request
 from fastapi.responses import Response
 
 from app.lib.config import get_app_config
+from app.lib.auth import get_current_user_from_request
 
 from app.models.collections import Collection, CollectionSerializerSelected
 from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
 from app.models.common.pagination import PaginationParams
 from app.models.tags import Tag, TagSerializerSelected
-from app.models.uploads import Upload, UploadSerializer
+from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User, UserSerializer
 
+from app.ui.common.breadcrumbs import Breadcrumbs
+from app.ui.common.etag import get_paginated_gallery_etag, check_etag_and_return_304_if_match, get_cache_headers
 from app.ui.common.responses import error_template_response
 from app.ui.common.templating import templates
-from app.ui.common.uploads import get_writable_selected_uploads
+from app.ui.common.uploads import get_writable_selected_uploads, default_readable_query_filter
 
 
 config = get_app_config()
@@ -99,23 +102,27 @@ def build_qs_filter(query_string: str) -> Q:
     return Q()
 
 
-async def _resolve_path_context_filter(path: str) -> Q | None:
+async def _resolve_path_context_filter(path: str, user: User | None = None) -> Q | None:
     """Return Q for path-based view context, or Q(id__in=[]) on stale entity."""
-    
+
+    # User uploads gallery view
+    if re.match(r'^/uploads$', path):
+        return Q(user=user) if user else Q(id__in=[])
+
     # Tags gallery view
     if m := re.match(r'^/tags/view/([^/]+)', path):
         tag = await Tag.get_or_none(name=m.group(1))
         return Q(tags__id=tag.id) if tag else Q(id__in=[])  # safe no-op if deleted
-    
+
     # Collections gallery view
     if m := re.match(r'^/collections/view/([^/]+)', path):
         collection = await Collection.get_or_none(name_unique=m.group(1))
         return Q(collections__id=collection.id) if collection else Q(id__in=[])
-    
-    return None
-    
 
-async def get_request_context_filter(request: Request) -> Q | None:
+    return None
+
+
+async def get_request_context_filter(request: Request, user: User | None = None) -> Q | None:
     """Build context_filter from HX-Current-URL (path-based + query string)."""
     url = request.headers.get('hx-current-url')
     if not url:
@@ -124,8 +131,9 @@ async def get_request_context_filter(request: Request) -> Q | None:
     parsed = urlparse(url)
     filters: list[Q] = []
 
-    # Path-based context (tag or collection view)
-    path_filter = await _resolve_path_context_filter(parsed.path)
+    if user is None:
+        user = await get_current_user_from_request(request)
+    path_filter = await _resolve_path_context_filter(parsed.path, user)
     if path_filter is not None:
         filters.append(path_filter)
 
@@ -272,5 +280,54 @@ async def render_multiselect_sidebar(
         "gallery/partials/sidebar-content.html.j2",
         context=context
     )
+
+    return response
+
+
+async def render_gallery_index(
+    request: Request,
+    pagination: GalleryPaginationDefaultParams,
+    breadcrumbs: Breadcrumbs,
+    context_filter: Q | None = None,
+    user: User | None = None,
+) -> Response:
+    """Fetch uploads and render the gallery index template with ETag caching."""
+
+    if user is None:
+        user = await get_current_user_from_request(request)
+    current_user = user
+    pagination_query = default_readable_query_filter(current_user)
+    if context_filter is not None:
+        pagination_query &= context_filter
+
+    pagination.count = await Upload.filter(pagination_query).count()
+
+    if current_user:
+        pagination.writable_count = await Upload.filter(pagination_query).filter(user_id=current_user.id).count()
+
+    uploads_models = Upload.paginate(**pagination.page_data(), query=pagination_query) \
+        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+    uploads = await UploadSerializer.from_queryset(uploads_models)
+
+    context = {
+        "current_user": current_user,
+        "breadcrumbs": breadcrumbs.get_all(),
+        "uploads": uploads,
+        "pagination": pagination,
+    }
+    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+
+    etag = get_paginated_gallery_etag(
+        request=request,
+        uploads=uploads,
+        pagination=pagination,
+        user_id=current_user.id if current_user else None,
+    )
+
+    not_modified = check_etag_and_return_304_if_match(request, etag)
+    if not_modified:
+        return not_modified
+
+    response.headers.update(get_cache_headers(etag=etag))
 
     return response

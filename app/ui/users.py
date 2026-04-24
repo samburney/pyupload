@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Response, Depends
 from fastapi.responses import HTMLResponse
+from tortoise.expressions import Q
 
 from app.lib.config import get_app_config
 
@@ -10,13 +11,19 @@ from app.models.download_archives import DownloadArchive, DownloadArchiveSeriali
 from app.models.users import User
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 
-from app.ui.common.templating import templates
-from app.ui.common.security import flash_message
+from app.ui.common.breadcrumbs import Breadcrumbs
+from app.ui.common.gallery import (
+    GalleryPaginationDefaultParams,
+    render_gallery_index,
+)
 from app.ui.common.security import get_current_authenticated_user
+from app.ui.common.session import flash_message
+from app.ui.common.templating import templates
 
 
 config = get_app_config()
 router = APIRouter(tags=["users"])
+breadcrumb_handler = Breadcrumbs(router=router, route_title="User")
 
 
 class ProfilePaginationParams(PaginationParams):
@@ -32,8 +39,11 @@ async def show_profile_page(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     pagination: Annotated[ProfilePaginationParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> HTMLResponse:
     """Render the users profile page."""
+
+    breadcrumbs.replace(0, current_user.username, request.url_for("show_profile_page"))
 
     # Show warning if user is not registered
     if not current_user.is_registered:
@@ -61,12 +71,30 @@ If you would like to upgrade to a full account, please [login](/login) or [regis
     download_archives = await DownloadArchiveSerializer.from_queryset(download_archive_models)
 
     return templates.TemplateResponse(
-        request,
-        "users/profile.html.j2",
-        {
+        request=request,
+        name="users/profile.html.j2",
+        context={
             "current_user": current_user,
+            "breadcrumbs": breadcrumbs.get_all(),
             "uploads": uploads,
             "pagination": pagination,
             "download_archives": download_archives,
         }
     )
+
+
+@router.get("/uploads", response_class=Response)
+async def user_uploads_get(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+) -> Response:
+    """Render the current user's uploads as a gallery."""
+
+    breadcrumbs.replace(0, current_user.username, request.url_for("show_profile_page"))
+    breadcrumbs.push(title="Uploads", url=request.url_for("user_uploads_get"))
+
+    context_filter = Q(user=current_user)
+
+    return await render_gallery_index(request, pagination, breadcrumbs, context_filter, user=current_user)

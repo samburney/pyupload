@@ -3,6 +3,8 @@
 Covers:
 - _resolve_path_context_filter: tag path → Q(tags__id=...)
 - _resolve_path_context_filter: collection path → Q(collections__id=...)
+- _resolve_path_context_filter: /uploads with user → Q(user=user)
+- _resolve_path_context_filter: /uploads without user → Q(id__in=[]) safe no-op
 - _resolve_path_context_filter: unrecognised path → None (no filter)
 - _resolve_path_context_filter: stale tag (deleted) → Q(id__in=[]) safe no-op
 - _resolve_path_context_filter: stale collection (deleted) → Q(id__in=[]) safe no-op
@@ -10,6 +12,7 @@ Covers:
 - get_request_context_filter (via HTTP): gallery URL → no filter
 - get_request_context_filter (via HTTP): tag URL → scoped to tag
 - get_request_context_filter (via HTTP): collection URL → scoped to collection
+- get_request_context_filter (via HTTP): /uploads URL → scoped to current user
 """
 
 from app.models.collections import Collection
@@ -98,6 +101,30 @@ class TestResolvePathContextFilter:
         await Upload.create(**_upload_data(owner, "rpfcstale"))
 
         q = await _resolve_path_context_filter("/collections/view/deleted-col-xyz")
+        assert q is not None
+        results = await Upload.filter(q)
+        assert len(results) == 0
+
+    async def test_uploads_path_with_user_returns_q_for_that_user(self, db):
+        """A /uploads path with a user returns Q scoped to that user's uploads."""
+        owner = await User.create(username="rpf-upowner", email="rpf-upowner@e.com", password="pw", is_registered=True)
+        other = await User.create(username="rpf-upother", email="rpf-upother@e.com", password="pw", is_registered=True)
+        owned = await Upload.create(**_upload_data(owner, "rpfupowned"))
+        not_owned = await Upload.create(**_upload_data(other, "rpfupother"))
+
+        q = await _resolve_path_context_filter("/uploads", owner)
+        assert q is not None
+        results = await Upload.filter(q)
+        ids = {u.id for u in results}
+        assert owned.id in ids
+        assert not_owned.id not in ids
+
+    async def test_uploads_path_without_user_returns_empty_q(self, db):
+        """A /uploads path with no user returns Q(id__in=[]) — no uploads match."""
+        owner = await User.create(username="rpf-upanon", email="rpf-upanon@e.com", password="pw", is_registered=True)
+        await Upload.create(**_upload_data(owner, "rpfupanon"))
+
+        q = await _resolve_path_context_filter("/uploads", None)
         assert q is not None
         results = await Upload.filter(q)
         assert len(results) == 0
@@ -216,3 +243,20 @@ class TestGetRequestContextFilter:
             headers={"hx-request": "true", "HX-Current-URL": "http://test/collections/view/nonexistent-col"},
         )
         assert response.status_code == 403
+
+    async def test_uploads_url_scopes_super_select_to_current_user(self, client):
+        """HX-Current-URL pointing to /uploads scopes super-select to the current user's uploads only."""
+        user = await User.create(username="gcf-uploads", email="gcf-uploads@e.com", password="pw", is_registered=True)
+        other = await User.create(username="gcf-uploads-other", email="gcf-uploads-other@e.com", password="pw", is_registered=True)
+        await Upload.create(**_upload_data(user, "gcfup1"))
+        await Upload.create(**_upload_data(user, "gcfup2"))
+        await Upload.create(**_upload_data(other, "gcfupother"))
+        client.cookies = _auth(user)
+
+        response = await client.post(
+            "/gallery/update-selected",
+            data={"super_selected": "true"},
+            headers={"hx-request": "true", "HX-Current-URL": "http://test/uploads"},
+        )
+        assert response.status_code == 200
+        assert "2 Uploads Selected" in response.text

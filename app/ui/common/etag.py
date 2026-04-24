@@ -1,18 +1,22 @@
 import hashlib
 import json
 
+from typing import TYPE_CHECKING
+
 from fastapi import Request
 from fastapi.responses import Response
 
 from app.models.uploads import UploadSerializer
 from app.models.common.pagination import PaginationParams
-from app.ui.common.gallery import SelectionDetail
+
+if TYPE_CHECKING:
+    from app.ui.common.gallery import SelectionDetail
 
 
 def get_paginated_gallery_etag(
     *,
     request: Request,
-    uploads: list[UploadSerializer] | list[SelectionDetail],
+    uploads: list[UploadSerializer] | list["SelectionDetail"],
     pagination: PaginationParams,
     user_id: int | None,
     etag_prefix: str = "gallery"

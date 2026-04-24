@@ -16,15 +16,15 @@ class TestUploadPageSmoke:
     """Smoke tests for the upload widget page."""
 
     async def test_upload_page_loads_without_auth(self, client):
-        """GET /uploads returns 200 without authentication."""
-        response = await client.get("/uploads")
+        """GET /upload returns 200 without authentication."""
+        response = await client.get("/upload")
 
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
     async def test_upload_page_contains_file_input(self, client):
         """The upload page contains a file input with the expected attributes."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
         html = response.text
 
         assert 'type="file"' in html
@@ -33,7 +33,7 @@ class TestUploadPageSmoke:
 
     async def test_upload_page_references_alpine_store(self, client):
         """The upload page references the Alpine.js uploadWidget store."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
         html = response.text
 
         assert "$store.uploadWidget" in html

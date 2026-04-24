@@ -13,15 +13,16 @@ from app.lib.auth import get_current_user_from_request
 from app.lib.config import get_app_config
 
 from app.ui.common.breadcrumbs import Breadcrumbs
-from app.ui.common.etag import (
-    get_paginated_gallery_etag,
-    get_cache_headers,
-    check_etag_and_return_304_if_match,
+from app.ui.common.gallery import (
+    GalleryPaginationDefaultParams,
+    RandomGalleryPaginationParams,
+    render_gallery_index,
+    render_multiselect_sidebar,
+    get_request_context_filter,
 )
-from app.ui.common.gallery import render_multiselect_sidebar, GalleryPaginationDefaultParams, RandomGalleryPaginationParams, get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.templating import templates
-from app.ui.common.uploads import default_readable_query_filter, build_writable_upload_queryset
+from app.ui.common.uploads import default_readable_query_filter
 
 
 config = get_app_config()
@@ -29,8 +30,6 @@ router = APIRouter(prefix='/gallery', tags=['gallery'])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="Browse")
 
 
-@router.get("/popular", response_class=Response)
-@router.get("/all", response_class=Response)
 @router.get("", response_class=Response)
 @router.get("/", response_class=Response)
 @router.get("/index", response_class=Response)
@@ -40,61 +39,37 @@ async def gallery_index_get(
     breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
     """Render main gallery view"""
-    
-    # If this was accessed as a `/all` route; sort alphabetically and enable infinite scroll
-    if request.url.path.endswith("/all"):
-        pagination.sort_by = "description"
-        pagination.sort_order = "asc"
-        pagination.infinite_scroll = True
-        breadcrumbs.push(title="All", url=f"{request.base_url}all")
-    
-    # If this was accessed as a `/popular` route; sort by view count
-    if request.url.path.endswith("/popular"):
-        pagination.sort_by = "viewed"
-        pagination.sort_order = "desc"
-        breadcrumbs.push(title="Popular", url=f"{request.base_url}popular")
 
-    current_user = await get_current_user_from_request(request)
-    pagination_query = default_readable_query_filter(current_user)
+    return await render_gallery_index(request, pagination, breadcrumbs)
 
-    # Update item pagination parameter
-    pagination.count = await Upload.filter(pagination_query).count()
 
-    # Get count of uploads owned by the current user, if any
-    if current_user:
-        pagination.writable_count = await Upload.filter(pagination_query).filter(user_id=current_user.id).count()
+@router.get("/all", response_class=Response)
+async def gallery_all_get(
+    request: Request,
+    pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+) -> Response:
+    """Render gallery sorted alphabetically with infinite scroll"""
 
-    # Get uploads
-    uploads_models = Upload.paginate(**pagination.page_data(), query=pagination_query) \
-        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+    pagination.sort_by = "description"
+    pagination.sort_order = "asc"
+    pagination.infinite_scroll = True
+    breadcrumbs.push(title="All", url=f"{request.base_url}all")
+    return await render_gallery_index(request, pagination, breadcrumbs)
 
-    uploads = await UploadSerializer.from_queryset(uploads_models)
 
-    # Template context
-    context = {
-        "current_user": current_user,
-        "breadcrumbs": breadcrumbs.get_all(),
-        "uploads": uploads,
-        "pagination": pagination,
-    }
-    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+@router.get("/popular", response_class=Response)
+async def gallery_popular_get(
+    request: Request,
+    pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
+    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+) -> Response:
+    """Render gallery sorted by view count"""
 
-    etag = get_paginated_gallery_etag(
-        request=request,
-        uploads=uploads,
-        pagination=pagination,
-        user_id=current_user.id if current_user else None,
-    )
-
-    # Check if client already has current version
-    not_modified = check_etag_and_return_304_if_match(request, etag)
-    if not_modified:
-        return not_modified
-
-    # Add cache headers to response
-    response.headers.update(get_cache_headers(etag=etag))
-
-    return response
+    pagination.sort_by = "viewed"
+    pagination.sort_order = "desc"
+    breadcrumbs.push(title="Popular", url=f"{request.base_url}popular")
+    return await render_gallery_index(request, pagination, breadcrumbs)
 
 
 @router.post('/update-selected')
@@ -112,7 +87,7 @@ async def gallery_handle_selected_upload_post(
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
     # Get request-based context filter
-    context_filter = await get_request_context_filter(request)
+    context_filter = await get_request_context_filter(request, user=current_user)
 
     response = await render_multiselect_sidebar(
         request=request,

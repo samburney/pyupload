@@ -22,21 +22,21 @@ class TestUploadGetEndpoint:
 
     async def test_upload_page_endpoint_exists(self, client):
         """Test that GET /uploads endpoint is accessible."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
 
         # Should return 200 (auto-creates authenticated user)
         assert response.status_code == 200
 
     async def test_upload_page_returns_html(self, client):
         """Test that upload page returns HTML content."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
 
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
     async def test_upload_page_contains_upload_form(self, client):
         """Test that upload page contains the upload form."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
 
         html = response.text
 
@@ -46,7 +46,7 @@ class TestUploadGetEndpoint:
 
     async def test_upload_page_contains_file_input(self, client):
         """Test that upload form contains file input element."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
 
         html = response.text
 
@@ -56,7 +56,7 @@ class TestUploadGetEndpoint:
 
     async def test_upload_page_contains_submit_button(self, client):
         """Test that upload form contains submit button."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
 
         html = response.text
 
@@ -65,17 +65,17 @@ class TestUploadGetEndpoint:
 
     async def test_upload_page_has_htmx_integration(self, client):
         """Test that form has HTMX attributes for dynamic upload."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
 
         html = response.text
 
         # Should have HTMX attributes
         assert "hx-post" in html
-        assert "/uploads" in html
+        assert "/upload" in html
 
     async def test_upload_page_includes_window_dimensions_script(self, client):
         """Test that upload page includes the window-dimensions tracking script."""
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
 
         assert response.status_code == 200
         html = response.text
@@ -84,7 +84,7 @@ class TestUploadGetEndpoint:
     async def test_upload_page_renders_with_authenticated_user(self, client):
         """Test that authenticated user is passed to template."""
         # Get the page (auto-creates user)
-        response = await client.get("/uploads")
+        response = await client.get("/upload")
 
         # Should succeed and render page
         assert response.status_code == 200
@@ -108,7 +108,7 @@ class TestUploadPostEndpoint:
         )
 
         response = await client.post(
-            "/uploads",
+            "/upload",
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
@@ -150,7 +150,7 @@ class TestUploadPostEndpoint:
 
         # Upload a file
         response = await client.post(
-            "/uploads",
+            "/upload",
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
@@ -194,7 +194,7 @@ class TestUploadPostEndpoint:
 
         # Upload multiple files
         response = await client.post(
-            "/uploads",
+            "/upload",
             files=[
                 ("upload_files", ("test1.txt", BytesIO(b"content"), "text/plain")),
                 ("upload_files", ("test2.txt", BytesIO(b"content"), "text/plain")),
@@ -235,7 +235,7 @@ class TestUploadPostEndpoint:
         monkeypatch.setattr(app.ui.uploads, "handle_uploaded_files", mock_handle_uploaded_files)
 
         response = await client.post(
-            "/uploads",
+            "/upload",
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
@@ -274,7 +274,7 @@ class TestUploadPostEndpoint:
         monkeypatch.setattr(app.ui.uploads, "handle_uploaded_files", mock_handle_uploaded_files)
 
         response = await client.post(
-            "/uploads",
+            "/upload",
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
@@ -306,7 +306,7 @@ class TestUploadPostEndpoint:
         monkeypatch.setattr(app.ui.uploads, "handle_uploaded_files", mock_handle_uploaded_files)
 
         response = await client.post(
-            "/uploads",
+            "/upload",
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
@@ -356,7 +356,7 @@ class TestUploadPostEndpoint:
         monkeypatch.setattr(app.ui.uploads, "handle_uploaded_files", mock_handle_uploaded_files)
 
         response = await client.post(
-            "/uploads",
+            "/upload",
             files=[
                 ("upload_files", ("test1.txt", BytesIO(b"content"), "text/plain")),
                 ("upload_files", ("test2.exe", BytesIO(b"content"), "application/octet-stream")),
@@ -397,7 +397,7 @@ class TestUploadPostEndpoint:
 
         # POST to /upload with a file - this triggers get_or_create_authenticated_user
         response = await client.post(
-            "/uploads",
+            "/upload",
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
@@ -437,7 +437,7 @@ class TestUploadPostEndpoint:
         monkeypatch.setattr(app.ui.uploads, "handle_uploaded_files", mock_handle_uploaded_files)
 
         response = await client.post(
-            "/uploads",
+            "/upload",
             files=[
                 ("upload_files", ("test1.exe", BytesIO(b"content"), "application/octet-stream")),
                 ("upload_files", ("test2.zip", BytesIO(b"x" * 10000000), "application/zip")),
@@ -597,7 +597,7 @@ class TestUploadIntegration:
 
         # POST endpoint should call handler
         response = await client.post(
-            "/uploads",
+            "/upload",
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
@@ -635,7 +635,7 @@ class TestUploadIntegration:
         monkeypatch.setattr(app.ui.uploads, "handle_uploaded_files", mock_handle_uploaded_files)
 
         response = await client.post(
-            "/uploads",
+            "/upload",
             files={"upload_files": ("important.txt", BytesIO(b"content"), "text/plain")},
         )
 

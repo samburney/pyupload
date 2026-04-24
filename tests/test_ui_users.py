@@ -1,8 +1,10 @@
-"""Tests for app/ui/users.py — User profile page.
+"""Tests for app/ui/users.py — User profile and uploads gallery pages.
 
 Covers:
 - GET /profile: authentication required, default and explicit sort order,
   upload and image rendering, pagination, download archives section
+- GET /uploads: authentication required, shows only current user's uploads
+  (including private), excludes other users' uploads
 """
 
 from datetime import datetime, timedelta, timezone
@@ -226,3 +228,60 @@ class TestUserProfileArchives:
         html = response.text
         assert "Download Archives" not in html
         assert archive.filename not in html
+
+
+# ---------------------------------------------------------------------------
+# GET /uploads — user gallery
+# ---------------------------------------------------------------------------
+
+class TestUserUploadsGallery:
+    """Tests for the /uploads gallery page showing the current user's uploads."""
+
+    async def test_uploads_requires_authentication(self, client):
+        """GET /uploads redirects unauthenticated users."""
+        response = await client.get("/uploads", follow_redirects=False)
+        assert response.status_code in (302, 303, 401, 403)
+
+    async def test_uploads_returns_200_for_authenticated_user(self, client):
+        """GET /uploads returns 200 for an authenticated user."""
+        user = await User.create(username="ugal-smoke", email="ugal-smoke@e.com", is_registered=True, password="pw")
+        client.cookies = {"access_token": create_access_token({"sub": user.username})}
+
+        response = await client.get("/uploads")
+
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+    async def test_uploads_shows_own_uploads(self, client):
+        """GET /uploads shows the current user's own uploads."""
+        user = await User.create(username="ugal-own", email="ugal-own@e.com", is_registered=True, password="pw")
+        client.cookies = {"access_token": create_access_token({"sub": user.username})}
+        upload = await Upload.create(**_upload_kwargs(user, "mine"))
+
+        response = await client.get("/uploads")
+
+        assert response.status_code == 200
+        assert upload.originalname in response.text
+
+    async def test_uploads_excludes_other_users_uploads(self, client):
+        """GET /uploads does not show uploads belonging to other users."""
+        user = await User.create(username="ugal-excl", email="ugal-excl@e.com", is_registered=True, password="pw")
+        other = await User.create(username="ugal-excl-other", email="ugal-excl-other@e.com", is_registered=True, password="pw")
+        client.cookies = {"access_token": create_access_token({"sub": user.username})}
+        other_upload = await Upload.create(**_upload_kwargs(other, "notmine"))
+
+        response = await client.get("/uploads")
+
+        assert response.status_code == 200
+        assert other_upload.originalname not in response.text
+
+    async def test_uploads_includes_private_uploads(self, client):
+        """GET /uploads shows the user's own private uploads."""
+        user = await User.create(username="ugal-priv", email="ugal-priv@e.com", is_registered=True, password="pw")
+        client.cookies = {"access_token": create_access_token({"sub": user.username})}
+        private_upload = await Upload.create(**{**_upload_kwargs(user, "secret"), "private": True})
+
+        response = await client.get("/uploads")
+
+        assert response.status_code == 200
+        assert private_upload.originalname in response.text

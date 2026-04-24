@@ -9,19 +9,22 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.exceptions import HTTPException
 
 from app.lib.config import get_app_config, logger
-from app.lib.error_handling import NotAuthorisedError, parse_tortoise_validation_errors
+from app.lib.error_handling import parse_tortoise_validation_errors
 from app.lib.upload_handler import handle_uploaded_files
 from app.lib.file_serving import serve_file, validate_file_request
 
 from app.models.uploads import Upload, UploadSerializer
 from app.models.users import User
 
+from app.ui.common.gallery import (
+    get_request_context_filter,
+    render_multiselect_sidebar,
+)
 from app.ui.common.responses import error_response_for_get, error_template_response
-from app.ui.common.gallery import render_multiselect_sidebar, get_request_context_filter
-from app.ui.common.templating import templates
-from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_for_update, get_writable_selected_upload_models
 from app.ui.common.security import get_current_user, get_current_authenticated_user, get_or_create_authenticated_user
 from app.ui.common.session import flash_message, get_client_dimensions, BREAKPOINT_FRAME_PADDING, BREAKPOINT_SIDEBAR_WIDTHS
+from app.ui.common.templating import templates
+from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_for_update, get_writable_selected_upload_models
 
 
 config = get_app_config()
@@ -48,13 +51,7 @@ async def _render_upload_component(request: Request, current_user: User, upload_
     )
 
 
-@router.get("/upload", response_class=RedirectResponse, include_in_schema=False)
-async def redirect_upload_get():
-    """Redirect singular /upload route to /uploads."""
-    return RedirectResponse(url="/uploads", status_code=301)
-
-
-@router.get("/uploads", response_class=HTMLResponse)
+@router.get("/upload", response_class=HTMLResponse)
 async def show_upload_page_get(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -70,7 +67,7 @@ async def show_upload_page_get(
     )
 
 
-@router.post("/uploads", response_class=HTMLResponse)
+@router.post("/upload", response_class=HTMLResponse)
 async def create_upload_post(
     current_user: Annotated[User, Depends(get_or_create_authenticated_user)],
     request: Request,
@@ -305,7 +302,7 @@ async def delete_selected_uploads_post(
     if not request.headers.get('hx-request', False):
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
-    context_filter = await get_request_context_filter(request)
+    context_filter = await get_request_context_filter(request, user=current_user)
     upload_models: list[Upload] = await get_writable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids, context_filter)
     if not upload_models:
         flash_message(request, "You do not have permission to delete any of the selected uploads.", "error")
@@ -352,7 +349,7 @@ async def toggle_selected_uploads_private_patch(
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
     # Get uploads from database
-    context_filter = await get_request_context_filter(request)
+    context_filter = await get_request_context_filter(request, user=current_user)
     upload_models = await get_writable_selected_upload_models(
         user=current_user,
         super_selected=super_selected,
