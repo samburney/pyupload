@@ -2,12 +2,9 @@ import asyncio
 
 from typing import Annotated
 
-from tortoise.expressions import Q
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import Response, HTMLResponse
 from fastapi.exceptions import HTTPException
-
-from app.lib.auth import get_current_user_from_request
 
 from app.models.collections import Collection
 from app.models.users import User
@@ -20,8 +17,8 @@ from app.ui.common.etag import (
     get_cache_headers,
 )
 from app.ui.common.responses import error_template_response, info_template_response
-from app.ui.common.gallery import GalleryPaginationDefaultParams, render_multiselect_sidebar, get_request_context_filter
-from app.ui.common.security import get_current_authenticated_user, get_or_create_authenticated_user
+from app.ui.common.gallery import GalleryPaginationDefaultParams, get_request_context_filter
+from app.ui.common.security import get_current_authenticated_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import (
     build_readable_upload_queryset,
@@ -35,12 +32,11 @@ breadcrumb_handler = Breadcrumbs(router=router, route_title="Collections")
 @router.get("", response_class=Response)
 async def collections_index_get(
     request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
     pagination: Annotated[CollectionPaginationDefaultParams, Depends()],
     breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
     """Render collections gallery view"""
-
-    current_user = await get_or_create_authenticated_user(request)
 
     collection_query = Collection.filter(user=current_user)
     pagination.count = await collection_query.count()
@@ -49,6 +45,9 @@ async def collections_index_get(
     collections = await CollectionSelectionDetail.from_queryset(
         collection_models, context={"user": current_user}
     )
+
+    breadcrumbs.replace(0, current_user.username, request.url_for("show_profile_page"))
+    breadcrumbs.push(title="Collections", url=request.url_for("collections_index_get"))
 
     # Template context
     context = {
@@ -82,13 +81,12 @@ async def collections_index_get(
 @router.get("/view/{name}", response_class=HTMLResponse)
 async def collections_view_get(
     request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
     name: str, 
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
     breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
 ) -> Response:
     """Render individual collection uploads gallery view"""
-
-    current_user = await get_current_user_from_request(request)
 
     collection_model = Collection.get(name_unique=name)
     collection = await CollectionSelectionDetail.from_single_queryset_or_none(collection_model, context={"user": current_user})
@@ -112,6 +110,8 @@ async def collections_view_get(
             request, ["This collection has no uploads yet."], 200, collection.name
         )
 
+    breadcrumbs.replace(0, current_user.username, request.url_for("show_profile_page"))
+    breadcrumbs.push(title="Collections", url=request.url_for("collections_index_get"))
     breadcrumbs.push(title=collection.name, url=request.url_for("collections_view_get", name=collection.name_unique))
 
     # Template context
