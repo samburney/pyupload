@@ -36,7 +36,7 @@ breadcrumb_handler = Breadcrumbs(router=router, route_title="Browse")
 async def gallery_index_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render main gallery view"""
 
@@ -47,7 +47,7 @@ async def gallery_index_get(
 async def gallery_all_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render gallery sorted alphabetically with infinite scroll"""
 
@@ -62,7 +62,7 @@ async def gallery_all_get(
 async def gallery_popular_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render gallery sorted by view count"""
 
@@ -105,7 +105,7 @@ async def gallery_handle_selected_upload_post(
 async def gallery_random_get(
     request: Request,
     pagination: Annotated[RandomGalleryPaginationParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render random gallery view"""        
 

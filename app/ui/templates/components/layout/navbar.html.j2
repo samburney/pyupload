@@ -52,7 +52,7 @@
                             <!-- User dropdown -->
                             <div class="relative" @click.away="userOpen = false">
                                 <div class="split-button split-button-narrow split-button-ghost">
-                                    {% if current_user is defined and current_user.is_registered %}
+                                    {% if current_user and current_user.is_registered %}
                                     <a class="split-button-action" href="/profile">{{ current_user.username }}</a>
                                     {% else %}
                                     <a class="split-button-action" href="/login">Not Logged In</a>

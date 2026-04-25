@@ -8,12 +8,17 @@ from app.lib.error_handling import supports_error_image, get_error_image_respons
 from app.ui.common.templating import templates
 
 
-async def error_template_response(request: Request, error_messages: list[str], status_code: int = 400, title: str | None = None):
+async def error_template_response(
+    request: Request,
+    error_messages: list[str],
+    status_code: int = 400,
+    title: str | None = None,
+):
     """Render an error response with given messages and status code."""
 
     current_user = await get_current_user_from_request(request)
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="components/layout/error.html.j2",
         context={
@@ -25,13 +30,20 @@ async def error_template_response(request: Request, error_messages: list[str], s
         status_code=status_code,
     )
 
+    return response
 
-async def info_template_response(request: Request, info_messages: list[str], status_code: int = 200, title: str | None = None):
+
+async def info_template_response(
+    request: Request,
+    info_messages: list[str],
+    status_code: int = 200,
+    title: str | None = None,
+):
     """Render an informational response (green banner) with given messages and status code."""
 
     current_user = await get_current_user_from_request(request)
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="components/layout/error.html.j2",
         context={
@@ -42,6 +54,8 @@ async def info_template_response(request: Request, info_messages: list[str], sta
         },
         status_code=status_code,
     )
+
+    return response
 
 
 async def error_response_for_get(

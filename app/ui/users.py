@@ -39,7 +39,7 @@ async def show_profile_page(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     pagination: Annotated[ProfilePaginationParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> HTMLResponse:
     """Render the users profile page."""
 
@@ -88,7 +88,7 @@ async def user_uploads_get(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render the current user's uploads as a gallery."""
 

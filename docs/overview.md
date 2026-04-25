@@ -61,3 +61,4 @@ This roadmap outlines the milestones for the initial development phase.
     - Project README.
     - API documentation.
     - Migration/Transition guide from `simplegallery`.
+    - Code style guide (`STYLE.md`).

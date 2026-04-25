@@ -36,7 +36,7 @@ breadcrumb_handler = Breadcrumbs(router=router, route_title="Tags")
 async def tags_index_get(
     request: Request,
     pagination: Annotated[TagPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render tags gallery view"""
 
@@ -83,7 +83,7 @@ async def tags_view_get(
     request: Request,
     name: str, 
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render individual tag uploads gallery view"""
 

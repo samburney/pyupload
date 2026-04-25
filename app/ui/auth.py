@@ -33,7 +33,14 @@ router = APIRouter(tags=["auth"])
 # Login page
 @router.get("/login", response_class=HTMLResponse)
 async def login(request: Request):
-    return templates.TemplateResponse(request, "auth/login.html.j2")
+    current_user = await get_current_user_from_request(request)
+    response = templates.TemplateResponse(
+        request=request,
+        name="auth/login.html.j2",
+        context={"current_user": current_user},
+    )
+
+    return response
 
 
 # Login form submission

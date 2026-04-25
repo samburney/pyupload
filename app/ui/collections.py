@@ -34,7 +34,7 @@ async def collections_index_get(
     request: Request,
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     pagination: Annotated[CollectionPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render collections gallery view"""
 
@@ -84,7 +84,7 @@ async def collections_view_get(
     current_user: Annotated[User, Depends(get_current_authenticated_user)],
     name: str, 
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render individual collection uploads gallery view"""
 

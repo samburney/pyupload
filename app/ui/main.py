@@ -22,7 +22,7 @@ breadcrumb_handler = Breadcrumbs(router=router)
 async def index_get(
     request: Request,
     pagination: Annotated[GalleryPaginationDefaultParams, Depends()],
-    breadcrumbs: Breadcrumbs = Depends(breadcrumb_handler.handle_request),
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
 ) -> Response:
     """Render the main index page."""
     
