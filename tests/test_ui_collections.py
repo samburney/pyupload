@@ -274,10 +274,11 @@ class TestCollectionPatchEndpoint:
 class TestCollectionsIndexGet:
     """Tests for GET /collections - collections gallery index page."""
 
-    async def test_returns_200_for_anonymous_user(self, client):
-        """Anonymous users can access the collections index (unregistered user from fingerprint)."""
+    async def test_returns_303_for_anonymous_user(self, client):
+        """Anonymous users cannot access collections - redirect to login page."""
         response = await client.get("/collections")
-        assert response.status_code == 200
+        assert response.status_code == 303
+        assert "/login" in response.headers.get("location", "")
 
     async def test_returns_200_for_authenticated_user(self, client):
         """Authenticated users can access the collections index."""
@@ -324,13 +325,16 @@ class TestCollectionsViewGet:
 
     async def test_returns_404_for_nonexistent_collection(self, client):
         """A slug that does not exist returns 404."""
+        user = await User.create(username="cv404user", email="cv404user@example.com", password="pw", is_registered=True)
+        client.cookies = _auth(user)
         response = await client.get("/collections/view/no-such-collection")
         assert response.status_code == 404
 
-    async def test_returns_200_for_collection_with_public_uploads(self, client):
-        """Anonymous users can view a collection containing public uploads."""
+    async def test_returns_200_for_authenticated_user_viewing_collection(self, client):
+        """An authenticated user can view a collection."""
         user = await User.create(username="cvpub", email="cvpub@example.com", password="pw", is_registered=True)
         col, _ = await self._make_collection_with_upload(user, "Public Col", "public-col-view", "cvpub")
+        client.cookies = _auth(user)
         response = await client.get(f"/collections/view/{col.name_unique}")
         assert response.status_code == 200
 
