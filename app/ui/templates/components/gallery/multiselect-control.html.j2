@@ -3,14 +3,15 @@
     <div class="overflow-hidden">
         <div id="uploads-selected-bar"
             class="flex w-full items-center py-2 px-4 mb-2 gap-2 border border-blue-300 rounded-md shadow-md shadow-blue-100 justify-between transition-all duration-200"
+            x-init="writableCount = {{ pagination.writable_count if pagination else 0 }};"
+            x-show="selectedCount > 0 || superSelected"
             x-cloak
             x-transition
-            x-show="selectedCount > 0 || superSelected"
-            x-init="writableCount = {{ pagination.writable_count if pagination else 0 }};"
             :class="pulse ? 'shadow-lg bg-blue-100' : 'shadow-md bg-white'">
             <div class="text-lg block">
                 <span x-text="selectedCount"></span>
                 <span>Selected</span>
+                {% if enable_super_select | default(false) %}
                 <span class="hover:underline"
                     x-show="selectedIds.length > 0 && allVisibleSelected && !superSelected"
                     x-cloak>
@@ -23,6 +24,7 @@
                     (<button class="cursor-pointer hover:underline"
                         @click="disableSuperSelect();">Undo select all</button>)
                 </span>
+                {% endif %}
             </div>
             <div class="flex gap-2">
                 <button class="p-2 rounded-sm hover:fill-gray-700 hover:shadow-md hover:cursor-pointer hover:outline hover:outline-red-200"

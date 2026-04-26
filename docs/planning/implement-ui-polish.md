@@ -26,6 +26,17 @@ Polish the user interface with improved navigation, responsive design refinement
 - Forms are functional with HTMX and baseline Tailwind styling, but need consistency and validation polish
 - Navbar links include unimplemented routes that need cleanup (/uploads, /search, /random, /popular, /all) — `/tags` and `/collections` are now implemented
 
+### Review Snapshot (2026-04-26)
+- `/search` route implemented in `app/ui/search.py` — keyword search across upload description, name, originalname, and tag names; collection name search when authenticated
+- Full-page and HTMX partial rendering (`search/index.html.j2`, `search/results.html.j2`, `search/partials/results_output.html.j2`, `search/partials/query_form.html.j2`)
+- `build_text_search_filter(query, user)` and `build_qs_filter(query_string, user)` added to `app/ui/common/gallery.py`; `build_qs_filter` now returns `None` (not `Q()`) when no recognised params are present — callers use `is not None` guards
+- `PaginationParams.page_url()` method added to `app/models/common/pagination.py` — builds query strings preserving `extra_params` and omitting pagination params that match subclass defaults; used by all pagination templates so search query is preserved across page navigation
+- `enable_super_select` template variable introduced — search results, tags, and collections pages pass `True`; gallery index passes `True` only when a `context_filter` is active; multiselect control renders the "Select all" option only when enabled
+- `build_writable_upload_queryset` guard added: `super_selected=True` with `context_filter=None` returns an empty queryset, preventing accidental bulk action against all writable uploads with no scope
+- `readable_upload_queryset` updated: applies `.distinct()` when a `context_filter` is present; changed to `is not None` check so an explicit `Q()` is treated as a valid "select everything" scope
+- Desktop navbar `/uploads` and `/search` links now point to implemented routes
+- Tests added: `tests/test_models_common_pagination.py` (11 tests), new classes in `tests/test_ui_common_gallery.py` (`TestBuildTextSearchFilter`, `TestBuildQsFilter`), `tests/test_ui_search.py` (18 tests); all 1193 tests passing
+
 ### Review Snapshot (2026-02-15)
 - Core Tailwind + Alpine UI scaffolding is in place and functional.
 - Responsive/navbar polish tasks are still largely open.

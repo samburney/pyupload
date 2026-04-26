@@ -20,7 +20,7 @@ from app.models.tags import Tag
 from app.models.uploads import Upload
 from app.models.users import User
 from app.lib.auth import create_access_token
-from app.ui.common.gallery import _resolve_path_context_filter
+from app.ui.common.gallery import _resolve_path_context_filter, build_qs_filter, build_text_search_filter
 
 
 def _auth(user) -> dict:
@@ -151,12 +151,12 @@ class TestGetRequestContextFilter:
         await upload.collections.add(col)
         return upload
 
-    async def test_no_hx_current_url_applies_no_context_filter(self, client):
-        """Without HX-Current-URL, super-select affects all user uploads."""
+    async def test_no_hx_current_url_super_select_is_inert(self, client):
+        """Without HX-Current-URL there is no scope — super-select must not target all uploads."""
         user = await User.create(username="gcf-nourl", email="gcf-nourl@e.com", password="pw", is_registered=True)
         tag = await Tag.create(name="gcf-nourl-tag")
-        u1 = await self._make_tagged_upload(user, tag, "gcfnourl1")
-        u2 = await Upload.create(**_upload_data(user, "gcfnourl2"))
+        await self._make_tagged_upload(user, tag, "gcfnourl1")
+        await Upload.create(**_upload_data(user, "gcfnourl2"))
         client.cookies = _auth(user)
 
         response = await client.post(
@@ -164,14 +164,13 @@ class TestGetRequestContextFilter:
             data={"super_selected": "true"},
             headers={"hx-request": "true"},
         )
-        assert response.status_code == 200
-        assert "2 Uploads Selected" in response.text
+        assert response.status_code == 403
 
-    async def test_gallery_url_applies_no_context_filter(self, client):
-        """HX-Current-URL pointing to /gallery applies no filter."""
+    async def test_gallery_url_super_select_is_inert(self, client):
+        """HX-Current-URL pointing to /gallery yields no scope — super-select must not target all uploads."""
         user = await User.create(username="gcf-gallery", email="gcf-gallery@e.com", password="pw", is_registered=True)
-        u1 = await Upload.create(**_upload_data(user, "gcfgal1"))
-        u2 = await Upload.create(**_upload_data(user, "gcfgal2"))
+        await Upload.create(**_upload_data(user, "gcfgal1"))
+        await Upload.create(**_upload_data(user, "gcfgal2"))
         client.cookies = _auth(user)
 
         response = await client.post(
@@ -179,8 +178,7 @@ class TestGetRequestContextFilter:
             data={"super_selected": "true"},
             headers={"hx-request": "true", "HX-Current-URL": "http://test/gallery"},
         )
-        assert response.status_code == 200
-        assert "2 Uploads Selected" in response.text
+        assert response.status_code == 403
 
     async def test_tag_url_scopes_super_select_to_tag(self, client):
         """HX-Current-URL for a tag view scopes super-select to that tag only."""
@@ -260,3 +258,119 @@ class TestGetRequestContextFilter:
         )
         assert response.status_code == 200
         assert "2 Uploads Selected" in response.text
+
+
+# ---------------------------------------------------------------------------
+# build_text_search_filter (unit tests — DB required)
+# ---------------------------------------------------------------------------
+
+class TestBuildTextSearchFilter:
+    """Unit tests for build_text_search_filter — verifies Q filter matches correct uploads."""
+
+    async def test_matches_description(self, db):
+        """A query matching an upload's description is returned."""
+        user = await User.create(username="btsf-desc", email="btsf-desc@e.com", password="pw", is_registered=True)
+        match = await Upload.create(**{**_upload_data(user, "desc"), "description": "uniquedescbtsf123"})
+        other = await Upload.create(**_upload_data(user, "nodesc"))
+
+        q = build_text_search_filter("uniquedescbtsf123")
+        results = await Upload.filter(q).distinct()
+        ids = {u.id for u in results}
+        assert match.id in ids
+        assert other.id not in ids
+
+    async def test_description_match_is_case_insensitive(self, db):
+        """Description matching is case-insensitive."""
+        user = await User.create(username="btsf-ci", email="btsf-ci@e.com", password="pw", is_registered=True)
+        match = await Upload.create(**{**_upload_data(user, "ci"), "description": "CaseSensTest999"})
+
+        q = build_text_search_filter("casesenstest999")
+        results = await Upload.filter(q).distinct()
+        assert match.id in {u.id for u in results}
+
+    async def test_matches_originalname(self, db):
+        """A query matching an upload's originalname is returned."""
+        user = await User.create(username="btsf-orig", email="btsf-orig@e.com", password="pw", is_registered=True)
+        match = await Upload.create(**{**_upload_data(user, "orig"), "originalname": "uniqueorigbtsf456.txt"})
+        other = await Upload.create(**_upload_data(user, "noorig"))
+
+        q = build_text_search_filter("uniqueorigbtsf456")
+        results = await Upload.filter(q).distinct()
+        ids = {u.id for u in results}
+        assert match.id in ids
+        assert other.id not in ids
+
+    async def test_matches_tag_name(self, db):
+        """A query matching an upload's tag name is returned."""
+        user = await User.create(username="btsf-tag", email="btsf-tag@e.com", password="pw", is_registered=True)
+        tag = await Tag.create(name="btsf-unique-tag-abc")
+        match = await Upload.create(**_upload_data(user, "tagged"))
+        await match.tags.add(tag)
+        other = await Upload.create(**_upload_data(user, "notagbtsf"))
+
+        q = build_text_search_filter("btsf-unique-tag-abc")
+        results = await Upload.filter(q).distinct()
+        ids = {u.id for u in results}
+        assert match.id in ids
+        assert other.id not in ids
+
+    async def test_matches_collection_name_for_user(self, db):
+        """A query matching a user's collection name is returned when user is supplied."""
+        user = await User.create(username="btsf-col", email="btsf-col@e.com", password="pw", is_registered=True)
+        col = await Collection.create(user=user, name="Btsf Unique Collection", name_unique="btsf-unique-col")
+        match = await Upload.create(**_upload_data(user, "coled"))
+        await match.collections.add(col)
+        other = await Upload.create(**_upload_data(user, "nocolbtsf"))
+
+        q = build_text_search_filter("Btsf Unique Collection", user=user)
+        results = await Upload.filter(q).distinct()
+        ids = {u.id for u in results}
+        assert match.id in ids
+
+    async def test_collection_not_matched_without_user(self, db):
+        """Collection names are not searched when no user is supplied."""
+        user = await User.create(username="btsf-nouser", email="btsf-nouser@e.com", password="pw", is_registered=True)
+        col = await Collection.create(user=user, name="BtsfNoUserCol999", name_unique="btsf-nouser-col")
+        match = await Upload.create(**_upload_data(user, "nousercoled"))
+        await match.collections.add(col)
+
+        q = build_text_search_filter("BtsfNoUserCol999", user=None)
+        results = await Upload.filter(q).distinct()
+        assert match.id not in {u.id for u in results}
+
+    async def test_matches_filename_with_extension(self, db):
+        """A filename.ext query matches uploads by exact originalname + ext."""
+        user = await User.create(username="btsf-fn", email="btsf-fn@e.com", password="pw", is_registered=True)
+        # originalname stored without extension so the iexact match applies
+        match = await Upload.create(**{**_upload_data(user, "fn"), "originalname": "btsfuniquefile", "ext": "pdf"})
+        other = await Upload.create(**_upload_data(user, "fnother"))
+
+        q = build_text_search_filter("btsfuniquefile.pdf")
+        results = await Upload.filter(q).distinct()
+        ids = {u.id for u in results}
+        assert match.id in ids
+        assert other.id not in ids
+
+
+# ---------------------------------------------------------------------------
+# build_qs_filter (unit tests — no DB required)
+# ---------------------------------------------------------------------------
+
+class TestBuildQsFilter:
+    """Unit tests for build_qs_filter — Q construction from URL query strings."""
+
+    def test_empty_query_string_returns_none(self):
+        """An empty query string returns None — no filter to apply."""
+        assert build_qs_filter("") is None
+
+    def test_unrecognised_params_return_none(self):
+        """Query strings with only unrecognised params return None."""
+        assert build_qs_filter("page=2&sort_by=name") is None
+
+    def test_query_param_returns_truthy_q(self):
+        """A ?query= param produces a non-empty Q filter."""
+        assert build_qs_filter("query=hello")
+
+    def test_query_param_without_user(self):
+        """?query= without a user still produces a non-empty Q."""
+        assert build_qs_filter("query=hello", user=None)

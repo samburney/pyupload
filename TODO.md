@@ -25,9 +25,9 @@
 
 ### Gallery & Discovery Pages
 - [ ] Sort and filter options (newest, most viewed, file type)
-- [ ] Search functionality
-  - [ ] Keyword search across titles, descriptions
-  - [ ] Tag-based search
+- [x] Search functionality
+  - [x] Keyword search across titles, descriptions, original filename
+  - [x] Tag-based search
 
 ### Collections & Organization
 - [x] Tags navbar link and browsing page (/tags)
@@ -89,14 +89,14 @@
 ---
 
 ## Fixes or Minor Enhancements
-- [ ] Wire up `build_qs_filter` stub in `app/ui/common/gallery.py` — parses request query string into a Tortoise `Q` object for use as a `context_filter` (uploader, private, date range, etc.).
+- [ ] Extend `build_qs_filter` in `app/ui/common/gallery.py` with additional filter parameters (uploader, private, date range, etc.) — `?query=` text search is now implemented.
 - [ ] Investigate potential double-counting of partially-selected collections in the `buttonText` getter of `combo-selector.js` — items in `partially_selected` may also be added to `selected` via `x-model`, inflating the displayed count.
 - [ ] Provide user feedback when some collection IDs are invalid/not owned in `PATCH /uploads/{id}/collection` (currently silently processes valid IDs and discards errors).
 - [ ] Make home gallery page size user-configurable. *(partial: `infinite_scroll` flag added to `PaginationParams`; pagination component switches between infinite scroll and standard page controls; an "all" option would set `infinite_scroll=True` on the relevant view)*
 - [ ] Make home gallery private-upload inclusion user-configurable (currently, logged-in users always see their own private uploads mixed into the home page feed).
 - [ ] Replace `?modal=true` query parameter on `/view/{id}/{filename}` with HTMX response headers to consolidate modal and full-page view into a single endpoint.
 - [ ] Scheduler: delete files owned by abandoned users when marked private.
-- [ ] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`) until their pages are implemented.
+- [x] Fix/remove navbar links to unimplemented routes (`/uploads`, `/search`) — both routes are now implemented and linked in the desktop navbar.
 - [x] Handle non-unique original names in archives
 - [ ] Debug audio file handling.  An MP3 file was identified as `application/octet-stream`.  May just be a one off, but worth checking.
 - [ ] Clean up Pydantic serialisation for Tortiose ORM models.  We originally used the build in serialisation which was clunky and since switched to `tortoise-serializer`.  We should switch everything to `tortoise-serializer` and clean up the dependencies of the old method.

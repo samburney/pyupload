@@ -7,7 +7,7 @@
     {%- if pagination.page < pagination.pages %}
     <div class="h-1"
         hx-trigger="revealed once"
-        hx-get="?page={{ pagination.page + 1 }}"
+        hx-get="{{ pagination.page_url(pagination.page + 1) }}"
         hx-target="#gallery-grid"
         hx-select="#gallery-grid > .group\/card"
         {%- if pagination.seed %}
@@ -27,8 +27,8 @@
     <ul class="flex gap-1 text-gray-900">
         <li>
             {% if pagination.page > 1 %}
-            <a href="?page={{ pagination.page - 1 }}" aria-label="Previous page" class="page-item next-previous-page justify-items-center"
-                hx-get="?page={{ pagination.page - 1 }}"
+            <a href="{{ pagination.page_url(pagination.page - 1) }}" aria-label="Previous page" class="page-item next-previous-page justify-items-center"
+                hx-get="{{ pagination.page_url(pagination.page - 1) }}"
                 hx-target="#gallery-grid"
                 hx-select="#gallery-grid"
                 {%- if pagination.seed %}
@@ -57,8 +57,8 @@
             {{ page }}
             </span>
         {% else %}
-            <a href="?page={{ page }}" class="page-item"
-                hx-get="?page={{ page }}"
+            <a href="{{ pagination.page_url(page) }}" class="page-item"
+                hx-get="{{ pagination.page_url(page) }}"
                 hx-target="#gallery-grid"
                 hx-select="#gallery-grid"
                 {%- if pagination.seed %}
@@ -75,8 +75,8 @@
 
         <li>
             {% if pagination.page < pagination.pages %}
-            <a href="?page={{ pagination.page + 1 }}" aria-label="Next page" class="page-item next-previous-page justify-items-center"
-                hx-get="?page={{ pagination.page + 1 }}"
+            <a href="{{ pagination.page_url(pagination.page + 1) }}" aria-label="Next page" class="page-item next-previous-page justify-items-center"
+                hx-get="{{ pagination.page_url(pagination.page + 1) }}"
                 hx-target="#gallery-grid"
                 hx-select="#gallery-grid"
                 {%- if pagination.seed %}

@@ -119,6 +119,7 @@ async def tags_view_get(
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
+        "enable_super_select": True,
     }
 
     etag = get_paginated_gallery_etag(

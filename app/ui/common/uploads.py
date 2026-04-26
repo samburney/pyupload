@@ -1,14 +1,14 @@
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from fastapi import HTTPException
-
-from tortoise.queryset import QuerySet
 from tortoise.expressions import Q
+from tortoise.queryset import QuerySet
+
+from app.lib.file_serving import validate_file_request, validate_file_update_request
 
 from app.models.common.pagination import PaginationParams
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User
-from app.lib.file_serving import validate_file_request, validate_file_update_request
 
 
 async def get_upload_or_404(id: int) -> Upload:
@@ -43,39 +43,53 @@ async def get_upload_or_404_for_update(id: int, user: User | None = None) -> Upl
 
 # If user is logged, include their private uploads
 # TODO: Make this a user configurable option
-def _build_default_readable_filter(user: Optional[User] = None, relation_prefix: str = "") -> Q:
+def _build_default_readable_filter(
+    user: User | None = None,
+    relation_prefix: str = "",
+) -> Q:
     private_field = f"{relation_prefix}private"
     public_filter = Q(**cast(Any, {private_field: False}))
 
-    if user:
+    if user is not None:
         user_field = f"{relation_prefix}user"
         return public_filter | Q(**cast(Any, {user_field: user}))
 
     return public_filter
 
 
-def default_readable_query_filter(user: Optional[User] = None) -> Q:
+def default_readable_query_filter(user: User | None = None) -> Q:
+    """Build the default readable upload filter for the current user."""
+
     return _build_default_readable_filter(user=user)
 
 
-def default_readable_upload_tag_filter(user: Optional[User] = None) -> Q:
+def default_readable_upload_tag_filter(user: User | None = None) -> Q:
     """Filter tags to those with at least one readable upload."""
+
     return _build_default_readable_filter(user=user, relation_prefix="uploads__")
 
 
 def readable_upload_queryset(
-    user: Optional[User] = None,
+    user: User | None = None,
     context_filter: Q | None = None,
     pagination: PaginationParams | None = None,
 ) -> QuerySet[Upload]:
     """Base queryset for all readable uploads, optionally scoped to a context."""
+
     qs = Upload.filter(default_readable_query_filter(user))
-    if context_filter:
-        qs = qs.filter(context_filter)
-    if pagination:
-        p = pagination.page_data()
-        order = f"-{p['sort_by']}" if p['sort_order'] == 'desc' else p['sort_by']
-        qs = qs.offset((p['page'] - 1) * p['page_size']).limit(p['page_size']).order_by(order)
+    if context_filter is not None:
+        qs = qs.filter(context_filter).distinct()
+    if pagination is not None:
+        page_data = pagination.page_data()
+        order = (
+            f"-{page_data['sort_by']}"
+            if page_data["sort_order"] == "desc"
+            else page_data["sort_by"]
+        )
+        qs = qs.offset((page_data["page"] - 1) * page_data["page_size"]).limit(
+            page_data["page_size"]
+        ).order_by(order)
+
     return qs
 
 
@@ -92,31 +106,54 @@ def build_readable_upload_queryset(
     user: User,
     selected_ids: list[int],
     super_selected: bool = False,
-    deselected_ids: list[int] = [],
+    deselected_ids: list[int] | None = None,
     context_filter: Q | None = None,
 ) -> QuerySet[Upload]:
     """Selection-aware readable upload queryset."""
+
+    if deselected_ids is None:
+        deselected_ids = []
+
     qs = readable_upload_queryset(user, context_filter)
     if super_selected:
         return qs.filter(id__not_in=deselected_ids)
-    else:
-        return qs.filter(id__in=selected_ids)
+
+    return qs.filter(id__in=selected_ids)
 
 
-async def get_readable_selected_upload_models(user: User,
+async def get_readable_selected_upload_models(
+    user: User,
     selected_ids: list[int],
     super_selected: bool = False,
-    deselected_ids: list[int] = [],
+    deselected_ids: list[int] | None = None,
     context_filter: Q | None = None,
 ) -> list[Upload]:
     """Get raw Upload model instances for selected uploads readable by user."""
-    return await build_readable_upload_queryset(user, selected_ids, super_selected, deselected_ids, context_filter)
+
+    return await build_readable_upload_queryset(
+        user,
+        selected_ids,
+        super_selected,
+        deselected_ids,
+        context_filter,
+    )
 
 
-async def get_readable_selected_uploads(user: User, selected_ids: list[int], super_selected: bool = False, deselected_ids: list[int] = []) -> list[UploadSerializer]:
+async def get_readable_selected_uploads(
+    user: User,
+    selected_ids: list[int],
+    super_selected: bool = False,
+    deselected_ids: list[int] | None = None,
+) -> list[UploadSerializer]:
     """Get serialized selected uploads readable by user."""
-    queryset = build_readable_upload_queryset(user, selected_ids, super_selected, deselected_ids) \
-        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+
+    queryset = build_readable_upload_queryset(
+        user,
+        selected_ids,
+        super_selected,
+        deselected_ids,
+    ).prefetch_related(*UPLOAD_PREFETCH_MODELS)
+
     return await UploadSerializer.from_queryset(queryset, context={"user": user})
 
 
@@ -124,25 +161,41 @@ def build_writable_upload_queryset(
     user: User,
     selected_ids: list[int],
     super_selected: bool = False,
-    deselected_ids: list[int] = [],
+    deselected_ids: list[int] | None = None,
     context_filter: Q | None = None,
 ) -> QuerySet[Upload]:
     """Selection-aware writable upload queryset."""
+
+    if deselected_ids is None:
+        deselected_ids = []
+
     qs = writable_upload_queryset(user, context_filter)
     if super_selected:
+        if context_filter is None:
+            # Without an explicit scope, super-select is undefined — return nothing
+            # rather than accidentally targeting every writable upload.
+            return qs.filter(id__in=[])
         return qs.filter(id__not_in=deselected_ids)
-    else:
-        return qs.filter(id__in=selected_ids)
+
+    return qs.filter(id__in=selected_ids)
 
 
-async def get_writable_selected_upload_models(user: User,
+async def get_writable_selected_upload_models(
+    user: User,
     selected_ids: list[int],
     super_selected: bool = False,
-    deselected_ids: list[int] = [],
+    deselected_ids: list[int] | None = None,
     context_filter: Q | None = None,
 ) -> list[Upload]:
     """Get raw Upload model instances for selected uploads owned by user."""
-    return await build_writable_upload_queryset(user, selected_ids, super_selected, deselected_ids, context_filter)
+
+    return await build_writable_upload_queryset(
+        user,
+        selected_ids,
+        super_selected,
+        deselected_ids,
+        context_filter,
+    )
 
 
 async def get_writable_selected_uploads(
@@ -150,9 +203,10 @@ async def get_writable_selected_uploads(
     selected_ids: list[int],
     context_filter: Q | None = None,
     super_selected: bool = False,
-    deselected_ids: list[int] = [],
+    deselected_ids: list[int] | None = None,
 ) -> list[UploadSerializer]:
     """Get serialized selected uploads owned by user."""
+
     queryset = build_writable_upload_queryset(
         user=user,
         selected_ids=selected_ids,

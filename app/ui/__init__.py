@@ -1,3 +1,27 @@
-from app.ui import main, common, collections, archives, auth, gallery, images, tags, uploads, users
+from app.ui import (
+    archives,
+    auth,
+    collections,
+    common,
+    gallery,
+    images,
+    main,
+    search,
+    tags,
+    uploads,
+    users,
+)
 
-__all__ = ["main", "common", "collections", "archives", "auth", "gallery", "images", "tags", "uploads", "users"]
+__all__ = [
+    "archives",
+    "auth",
+    "collections",
+    "common",
+    "gallery",
+    "images",
+    "main",
+    "search",
+    "tags",
+    "uploads",
+    "users",
+]

@@ -1,30 +1,42 @@
 import random
 import re
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
-from pydantic import BaseModel, ConfigDict, Field
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
-from tortoise.expressions import Q
 from fastapi import Request
 from fastapi.responses import Response
+from pydantic import BaseModel, ConfigDict, Field
+from tortoise.expressions import Q
 
-from app.lib.config import get_app_config
 from app.lib.auth import get_current_user_from_request
+from app.lib.config import get_app_config
+from app.lib.helpers import clean_text, split_filename
 
 from app.models.collections import Collection, CollectionSerializerSelected
-from app.models.download_archives import DownloadArchive, DownloadArchiveSerializer, ArchiveStatusEnum
 from app.models.common.pagination import PaginationParams
+from app.models.download_archives import (
+    ArchiveStatusEnum,
+    DownloadArchive,
+    DownloadArchiveSerializer,
+)
 from app.models.tags import Tag, TagSerializerSelected
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User, UserSerializer
 
 from app.ui.common.breadcrumbs import Breadcrumbs
-from app.ui.common.etag import get_paginated_gallery_etag, check_etag_and_return_304_if_match, get_cache_headers
+from app.ui.common.etag import (
+    check_etag_and_return_304_if_match,
+    get_cache_headers,
+    get_paginated_gallery_etag,
+)
 from app.ui.common.responses import error_template_response
 from app.ui.common.templating import templates
-from app.ui.common.uploads import get_writable_selected_uploads, default_readable_query_filter
+from app.ui.common.uploads import (
+    default_readable_query_filter,
+    get_writable_selected_uploads,
+)
 
 
 config = get_app_config()
@@ -57,6 +69,7 @@ class SelectionDetail(BaseModel):
     Detail model for an arbitrary list of Upload models.
     Mostly follows the API of the Upload model.
     """
+
     model_config = {"arbitrary_types_allowed": True}
 
     owners: list[UserSerializer]
@@ -69,7 +82,7 @@ class SelectionDetail(BaseModel):
     collections: list[CollectionSerializerSelected]
     filtered_collections: list[Collection]
     is_writable: bool
-    is_private: bool | Literal['partial']
+    is_private: bool | Literal["partial"]
     is_image: bool
 
     def __len__(self) -> int:
@@ -93,29 +106,63 @@ class SelectionDetail(BaseModel):
         )
 
 
-def build_qs_filter(query_string: str) -> Q:
-    """Create tortoiseorm compatible query from request query_string"""
+def build_text_search_filter(query: str, user: User | None = None) -> Q:
+    """Build a Q filter matching uploads against a free-text search query."""
 
-    # parses ?uploader=alice&private=false&after=2024-01-01 etc.
-    # Just a stub for now
+    q = (
+        Q(description__icontains=query)
+        | Q(name__icontains=query)
+        | Q(originalname__icontains=query)
+        | Q(tags__name__iexact=clean_text(query, "-"))
+    )
 
-    return Q()
+    name_part, ext_part = split_filename(query)
+    if ext_part:
+        q |= Q(originalname__iexact=name_part, ext__iexact=ext_part)
+
+    if user is not None:
+        q |= Q(collections__name__icontains=query, collections__user=user)
+
+    return q
+
+
+def build_qs_filter(query_string: str, user: User | None = None) -> Q | None:
+    """Build a Q filter from a URL query string.
+
+    Handles known filter parameters (?query=, and future additions).
+    Returns None when no recognised parameters are present.
+    """
+
+    params = parse_qs(query_string)
+    filters: list[Q] = []
+
+    if query_values := params.get("query"):
+        filters.append(build_text_search_filter(query_values[0], user))
+
+    if not filters:
+        return None
+
+    result = filters[0]
+    for f in filters[1:]:
+        result &= f
+
+    return result
 
 
 async def _resolve_path_context_filter(path: str, user: User | None = None) -> Q | None:
     """Return Q for path-based view context, or Q(id__in=[]) on stale entity."""
 
     # User uploads gallery view
-    if re.match(r'^/uploads$', path):
+    if re.match(r"^/uploads$", path):
         return Q(user=user) if user else Q(id__in=[])
 
     # Tags gallery view
-    if m := re.match(r'^/tags/view/([^/]+)', path):
+    if m := re.match(r"^/tags/view/([^/]+)", path):
         tag = await Tag.get_or_none(name=m.group(1))
         return Q(tags__id=tag.id) if tag else Q(id__in=[])  # safe no-op if deleted
 
     # Collections gallery view
-    if m := re.match(r'^/collections/view/([^/]+)', path):
+    if m := re.match(r"^/collections/view/([^/]+)", path):
         collection = await Collection.get_or_none(name_unique=m.group(1))
         return Q(collections__id=collection.id) if collection else Q(id__in=[])
 
@@ -124,7 +171,8 @@ async def _resolve_path_context_filter(path: str, user: User | None = None) -> Q
 
 async def get_request_context_filter(request: Request, user: User | None = None) -> Q | None:
     """Build context_filter from HX-Current-URL (path-based + query string)."""
-    url = request.headers.get('hx-current-url')
+
+    url = request.headers.get("hx-current-url")
     if not url:
         return None
 
@@ -137,20 +185,25 @@ async def get_request_context_filter(request: Request, user: User | None = None)
     if path_filter is not None:
         filters.append(path_filter)
 
-    # Query string filters (stub — populates when build_qs_filter is implemented)
-    qs_filter = build_qs_filter(parsed.query)
-    if qs_filter:  # empty Q() is falsy; only append when non-trivial
+    # Query string filters
+    qs_filter = build_qs_filter(parsed.query, user)
+    if qs_filter is not None:
         filters.append(qs_filter)
 
     if not filters:
         return None
+
     result = filters[0]
     for f in filters[1:]:
         result &= f
+
     return result
 
 
-async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], user: User | None = None) -> SelectionDetail:
+async def get_selection_detail(
+    uploads: list[Upload] | list[UploadSerializer],
+    user: User | None = None,
+) -> SelectionDetail:
     """Build a SelectionDetail model from a provided list of Upload objects"""
 
     # Handle empty list
@@ -162,7 +215,7 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
     selection_file_types = set()
     selection_file_size = 0
     selection_views = 0
-    is_private: bool | Literal['partial'] = bool(uploads[0].private)
+    is_private: bool | Literal["partial"] = bool(uploads[0].private)
 
     # Get combined upload details
     for upload in uploads:
@@ -183,7 +236,7 @@ async def get_selection_detail(uploads: list[Upload] | list[UploadSerializer], u
 
         # Handle `is_private` partial logic
         if is_private != upload.private:
-            is_private = 'partial'
+            is_private = "partial"
 
     # If a user has been provided, calculate user-related detail for provided uploads
     selected_collections = []
@@ -226,10 +279,16 @@ async def render_multiselect_sidebar(
     user: User,
     context_filter: Q | None = None,
     super_selected: bool = False,
-    selected_ids: list[int] = [],
-    deselected_ids: list[int] = [],
+    selected_ids: list[int] | None = None,
+    deselected_ids: list[int] | None = None,
 ) -> Response:
-    """Common function to render multiselect sidebar based on currently selected items"""
+    """Render the multiselect sidebar for the current selection."""
+
+    if selected_ids is None:
+        selected_ids = []
+
+    if deselected_ids is None:
+        deselected_ids = []
 
     # Get selected uploads
     selected_uploads: list[UploadSerializer] = await get_writable_selected_uploads(
@@ -251,17 +310,22 @@ async def render_multiselect_sidebar(
     # Match selected uploads against any existing DownloadArchives for this user
     selected_upload_ids = sorted(upload.id for upload in selected_uploads)
     download_archive = None
-    download_archive_expires_at = datetime.now(tz=timezone.utc) - timedelta(hours=config.archive_max_age_hours)
-    download_archive_models = await DownloadArchive.filter(user=user,
-                                                          created_at__gt=download_archive_expires_at,
-                                                          status__not=ArchiveStatusEnum.failed,
-                                                          upload_ids=selected_upload_ids
-                                                          ) \
-                                                    .order_by("-created_at") \
-                                                    .prefetch_related("user")
-    
+    download_archive_expires_at = datetime.now(tz=timezone.utc) - timedelta(
+        hours=config.archive_max_age_hours
+    )
+    download_archive_models = await (
+        DownloadArchive.filter(
+            user=user,
+            created_at__gt=download_archive_expires_at,
+            status__not=ArchiveStatusEnum.failed,
+            upload_ids=selected_upload_ids,
+        )
+        .order_by("-created_at")
+        .prefetch_related("user")
+    )
+
     # If there's multiple, just get the newest one
-    if len(download_archive_models):
+    if download_archive_models:
         download_archive_model = download_archive_models[0]
         download_archive = await DownloadArchiveSerializer.from_tortoise_orm(download_archive_model)
 
@@ -276,9 +340,9 @@ async def render_multiselect_sidebar(
         "selection_detail": selection_detail,
     }
     response = templates.TemplateResponse(
-        request,
-        "gallery/partials/sidebar-content.html.j2",
-        context=context
+        request=request,
+        name="gallery/partials/sidebar-content.html.j2",
+        context=context,
     )
 
     return response
@@ -293,20 +357,28 @@ async def render_gallery_index(
 ) -> Response:
     """Fetch uploads and render the gallery index template with ETag caching."""
 
+    enable_super_select = False
+
     if user is None:
         user = await get_current_user_from_request(request)
     current_user = user
     pagination_query = default_readable_query_filter(current_user)
+
     if context_filter is not None:
         pagination_query &= context_filter
+        enable_super_select = True
 
     pagination.count = await Upload.filter(pagination_query).count()
 
     if current_user:
-        pagination.writable_count = await Upload.filter(pagination_query).filter(user_id=current_user.id).count()
+        pagination.writable_count = await Upload.filter(pagination_query).filter(
+            user_id=current_user.id
+        ).count()
 
-    uploads_models = Upload.paginate(**pagination.page_data(), query=pagination_query) \
-        .prefetch_related(*UPLOAD_PREFETCH_MODELS)
+    uploads_models = Upload.paginate(
+        **pagination.page_data(),
+        query=pagination_query,
+    ).prefetch_related(*UPLOAD_PREFETCH_MODELS)
     uploads = await UploadSerializer.from_queryset(uploads_models)
 
     context = {
@@ -314,8 +386,13 @@ async def render_gallery_index(
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
+        "enable_super_select": enable_super_select,
     }
-    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+    response = templates.TemplateResponse(
+        request=request,
+        name="gallery/index.html.j2",
+        context=context,
+    )
 
     etag = get_paginated_gallery_etag(
         request=request,

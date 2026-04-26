@@ -1,9 +1,10 @@
 from math import ceil
+from typing import TYPE_CHECKING, Any
+from urllib.parse import urlencode
 
 from pydantic import BaseModel
-from typing import TYPE_CHECKING, Any
-from tortoise.queryset import QuerySet
 from tortoise.expressions import Q
+from tortoise.queryset import QuerySet
 
 from app.models.common.base import _ModelBase
 
@@ -17,11 +18,30 @@ class PaginationParams(BaseModel):
     sort_by: str = "id"
     count: int = 0
     infinite_scroll: bool = False
+    extra_params: dict[str, str] = {}
 
     @property
     def pages(self) -> int:
         """Return the number of pages."""
         return ceil(self.count / self.page_size)
+
+    def page_url(self, page: int | None = None) -> str:
+        """Build a query string for the given page.
+
+        Always includes extra_params and page. Other pagination params are only
+        included when they differ from their declared defaults, keeping URLs clean.
+        """
+
+        if page is None:
+            page = self.page
+
+        params: dict[str, Any] = {**self.extra_params, "page": page}
+        for key in ("page_size", "sort_order", "sort_by", "infinite_scroll"):
+            value = getattr(self, key)
+            if value != self.__class__.model_fields[key].default:
+                params[key] = value
+
+        return "?" + urlencode(params)
 
     def page_data(self) -> dict[str, Any]:
         """Return the page data."""
@@ -51,16 +71,17 @@ class PaginationMixin(_ModelBase):
         sort_by: str = "id",
         count: int = 0,
         query: Q | None = None,
-        *args: Q, **kwargs: Any
+        *args: Q,
+        **kwargs: Any,
     ) -> "QuerySet[Any]":
         """Paginate user uploads."""
-        
+
         offset = (page - 1) * page_size
         limit = page_size
-        order = f'-{sort_by}' if sort_order == 'desc' else sort_by
+        order = f"-{sort_by}" if sort_order == "desc" else sort_by
 
         # Handle query argument if it's provided
-        if query:
+        if query is not None:
             qs = cls.filter(query)
         else:
             qs = cls.filter(*args, **kwargs)
@@ -72,12 +93,13 @@ class PaginationMixin(_ModelBase):
         cls,
         page_size: int = 10,
         query: Q | None = None,
-        *args: Q, **kwargs: Any
+        *args: Q,
+        **kwargs: Any,
     ) -> int:
         """Paginate user uploads."""
 
         # Handle query argument if it's provided
-        if query:
+        if query is not None:
             qs = cls.filter(query)
         else:
             qs = cls.filter(*args, **kwargs)
@@ -86,6 +108,7 @@ class PaginationMixin(_ModelBase):
         # Return 1 page if no items
         if count == 0:
             return 1
+
         pages = ceil(count / page_size)
-        
+
         return pages
