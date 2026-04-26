@@ -1,5 +1,5 @@
-from fastapi import Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi import Request
+from fastapi.responses import HTMLResponse, Response
 
 from app.lib.config import logger
 from app.lib.auth import get_current_user_from_request
@@ -13,7 +13,7 @@ async def error_template_response(
     error_messages: list[str],
     status_code: int = 400,
     title: str | None = None,
-):
+) -> Response:
     """Render an error response with given messages and status code."""
 
     current_user = await get_current_user_from_request(request)
@@ -38,7 +38,7 @@ async def info_template_response(
     info_messages: list[str],
     status_code: int = 200,
     title: str | None = None,
-):
+) -> Response:
     """Render an informational response (green banner) with given messages and status code."""
 
     current_user = await get_current_user_from_request(request)
