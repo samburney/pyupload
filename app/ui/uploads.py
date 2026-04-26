@@ -369,7 +369,7 @@ async def toggle_selected_uploads_private_patch(
     if request.headers.get('hx-target') == 'upload-sidebar':
         # `#upload-sidebar` only supports one 'selected' item (It's hard coded on the sidebar)
         flash_message(request, f"Upload privacy status set to {'Private' if upload_private else 'Public'}.")
-        response = await _render_upload_component(request, current_user, upload_models[0], "components/uploads/sidebar-content.html.j2")
+        response = await _render_upload_component(request, current_user, upload_models[0], "components/uploads/sidebar.html.j2")
     elif request.headers.get('hx-target') == 'gallery-multiselect-sidebar':
         flash_message(request, f"Privacy status set to {'Private' if upload_private else 'Public'} for {len(upload_models)} uploads.")
         response = await render_multiselect_sidebar(

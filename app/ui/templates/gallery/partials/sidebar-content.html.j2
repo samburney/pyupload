@@ -1,15 +1,15 @@
 {%- include "components/common/messages.html.j2" %}
 {% if selected_uploads and selected_uploads | length > 0 %}
-<aside id="gallery-sidebar"
+<div id="gallery-sidebar"
     class="sidebar-not-loaded flex w-full">
     {% set sidebar_target = "gallery-multiselect-sidebar" %}
     {% if selected_uploads | length == 1 %}
     {% set upload = selected_uploads[0] %}
-    {%- include "components/uploads/sidebar-content.html.j2" %}
+    {%- include "components/uploads/sidebar.html.j2" %}
     {% else %}
     {%- include "components/gallery/multiselect-sidebar.html.j2" %}
     {% endif %}
-</aside>
+</div>
 {% else %}
-<aside id="gallery-sidebar" class="sidebar-not-loaded w-full"></aside>
+<div id="gallery-sidebar" class="sidebar-not-loaded w-full"></div>
 {% endif %}

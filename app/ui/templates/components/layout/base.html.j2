@@ -15,10 +15,15 @@
         {%- include "components/layout/messages.html.j2" %}
         </section>
         <main class="mx-2 mb-2 flex flex-col grow">
-            <div class="container mx-auto flex flex-col gap-2">
+            <div class="container mx-auto flex flex-col gap-2 lg:gap-4">
             {% include("components/layout/breadcrumbs.html.j2") %}
-                <div id="content" class="flex flex-col grow">
-                {% block content %}{% endblock %}
+                <div class="flex grow md:gap-2 lg:gap-4">
+                    <div id="content" class="flex flex-col gap-2 lg:gap-4 grow min-w-0">
+                    {% block content %}{% endblock %}
+                    </div>
+                    <aside id="sidebar" class="flex-none w-40 lg:w-64">
+                    {% block sidebar %}{% endblock %}
+                    </aside>
                 </div>
             </div>
         </main>

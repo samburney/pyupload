@@ -1,10 +1,11 @@
 {% extends "components/layout/base.html.j2" %}
 
 {% block content %}
-<div class="flex flex-row grow gap-4 mb-4 mt-2">
+<div class="flex flex-row grow">
     {% include "uploads/partials/view-frame.html.j2" %}
-    <aside class="hidden md:flex flex-none flex-col gap-4 w-40 lg:w-64">
-        {% include "components/uploads/sidebar-content.html.j2" %}
-    </aside>
 </div>
+{% endblock %}
+
+{% block sidebar %}
+{% include "components/uploads/sidebar.html.j2" %}
 {% endblock %}

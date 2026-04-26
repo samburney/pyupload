@@ -1,0 +1,12 @@
+<div id="sidebar-content"
+    class="sticky top-2 flex w-40 lg:w-64">
+    <div class="absolute top-0 left-0 flex w-full">
+        {%- include("/gallery/partials/sidebar-content.html.j2") %}
+    </div>
+    <div id="sidebar-loading-indicator"
+        class="absolute top-0 left-0 flex w-full min-h-[calc(100dvh-148px)] justify-center items-center">
+        <svg class="size-12 animate-spin" fill="none" viewBox="0 0 24 24">
+            <use href="#icon-loading-spinner"></use>
+        </svg>
+    </div>
+</div>
