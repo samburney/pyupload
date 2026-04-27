@@ -17,5 +17,6 @@ test.html.j2
 
 # Node / Tailwind CSS
 node_modules/
-app/static/css/tailwind.css
 app/static/js/vendor/
+app/static/css/vendor/
+app/static/css/app/tailwind.css

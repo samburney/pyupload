@@ -3,20 +3,31 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const vendorDir = resolve(projectRoot, 'app/static/js/vendor');
+const vendorScriptDir = resolve(projectRoot, 'app/static/js/vendor');
+const vendorStyleDir = resolve(projectRoot, 'app/static/css/vendor');
 
-mkdirSync(vendorDir, { recursive: true });
+mkdirSync(vendorScriptDir, { recursive: true });
+mkdirSync(vendorStyleDir, { recursive: true });
 
-const files = [
+const scriptFiles = [
   ['node_modules/alpinejs/dist/cdn.min.js', 'alpine.min.js'],
   ['node_modules/@alpinejs/focus/dist/cdn.min.js', 'alpine-focus.min.js'],
   ['node_modules/htmx.org/dist/htmx.min.js', 'htmx.min.js'],
   ['node_modules/htmx-ext-response-targets/dist/response-targets.min.js', 'htmx-ext-response-targets.min.js'],
   ['node_modules/sweetalert2/dist/sweetalert2.all.min.js', 'sweetalert2.all.min.js'],
+  ['node_modules/dropzone/dist/min/dropzone.min.js', 'dropzone.min.js'],
 ];
 
-for (const [sourcePath, targetName] of files) {
-  copyFileSync(resolve(projectRoot, sourcePath), resolve(vendorDir, targetName));
-}
+const styleFiles = [
+  ['node_modules/dropzone/dist/min/dropzone.min.css', 'dropzone.min.css'],
+];
 
-console.log(`Synced ${files.length} vendor files to ${vendorDir}`);
+for (const [sourcePath, targetName] of scriptFiles) {
+  copyFileSync(resolve(projectRoot, sourcePath), resolve(vendorScriptDir, targetName));
+}
+console.log(`Synced ${scriptFiles.length} vendor scripts to ${vendorScriptDir}`);
+
+for (const [sourcePath, targetName] of styleFiles) {
+  copyFileSync(resolve(projectRoot, sourcePath), resolve(vendorStyleDir, targetName));
+}
+console.log(`Synced ${styleFiles.length} vendor styles to ${vendorStyleDir}`);
