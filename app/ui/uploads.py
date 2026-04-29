@@ -63,12 +63,14 @@ async def show_upload_page_get(
         "uploads/index.html.j2",
         context={
             "current_user": current_user,
+            "max_file_size_mb": current_user.max_file_size_mb,
+            "accepted_files": ",".join(current_user.allowed_mime_types),
         },
     )
 
 
 @router.post("/upload", response_class=HTMLResponse)
-async def create_upload_post(
+async def upload_create_post(
     current_user: Annotated[User, Depends(get_or_create_authenticated_user)],
     request: Request,
     upload_files: list[UploadFile]

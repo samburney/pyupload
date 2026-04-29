@@ -1,22 +1,22 @@
 <!-- Custom scripts -->
-<script src="/static/js/app/lib/htmx-helpers.js"></script>
-<script defer src="/static/js/app/lib/helpers.js"></script>
-<script defer src="/static/js/app/lib/store-client-dimensions.js"></script>
-<script defer src="/static/js/app/lib/alpinejs-helpers.js"></script>
+<script src="{{ request.url_for('static', path='js/app/lib/htmx-helpers.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/app/lib/helpers.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/app/lib/store-client-dimensions.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/app/lib/alpinejs-helpers.js') }}"></script>
 
 <!-- App components -->
-<script defer src="/static/js/app/uploads/tag-input.js"></script>
-<script defer src="/static/js/app/uploads/combo-selector.js"></script>
-<script defer src="/static/js/app/gallery/multiselect.js"></script>
+<script defer src="{{ request.url_for('static', path='js/app/uploads/tag-input.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/app/uploads/combo-selector.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/app/gallery/multiselect.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/app/uploads/dropzone.js') }}"></script>
 
 <!-- Vendor scripts -->
-<script defer src="/static/js/vendor/htmx.min.js"></script>
-<script defer src="/static/js/vendor/htmx-ext-response-targets.min.js"></script>
-<script defer src="/static/js/vendor/alpine-focus.min.js"></script>
-<script defer src="/static/js/vendor/alpine.min.js"></script>
-<script defer src="/static/js/vendor/sweetalert2.all.min.js"></script>
-<script defer src="/static/js/vendor/dropzone.min.js"></script>
+<script defer src="{{ request.url_for('static', path='js/vendor/htmx.min.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/vendor/htmx-ext-response-targets.min.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/vendor/dropzone.min.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/vendor/alpine-focus.min.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/vendor/alpine.min.js') }}"></script>
+<script defer src="{{ request.url_for('static', path='js/vendor/sweetalert2.all.min.js') }}"></script>
 
 <!-- Tailwind CSS -->
-<link href="/static/css/app/tailwind.css" rel="stylesheet">
-<link href="/static/css/vendor/dropzone.min.css" rel="stylesheet">
+<link href="{{ request.url_for('static', path='css/app/tailwind.css') }}" rel="stylesheet">

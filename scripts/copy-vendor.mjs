@@ -19,7 +19,6 @@ const scriptFiles = [
 ];
 
 const styleFiles = [
-  ['node_modules/dropzone/dist/min/dropzone.min.css', 'dropzone.min.css'],
 ];
 
 for (const [sourcePath, targetName] of scriptFiles) {

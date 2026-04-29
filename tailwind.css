@@ -68,6 +68,11 @@
         opacity: 0.25;
     }
 
+    /* .dz-message */
+    .dz-message {
+        @apply hidden;
+    }
+
     /* Gallery sidebar loading styles */
     .sidebar-loaded #upload-sidebar-placeholder {
         opacity: 0;
