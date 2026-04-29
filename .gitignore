@@ -20,3 +20,4 @@ node_modules/
 app/static/js/vendor/
 app/static/css/vendor/
 app/static/css/app/tailwind.css
+app/ui/templates/components/common/material-symbols-sprite.html.j2
