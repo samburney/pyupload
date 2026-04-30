@@ -4,8 +4,11 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.data('fileUploadWidget', () => ({
         dzInst: null,
+        isLoaded: false,
         statusMessage: 'Waiting for files...',
         fileCount: 0,
+        pendingCount: 0,
+        queueLength: 0,
 
         init() {
             // Create Dropzone instance
@@ -21,8 +24,11 @@ document.addEventListener('alpine:init', () => {
             });
 
             this.dzInst.on("addedfile", (file) => {
+                file.previewElement.querySelector('[data-dz-size]').textContent = formatFileSize(file.size);
+                file.previewElement.querySelector('[data-dz-type]').textContent = file.type;
                 this.fileCount++;
-                this.statusMessage = `Added: ${file.name}`;
+                this.pendingCount = this.dzInst.getAddedFiles().length;
+                this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
             });
 
             this.dzInst.on("success", (file, response) => {
@@ -37,8 +43,19 @@ document.addEventListener('alpine:init', () => {
                 if (this.fileCount >= 1) {
                     this.fileCount--;
                 }
-                this.statusMessage = `Removed: ${file.name}`;
+                this.pendingCount = this.dzInst.getAddedFiles().length;
+                this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
             });
-        }
+
+            this.dzInst.on("complete", (file) => {
+                this.pendingCount = this.dzInst.getAddedFiles().length;
+                this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
+                if (this.queueLength > 0) {
+                    this.dzInst.processQueue();
+                }
+            });
+
+            this.isLoaded = true;
+        },
     }));
 });

@@ -1,3 +1,5 @@
+import asyncio
+
 import html
 import json
 
@@ -78,14 +80,14 @@ async def upload_create_post(
     """Handle multiple uploaded files."""
 
     # Handle file uploads
-    results = await handle_uploaded_files(user=current_user, files=upload_files)
-    uploaded_files = []
-    for result in results:
-        if result.status == "success" and result.metadata is not None:
-            flash_message(request, f"File '{result.metadata.filename}' uploaded successfully.")
-            uploaded_files.append(result)
-        else:
-            flash_message(request, result.message if result.message else "An unknown error occurred during file upload.", "error")
+#    results = await handle_uploaded_files(user=current_user, files=upload_files)
+#    uploaded_files = []
+#    for result in results:
+#        if result.status == "success" and result.metadata is not None:
+#            flash_message(request, f"File '{result.metadata.filename}' uploaded successfully.")
+#            uploaded_files.append(result)
+#        else:
+#            flash_message(request, result.message if result.message else "An unknown error occurred during file upload.", "error")
 
     # Render response
     response = templates.TemplateResponse(
@@ -93,9 +95,12 @@ async def upload_create_post(
         name="uploads/list.html.j2",
         context={
             "current_user": current_user,
-            "uploaded_files": uploaded_files,
+#            "uploaded_files": uploaded_files,
         },
     )
+
+    await asyncio.sleep(2)
+    print(f"Uploaded: {upload_files}")
 
     return response
 
