@@ -1,23 +1,14 @@
-<!-- File upload widget -->
 <div id="file-upload-widget"
-    class="flex flex-col w-full items-center rounded-md border border-gray-100 shadow-sm shadow-gray-300 md:p-4 text-gray-900"
-    x-data
-    :class="$store.uploadWidget.dragActive ? 'border-blue-300 border-dashed' : 'border-gray-200 border-solid'"
-    @drop.prevent="$store.uploadWidget.handleDrop($event)"
-    @dragover.prevent="$store.uploadWidget.dragActive = true"
-    @dragleave.prevent="$store.uploadWidget.dragActive = false">
-    <form id="upload-form" class="flex flex-col w-full"
-        hx-encoding="multipart/form-data"
-        hx-post="/upload"
-        hx-swap="innerHTML"
-        hx-target="#uploads-list"
-        hx-select-oob="#messages"
-        hx-target-4*="#messages">
-        <label for="file-upload-picker" class="flex flex-col w-full">
-            <input id="file-upload-picker" type="file" name="upload_files" multiple
-                class="hidden"
-                x-ref="fileInput"
-                @change="$store.uploadWidget.addFiles($event.target.files)">
+    x-data="fileUploadWidget">
+    <div class="flex flex-col w-full items-center rounded-md border border-gray-100 shadow-sm shadow-gray-300 text-gray-900
+            has-[.dz-drag-hover]:border-blue-300 has-[.dz-drag-hover]:border-dashed">
+        <form id="upload-form"
+            action="{{ request.url_for('upload_create_post') }}"
+            method="post"
+            enctype="multipart/form-data"
+            class="w-full p-1 md:p-4"
+            data-max-file-size="{{ max_file_size_mb }}"
+            {% if accepted_files != '*' %}data-accepted-files="{{ accepted_files }}"{% endif %}>
             <div class="flex flex-col gap-2 items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 0 0 4.5 9.75v7.5a2.25 2.25 0 0 0 2.25 2.25h7.5a2.25 2.25 0 0 0 2.25-2.25v-7.5a2.25 2.25 0 0 0-2.25-2.25h-.75m0-3-3-3m0 0-3 3m3-3v11.25m6-2.25h.75a2.25 2.25 0 0 1 2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25h-7.5a2.25 2.25 0 0 1-2.25-2.25v-.75"></path>
@@ -25,37 +16,70 @@
                 <span class="text-xs md:text-sm lg:text-md">
                     Upload your file(s)
                 </span>
-                <span class="button button-neutral button-sm lg:button-md mt-2">
+                <span id="browse-files-button" class="button button-neutral button-sm lg:button-md mt-2">
                     Browse files
                 </span>
             </div>
-        </label>
-        <div class="w-full flex flex-col gap-4"
-            x-cloak
-            x-show="$store.uploadWidget.files.length > 0">
-            <div id="file-list-container" class="w-full">
-                <hr class="border-gray-200 border-dashed mt-4">
-                <div id="file-list" class="grid grid-cols-[1fr_auto_auto] gap-x-2 divide-y divide-gray-200 divide-dashed">
-                    <span class="font-semibold">File Name</span>
-                    <span class="font-semibold">Size</span>
-                    <span class="font-semibold">Actions</span>
-                    <template x-for="(file, index) in $store.uploadWidget.files" :key="index">
-                        <div class="col-span-3 grid grid-cols-subgrid">
-                            <span x-text="file.name" class="overflow-hidden overflow-ellipsis whitespace-nowrap"></span>
-                            <span x-text="$store.uploadWidget.formatFileSize(file.size)"></span>
-                            <button @click="$store.uploadWidget.removeFile(index)" class="button button-xs button-alert">Remove</button>
-                        </div>
-                    </template>
-                </div>
-            </div>
-            <div class="flex justify-center">
-                <button type="submit" class="button button-md lg:button" disabled
-                    x-data
-                    :disabled="$store.uploadWidget.files.length === 0"
-                    :class="{ 'button-disabled': $store.uploadWidget.files.length === 0 }">
-                    Upload
-                </button>
+        </form>
+    </div>
+    <div id="uploaded-files-list" class="w-full">
+        <p>Files: <span x-text="fileCount"></span></p>
+        <p>Status message: <span x-text="statusMessage"></span></p>
+        <hr class="border-gray-200 border-dashed mt-4">
+        <div id="file-list" class="grid grid-cols-[1fr_auto_auto] gap-x-2 divide-y divide-gray-200 divide-dashed">
+            <span class="font-semibold">File Name</span>
+            <span class="font-semibold">Size</span>
+            <span class="font-semibold">Actions</span>
+            <div id="uploaded-file-item-container" class="grid grid-cols-subgrid col-span-3">
+                <span class="inline-flex items-center overflow-hidden overflow-ellipsis whitespace-nowrap" data-dz-name>A filename</span>
+                <span class="inline-flex items-center justify-center" data-dz-size>54M</span>
+                <span class="inline-flex items-center justify-center">
+                    <button class="cursor-pointer hover:fill-red-500"
+                        data-dz-remove>
+                        <svg class="size-5">
+                            <use href="#material-symbols-outlined-cancel"></use>
+                        </svg>
+                    </button>
+                </span>
             </div>
         </div>
-    </form>
+    </div>
+    <div class="flex justify-center">
+        <button type="button" class="button button-md lg:button" disabled
+            x-show="fileCount > 0"
+            x-cloak
+            :disabled="fileCount === 0"
+            :class="{ 'button-disabled': fileCount === 0 }"
+            @click="dzInst.processQueue();"
+            >
+            Upload
+        </button>
+    </div>
+    <template id="uploaded-file-item-template">
+        <div class="col-span-3 grid grid-cols-subgrid">
+            <span class="inline-flex items-center overflow-hidden overflow-ellipsis whitespace-nowrap" data-dz-name></span>
+            <span class="inline-flex items-center justify-center" data-dz-size></span>
+            <span class="inline-flex items-center justify-center">
+                <button class="cursor-pointer hover:fill-red-500"
+                    data-dz-remove>
+                    <svg class="size-5">
+                        <use href="#material-symbols-outlined-cancel"></use>
+                    </svg>
+                </button>
+            </span>
+        </div>
+    </template>
+    <template id="uploaded-file-item-template-example">
+        <div class="dz-preview dz-file-preview">
+            <div class="dz-details">
+                <div class="dz-filename"><span data-dz-name></span></div>
+                <div class="dz-size" data-dz-size></div>
+                <img data-dz-thumbnail />
+            </div>
+            <div class="dz-progress"><span class="dz-upload" data-dz-uploadprogress></span></div>
+            <div class="dz-success-mark"><span>✔</span></div>
+            <div class="dz-error-mark"><span>✘</span></div>
+            <div class="dz-error-message"><span data-dz-errormessage></span></div>
+        </div>
+    </template>
 </div>

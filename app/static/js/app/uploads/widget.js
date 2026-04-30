@@ -1,20 +1,3 @@
-///* Dropzone configuration */
-//document.addEventListener("DOMContentLoaded", () => {
-//    const form = document.getElementById("upload-form");
-//
-//    // Dropzone configuration
-//    Dropzone.options.uploadForm = {
-//        paramName: "upload_files",
-//        uploadMultiple: false,
-//        maxFilesize: parseInt(form.dataset.maxFileSize, 10),
-//        acceptedFiles: form.dataset.acceptedFiles || null,
-//        autoProcessQueue: false,
-//        clickable: ["#browse-files-button"],
-//        previewTemplate: document.querySelector('#uploaded-file-item-template').innerHTML,
-//        previewsContainer: document.querySelector('#uploaded-file-item-container')
-//    }
-//});
-
 /* Alpine JS handlers for Dropzone.js events */
 document.addEventListener('alpine:init', () => {
     const uploadFormElement = document.getElementById("upload-form");
@@ -51,7 +34,9 @@ document.addEventListener('alpine:init', () => {
             });
 
             this.dzInst.on("removedfile", (file) => {
-                this.fileCount--;
+                if (this.fileCount >= 1) {
+                    this.fileCount--;
+                }
                 this.statusMessage = `Removed: ${file.name}`;
             });
         }
