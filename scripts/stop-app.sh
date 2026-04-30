@@ -22,6 +22,7 @@ print_help() {
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FILES_DIR="${APP_DIR}/data/files"
 TAILWIND_PID_FILE="/tmp/pyupload-tailwind.pid"
+ICONS_PID_FILE="/tmp/pyupload-icons.pid"
 CLEAN_DB=false
 
 for arg in "$@"; do
@@ -42,15 +43,17 @@ for arg in "$@"; do
     esac
 done
 
-# Stop Tailwind watcher
-if [ -f "$TAILWIND_PID_FILE" ]; then
-    TAILWIND_PID=$(cat "$TAILWIND_PID_FILE")
-    if kill -0 "$TAILWIND_PID" 2>/dev/null; then
-        echo "Stopping Tailwind CSS watcher (PID: $TAILWIND_PID)..."
-        kill "$TAILWIND_PID"
+# Stop Node watchers
+for PID_FILE in "$TAILWIND_PID_FILE" "$ICONS_PID_FILE"; do
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
+        if kill -0 "$PID" 2>/dev/null; then
+            echo "Stopping watcher (PID: $PID)..."
+            kill "$PID"
+        fi
+        rm "$PID_FILE"
     fi
-    rm "$TAILWIND_PID_FILE"
-fi
+done
 
 echo "Stopping Docker services..."
 docker compose --project-directory "$APP_DIR" stop

@@ -34,6 +34,7 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT_DIR="${APP_DIR}/scripts"
 FILES_DIR="${APP_DIR}/data/files"
 TAILWIND_PID_FILE="/tmp/pyupload-tailwind.pid"
+ICONS_PID_FILE="/tmp/pyupload-icons.pid"
 
 # Default options
 CLEAN_DB=false
@@ -97,9 +98,9 @@ check_prerequisites() {
         echo "Warning: 'uv' not found. Ensure you have a python environment manager."
     fi
 
-    # Check for Node/npm for Tailwind CSS
+    # Check for Node/npm for Tailwind CSS and icons sprite
     if ! command -v npm &> /dev/null; then
-        echo "Error: npm is not installed. Required for Tailwind CSS."
+        echo "Error: npm is not installed. Required for Tailwind CSS and icons sprite."
         exit 1
     fi
 
@@ -159,26 +160,34 @@ seed_app() {
     fi
 }
 
-start_css_watcher() {
+start_watchers() {
     echo "Installing/updating Node dependencies..."
     cd "$APP_DIR"
     npm install --silent
 
-    # Stop any existing watcher
-    if [ -f "$TAILWIND_PID_FILE" ]; then
-        OLD_PID=$(cat "$TAILWIND_PID_FILE")
-        if kill -0 "$OLD_PID" 2>/dev/null; then
-            echo "Stopping existing Tailwind watcher (PID: $OLD_PID)..."
-            kill "$OLD_PID"
+    # Stop any existing watchers
+    for PID_FILE in "$TAILWIND_PID_FILE" "$ICONS_PID_FILE"; do
+        if [ -f "$PID_FILE" ]; then
+            OLD_PID=$(cat "$PID_FILE")
+            if kill -0 "$OLD_PID" 2>/dev/null; then
+                echo "Stopping existing watcher (PID: $OLD_PID)..."
+                kill "$OLD_PID"
+            fi
+            rm "$PID_FILE"
         fi
-        rm "$TAILWIND_PID_FILE"
-    fi
+    done
 
     echo "Starting Tailwind CSS watcher..."
     npm run watch:css &
     TAILWIND_PID=$!
     echo $TAILWIND_PID > "$TAILWIND_PID_FILE"
     echo "Tailwind CSS watcher started (PID: $TAILWIND_PID)"
+
+    echo "Starting icons sprite watcher..."
+    npm run watch:icons &
+    ICONS_PID=$!
+    echo $ICONS_PID > "$ICONS_PID_FILE"
+    echo "Icons sprite watcher started (PID: $ICONS_PID)"
 }
 
 start_app() {
@@ -195,7 +204,7 @@ start_app() {
 run() {
     check_prerequisites
     check_config
-    start_css_watcher
+    start_watchers
     start_database
     initialise_database
 
