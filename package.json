@@ -19,6 +19,7 @@
     "dropzone": "^5",
     "htmx-ext-response-targets": "^2.0.4",
     "htmx.org": "^2.0.8",
+    "izitoast": "^1.4.0",
     "sweetalert2": "^11.26",
     "tailwindcss": "^4.2"
   },

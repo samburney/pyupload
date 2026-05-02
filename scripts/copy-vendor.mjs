@@ -16,9 +16,11 @@ const scriptFiles = [
   ['node_modules/htmx-ext-response-targets/dist/response-targets.min.js', 'htmx-ext-response-targets.min.js'],
   ['node_modules/sweetalert2/dist/sweetalert2.all.min.js', 'sweetalert2.all.min.js'],
   ['node_modules/dropzone/dist/min/dropzone.min.js', 'dropzone.min.js'],
+  ['node_modules/izitoast/dist/js/iziToast.min.js', 'iziToast.min.js'],
 ];
 
 const styleFiles = [
+  ['node_modules/izitoast/dist/css/iziToast.min.css', 'iziToast.min.css'],
 ];
 
 for (const [sourcePath, targetName] of scriptFiles) {

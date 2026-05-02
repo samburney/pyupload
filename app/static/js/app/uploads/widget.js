@@ -31,20 +31,59 @@ document.addEventListener('alpine:init', () => {
                 file.previewElement.querySelector('[data-dz-size]').textContent = formatFileSize(file.size);
                 file.previewElement.querySelector('[data-dz-type]').textContent = file.type;
 
+                // If this isn't an image, replace thumbnail preview with our usual extension <div>
+                if (!file.type.startsWith('image/')) {
+                    const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+
+                    let thumbnailContainerDiv = document.createElement("div");
+                    thumbnailContainerDiv.classList.add(
+                        "rounded-sm", "min-w-13", "min-h-13", "shadow-sm", "border", "border-gray-300", "p-0.5",
+                    );
+
+                    let thumbnailDiv = document.createElement("div");
+                    thumbnailDiv.classList.add(
+                        "flex", "w-full", "h-full", "border", "border-dashed",
+                        "rounded-sm", "text-gray-600", "border-gray-300", "bg-white",
+                    );
+
+                    let extDiv = document.createElement("div")
+                    extDiv.classList.add("flex", "items-end", "justify-end", "h-full", "w-full", "p-1", "text-xs");
+                    extDiv.textContent = ext;
+
+                    thumbnailContainerDiv.append(thumbnailDiv);
+                    thumbnailDiv.append(extDiv);
+
+                    file.previewElement.querySelector('[data-dz-thumbnail]').replaceWith(thumbnailContainerDiv);
+                }
+
                 this.fileCount++;
                 this._updateCounts();
             });
 
             this.dzInst.on("success", (file, response) => {
+                console.log(`success: ${file.name}, ${response}`);
+
                 const elt = file.previewElement.querySelector("[data-dz-uploadprogress]");
                 elt.classList.replace("bg-blue-500", "bg-green-500");
             });
 
             this.dzInst.on("error", (file, errorMessage) => {
+                console.log(`error: ${file.name}, ${errorMessage}`);
+
                 const elt = file.previewElement.querySelector("[data-dz-uploadprogress]");
                 elt.classList.replace("bg-blue-500", "bg-red-500");
+                elt.style.width = "100%";
 
                 this.erroredFiles[file.upload.uuid] = errorMessage;
+
+                iziToast.error({
+                    title: "Error",
+                    message: `${file.name}: ${errorMessage}`,
+                    progressBarColor: "red",
+                    timeout: 30000,
+                    animateInside: false,
+                    drag: false,
+                })
             });
 
             this.dzInst.on("removedfile", (file) => {
