@@ -7,6 +7,7 @@ document.addEventListener('alpine:init', () => {
         isLoaded: false,
         fileCount: 0,
         pendingCount: 0,
+        uploadingCount: 0,
         queueLength: 0,
         totalUploadProgress: 0,
         erroredFiles: {},
@@ -31,8 +32,7 @@ document.addEventListener('alpine:init', () => {
                 file.previewElement.querySelector('[data-dz-type]').textContent = file.type;
 
                 this.fileCount++;
-                this.pendingCount = this.dzInst.getAddedFiles().length;
-                this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
+                this._updateCounts();
             });
 
             this.dzInst.on("success", (file, response) => {
@@ -51,12 +51,11 @@ document.addEventListener('alpine:init', () => {
                 if (Object.keys(this.erroredFiles).includes(file.upload.uuid)) {
                     delete this.erroredFiles[file.upload.uuid];
                 }
-                this.pendingCount = this.dzInst.getAddedFiles().length;
-                this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
 
                 if (this.fileCount >= 1) {
                     this.fileCount--;
                 }
+                this._updateCounts();
 
                 if (this.fileCount === 0) {
                     this.resetQueue();
@@ -66,8 +65,7 @@ document.addEventListener('alpine:init', () => {
             this.dzInst.on("complete", (file) => {
                 console.log(`complete: ${file.name}`);
 
-                this.pendingCount = this.dzInst.getAddedFiles().length;
-                this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
+                this._updateCounts();
                 if (this.queueLength > 0) {
                     this.dzInst.processQueue();
                 }
@@ -81,6 +79,7 @@ document.addEventListener('alpine:init', () => {
 
             this.dzInst.on("processing", (file) => {
                 console.log(`processing: ${file.name}`);
+                this._updateCounts();
             });
 
             this.dzInst.on("uploadprogress", (file, progress, bytesSent) => {
@@ -139,6 +138,12 @@ document.addEventListener('alpine:init', () => {
                     console.debug(`Received unhandled data type: ${item.kind}:${item.type}`)
                 }
             }
+        },
+
+        _updateCounts() {
+            this.pendingCount = this.dzInst.getAddedFiles().length + this.dzInst.getQueuedFiles().length;
+            this.uploadingCount = this.dzInst.files.filter(f => f.status === Dropzone.UPLOADING).length;
+            this.queueLength = this.pendingCount + this.uploadingCount;
         },
 
         // Reset queue status
