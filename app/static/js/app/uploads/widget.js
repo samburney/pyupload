@@ -5,7 +5,6 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('fileUploadWidget', () => ({
         dzInst: null,
         isLoaded: false,
-        statusMessage: 'Waiting for files...',
         fileCount: 0,
         pendingCount: 0,
         queueLength: 0,
@@ -21,6 +20,7 @@ document.addEventListener('alpine:init', () => {
                 clickable: ["#browse-files-button"],
                 previewTemplate: document.querySelector('#uploaded-file-item-template').innerHTML,
                 previewsContainer: document.querySelector('#uploaded-file-item-container'),
+                thumbnailMethod: "contain",
             });
 
             this.dzInst.on("addedfile", (file) => {
@@ -32,11 +32,9 @@ document.addEventListener('alpine:init', () => {
             });
 
             this.dzInst.on("success", (file, response) => {
-                this.statusMessage = 'Upload successful!';
             });
 
             this.dzInst.on("error", (file, errorMessage) => {
-                this.statusMessage = `Error: ${errorMessage}`;
             });
 
             this.dzInst.on("removedfile", (file) => {
@@ -48,6 +46,8 @@ document.addEventListener('alpine:init', () => {
             });
 
             this.dzInst.on("complete", (file) => {
+                console.log(`complete: ${file.name}`);
+
                 this.pendingCount = this.dzInst.getAddedFiles().length;
                 this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
                 if (this.queueLength > 0) {
@@ -55,7 +55,68 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
+            this.dzInst.on("queuecomplete", () => {
+                console.log(`queuecomplete`);
+            });
+
+            this.dzInst.on("processing", (file) => {
+                console.log(`processing: ${file.name}`);
+            });
+
+            this.dzInst.on("uploadprogress", (file, progress, bytesSent) => {
+                console.log(`uploadprogress: ${file.name} ${progress} ${bytesSent}`);
+            });
+
+            this.dzInst.on("totaluploadprogress", (totalUploadProgress, totalBytes, totalBytesSent) => {
+                console.log(`totaluploadprogress: ${totalUploadProgress} ${totalBytes} ${totalBytesSent}`);
+            });
+
+            this.dzInst.on("paste", (elt) => {
+                console.log(`paste: ${elt}`)
+            });
+
             this.isLoaded = true;
         },
-    }));
+ 
+        handlePaste(event) {
+            const pasteDate = new Date(Date.now())
+            const fileNamePasteDate = pasteDate.toISOString().slice(0, 19).replace(/[-:T]/g, "");
+            const fileNameSuffix = `${fileNamePasteDate}${String(this.queueLength).padStart(2, "0")}`
+            const items = event.clipboardData.items;
+
+            for (let item of items) {
+                // File
+                if (item.kind === "file") {
+                    const blob = item.getAsFile();
+                    let file = null;
+
+                    // Handle direct image paste
+                    if (blob.name.startsWith("image.") && item.type.startsWith("image")) {
+                        const mimeSplit = item.type.split("/");
+                        const name = `pasted-${mimeSplit[0]}-${fileNameSuffix}`
+                        const ext = mimeSplit[1] === "jpeg" ? "jpg" : mimeSplit[1];
+
+                        file = new File([blob], `${name}.${ext}`, { type: item.type});
+                    }
+                    else {
+                        file = blob;
+                    }
+
+                    this.dzInst.addFile(file);
+                }
+                // Text / HTML
+                else if (item.kind === "string" && ["text/plain", "text/html"].includes(item.type)) {
+                    const itemType = item.type;
+                    item.getAsString((text) => {
+                        const ext = itemType === "text/html" ? "html" : "txt";
+                        const file = new File([text], `pasted-text-${fileNameSuffix}.${ext}`, { type: itemType });
+                        this.dzInst.addFile(file);
+                    });
+                }
+                else {
+                    console.debug(`Received unhandled data type: ${item.kind}:${item.type}`)
+                }
+            }
+        },
+   }));
 });
