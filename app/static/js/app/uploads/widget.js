@@ -10,6 +10,7 @@ document.addEventListener('alpine:init', () => {
         uploadingCount: 0,
         queueLength: 0,
         totalUploadProgress: 0,
+        successfulFiles: {},
         erroredFiles: {},
         queueComplete: false,
 
@@ -65,6 +66,8 @@ document.addEventListener('alpine:init', () => {
 
                 const elt = file.previewElement.querySelector("[data-dz-uploadprogress]");
                 elt.classList.replace("bg-blue-500", "bg-green-500");
+
+                this.successfulFiles[file.upload.uuid] = file;
             });
 
             this.dzInst.on("error", (file, errorMessage) => {
@@ -87,6 +90,10 @@ document.addEventListener('alpine:init', () => {
             });
 
             this.dzInst.on("removedfile", (file) => {
+                if (Object.keys(this.successfulFiles).includes(file.upload.uuid)) {
+                    delete this.successfulFiles[file.upload.uuid];
+                }
+
                 if (Object.keys(this.erroredFiles).includes(file.upload.uuid)) {
                     delete this.erroredFiles[file.upload.uuid];
                 }
@@ -112,6 +119,19 @@ document.addEventListener('alpine:init', () => {
 
             this.dzInst.on("queuecomplete", () => {
                 console.log(`queuecomplete`);
+
+                const successCount = Object.keys(this.successfulFiles).length;
+
+                if (successCount > 0) {
+                    iziToast.success({
+                        title: "Info",
+                        message: `${successCount} files successfully uploaded`,
+                        progressBarColor: "green",
+                        timeout: 30000,
+                        animateInside: false,
+                        drag: false,
+                    });
+                };
 
                 this.queueComplete = true;
             });
@@ -187,6 +207,7 @@ document.addEventListener('alpine:init', () => {
 
         // Reset queue status
         resetQueue() {
+            this.successfulFiles = {};
             this.queueComplete = false;
             this.totalUploadProgress = 0;
         },
