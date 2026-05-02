@@ -34,7 +34,7 @@ document.addEventListener('alpine:init', () => {
 
                 // If this isn't an image, replace thumbnail preview with our usual extension <div>
                 if (!file.type.startsWith('image/')) {
-                    const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : '';
+                    const ext = (file.name.includes('.') ? `.${file.name.split('.').pop()}` : '').substring(0, 6);
 
                     let thumbnailContainerDiv = document.createElement("div");
                     thumbnailContainerDiv.classList.add(
