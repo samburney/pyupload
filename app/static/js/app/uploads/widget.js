@@ -8,6 +8,9 @@ document.addEventListener('alpine:init', () => {
         fileCount: 0,
         pendingCount: 0,
         queueLength: 0,
+        totalUploadProgress: 0,
+        errorCount: 0,
+        queueComplete: false,
 
         init() {
             // Create Dropzone instance
@@ -26,15 +29,21 @@ document.addEventListener('alpine:init', () => {
             this.dzInst.on("addedfile", (file) => {
                 file.previewElement.querySelector('[data-dz-size]').textContent = formatFileSize(file.size);
                 file.previewElement.querySelector('[data-dz-type]').textContent = file.type;
+
                 this.fileCount++;
                 this.pendingCount = this.dzInst.getAddedFiles().length;
                 this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
             });
 
             this.dzInst.on("success", (file, response) => {
+                const elt = file.previewElement.querySelector("[data-dz-uploadprogress]");
+                elt.classList.replace("bg-blue-500", "bg-green-500");
             });
 
             this.dzInst.on("error", (file, errorMessage) => {
+                const elt = file.previewElement.querySelector("[data-dz-uploadprogress]");
+                elt.classList.replace("bg-blue-500", "bg-red-500");
+                this.errorCount++;
             });
 
             this.dzInst.on("removedfile", (file) => {
@@ -57,6 +66,8 @@ document.addEventListener('alpine:init', () => {
 
             this.dzInst.on("queuecomplete", () => {
                 console.log(`queuecomplete`);
+
+                this.queueComplete = true;
             });
 
             this.dzInst.on("processing", (file) => {
@@ -69,6 +80,7 @@ document.addEventListener('alpine:init', () => {
 
             this.dzInst.on("totaluploadprogress", (totalUploadProgress, totalBytes, totalBytesSent) => {
                 console.log(`totaluploadprogress: ${totalUploadProgress} ${totalBytes} ${totalBytesSent}`);
+                this.totalUploadProgress = totalUploadProgress;
             });
 
             this.dzInst.on("paste", (elt) => {
@@ -78,6 +90,7 @@ document.addEventListener('alpine:init', () => {
             this.isLoaded = true;
         },
  
+        // Handle paste events
         handlePaste(event) {
             const pasteDate = new Date(Date.now())
             const fileNamePasteDate = pasteDate.toISOString().slice(0, 19).replace(/[-:T]/g, "");
@@ -85,7 +98,7 @@ document.addEventListener('alpine:init', () => {
             const items = event.clipboardData.items;
 
             for (let item of items) {
-                // File
+                // Files and binary data
                 if (item.kind === "file") {
                     const blob = item.getAsFile();
                     let file = null;
@@ -117,6 +130,17 @@ document.addEventListener('alpine:init', () => {
                     console.debug(`Received unhandled data type: ${item.kind}:${item.type}`)
                 }
             }
+        },
+
+        // Reset queue status
+        resetQueue() {
+            this.queueComplete = false;
+        },
+
+        // Begin processing pending uploads
+        processUploads() {
+            this.resetQueue();
+            this.dzInst.processQueue();
         },
    }));
 });
