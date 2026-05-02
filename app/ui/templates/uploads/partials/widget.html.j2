@@ -36,7 +36,11 @@
         <div class="absolute bottom-0 left-0 w-full h-2 rounded-b-md overflow-hidden">
             <div style="width: 0%;" class="h-full bg-blue-500 transition-[width] ease-in-out duration-200"
                 :style="`width: ${totalUploadProgress}%;`"
-                :class="`bg-${ queueComplete ? (errorCount > 0 ? 'red' : 'green') : 'blue' }-500`"></div>
+                :class="{
+                    'bg-red-500': queueComplete && Object.keys(erroredFiles).length > 0,
+                    'bg-green-500': queueComplete && Object.keys(erroredFiles).length === 0,
+                    'bg-blue-500': !queueComplete,
+                }"></div>
         </div>
     </div>
     <div id="uploaded-files-list" class="w-full mt-2"

@@ -9,7 +9,7 @@ document.addEventListener('alpine:init', () => {
         pendingCount: 0,
         queueLength: 0,
         totalUploadProgress: 0,
-        errorCount: 0,
+        erroredFiles: {},
         queueComplete: false,
 
         init() {
@@ -43,15 +43,24 @@ document.addEventListener('alpine:init', () => {
             this.dzInst.on("error", (file, errorMessage) => {
                 const elt = file.previewElement.querySelector("[data-dz-uploadprogress]");
                 elt.classList.replace("bg-blue-500", "bg-red-500");
-                this.errorCount++;
+
+                this.erroredFiles[file.upload.uuid] = errorMessage;
             });
 
             this.dzInst.on("removedfile", (file) => {
-                if (this.fileCount >= 1) {
-                    this.fileCount--;
+                if (Object.keys(this.erroredFiles).includes(file.upload.uuid)) {
+                    delete this.erroredFiles[file.upload.uuid];
                 }
                 this.pendingCount = this.dzInst.getAddedFiles().length;
                 this.queueLength = this.pendingCount + this.dzInst.getActiveFiles().length;
+
+                if (this.fileCount >= 1) {
+                    this.fileCount--;
+                }
+
+                if (this.fileCount === 0) {
+                    this.resetQueue();
+                }
             });
 
             this.dzInst.on("complete", (file) => {
@@ -135,6 +144,7 @@ document.addEventListener('alpine:init', () => {
         // Reset queue status
         resetQueue() {
             this.queueComplete = false;
+            this.totalUploadProgress = 0;
         },
 
         // Begin processing pending uploads
