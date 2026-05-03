@@ -7,7 +7,7 @@ Replace all custom Alpine.js-powered modals and flash message popups with SweetA
 ### Scope
 - Delete confirmation dialogs (single upload and gallery bulk)
 - Share URL modal
-- Flash message notifications
+- ~~Flash message notifications~~ — moved to iziToast (see Step 5)
 - Removal of unused modal macro templates
 
 ### Current State
@@ -15,12 +15,13 @@ Replace all custom Alpine.js-powered modals and flash message popups with SweetA
 - Alpine.js `x-data="{ open: false }"` pattern used in delete and share button components
 - Flash messages rendered server-side via Alpine.js-driven `#messages` div with HTMX OOB swap
 - SweetAlert2 is not installed
+- iziToast has been added as a vendor library (used by the Dropzone upload widget for upload success/error feedback)
 
 ### Target State
 - SweetAlert2 installed as a local vendor script
 - Delete confirmations use `Swal.fire()` confirm dialogs
 - Share URL display uses `Swal.fire()` with HTML content
-- Flash messages use SweetAlert2 toast notifications
+- ~~Flash messages use SweetAlert2 toast notifications~~ — **Not proceeding**: SweetAlert2 only displays one toast at a time; iziToast chosen instead (see Step 5)
 - `modal-basic.html.j2` and `modal-dialog.html.j2` deleted
 - Image preview modal (`view-modal.html.j2`) remains unchanged
 
@@ -138,31 +139,11 @@ Replace all custom Alpine.js-powered modals and flash message popups with SweetA
 
 ---
 
-## Step 5: Replace Flash Messages with SweetAlert2 Toasts
+## Step 5: ~~Replace Flash Messages with SweetAlert2 Toasts~~ — CANCELLED
 
-**Files**:
-- `app/ui/templates/components/core/messages.html.j2`
+**Reason**: SweetAlert2 only displays one toast notification at a time; multiple simultaneous flash messages are a normal use case. iziToast supports stacking multiple toasts and has been added as a vendor library (used by the Dropzone upload widget). Flash message migration will use iziToast instead.
 
-**Tasks**:
-1. [ ] Replace the Alpine.js-driven message lists with a `<script>` block that calls `Swal.fire({ toast: true, ... })` for each message in each severity category
-2. [ ] Keep an empty `<div id="messages" hx-swap-oob="outerHTML:#messages"></div>` so HTMX OOB swaps continue to work and trigger new toasts
-3. [ ] Map severity types: `info` → `icon: 'success'`, `warning` → `icon: 'warning'`, `error` → `icon: 'error'`
-4. [ ] Pass `{{ message | markdown | safe }}` as the `html` parameter (not `title`) to preserve markdown rendering
-
-**Tests**:
-1. [ ] Flash messages from initial page load appear as toasts in the top-right corner
-2. [ ] Messages returned via HTMX OOB swap also appear as toasts
-3. [ ] Info, warning, and error messages each show with their correct icons
-4. [ ] Toasts auto-dismiss after a few seconds
-
-**Acceptance Criteria**:
-- [ ] All Alpine.js message-related state removed from this template
-- [ ] Toasts appear for all three severity levels
-- [ ] HTMX OOB swap mechanism still works (new messages after HTMX actions show as toasts)
-
-**Implementation Notes**:
-- SweetAlert2 config: `position: 'top-end'`, `timer: 4000`, `timerProgressBar: true`, `showConfirmButton: false`
-- Multiple toasts stack correctly in SweetAlert2 without extra configuration
+**See**: `migrate-flash-messages.md` Step 9 for the updated flash message rendering approach.
 
 **Dependencies**:
 - Step 1

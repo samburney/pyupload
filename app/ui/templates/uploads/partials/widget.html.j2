@@ -3,11 +3,10 @@
     <div class="relative flex flex-col w-full items-center rounded-md border border-gray-100 p-px shadow-sm shadow-gray-300 text-gray-900
             hover:shadow-lg hover:border-2 hover:border-blue-500 hover:p-0
             focus:shadow-lg focus:border-2 focus:border-blue-500 focus:p-0
-            active:shadow-md
             has-[.dz-drag-hover]:shadow-lg has-[.dz-drag-hover]:border-2 has-[.dz-drag-hover]:border-blue-500 has-[.dz-drag-hover]:border-dashed has-[.dz-drag-hover]:p-0"
-        tabindex="0"
         @click="$el.focus();"
-        @paste="handlePaste(event);">   
+        @paste="handlePaste(event);"
+        tabindex="0">
         <form id="upload-form"
             action="{{ request.url_for('upload_create_post') }}"
             method="post"
@@ -17,13 +16,29 @@
             {% if accepted_files != '*' %}data-accepted-files="{{ accepted_files }}"{% endif %}>
             <div class="flex flex-col gap-4 items-center">
                 <svg id="browse-files-button"
-                    class="size-12 mt-4 cursor-pointer hover:fill-blue-500">
+                    class="w-16 h-14 mt-4 py-2.25 px-4.25 rounded-md cursor-pointer
+                        hover:py-2 hover:px-4 hover:fill-blue-500 hover:border hover:border-gray-300 hover:shadow-lg
+                        active:shadow-md">
                     <use href="#material-symbols-outlined-place-item"></use>
                 </svg>
-                <span class="flex h-8 text-xs text-center items-center"
-                    x-html="!isLoaded ? 'Loading...' : uploadingCount > 0 ? 'Uploading files...' : 'Drop, paste or click<br>to upload files'">
-                    Loading...
-                </span>
+                <div class="flex flex-col h-8 text-xs text-center items-center">
+                    <div class="flex h-8 text-xs text-center items-center"
+                        x-show="pendingCount === 0 || uploadingCount > 0"
+                        x-html="!isLoaded ? 'Loading...' : uploadingCount > 0 ? 'Uploading files...' : 'Drop, paste or click<br>to upload files'">
+                        Loading...
+                    </div>
+                    <div class="flex justify-center">
+                        <button type="button" class="button button-md lg:button" disabled
+                            x-show="pendingCount > 0 && uploadingCount === 0"
+                            x-cloak
+                            :disabled="pendingCount === 0 || uploadingCount > 0"
+                            :class="{ 'button-disabled': pendingCount === 0 || uploadingCount > 0 }"
+                            @click="processUploads();"
+                            x-text="`Upload ${pendingCount} files`">
+                            Upload
+                        </button>
+                    </div>
+                </div>
             </div>
         </form>
         <div class="absolute flex top-0 left-0 w-full h-20 transition-opacity duration-300"
@@ -48,67 +63,21 @@
         x-cloak>
         <div id="uploaded-file-item-container" class="grid grid-cols-[auto_1fr] my-1 gap-0.5"></div>
     </div>
-    <div class="flex justify-center">
-        <button type="button" class="button button-md lg:button" disabled
-            x-show="pendingCount > 0 && uploadingCount === 0"
-            x-cloak
-            :disabled="pendingCount === 0 || uploadingCount > 0"
-            :class="{ 'button-disabled': pendingCount === 0 || uploadingCount > 0 }"
-            @click="processUploads();">
-            Upload
-        </button>
-    </div>
     <template id="uploaded-file-item-template">
-        <div class="grid grid-cols-subgrid col-span-2 gap-1 items-center">
-            <div class="flex justify-center">
-                <div class="relative group/thumbnail flex w-fit isolate">
-                    <div class="absolute top-0 left-0 w-full h-full rounded-sm overflow-hidden -z-1">
-                        <div style="width: 0%;" class="h-full bg-blue-500 transition-[width] ease-in-out duration-200"
-                            data-dz-uploadprogress></div>
-                    </div>
-                    <img class="rounded-sm max-w-18 max-h-13 shadow-sm border border-gray-300 p-0.5"
-                        data-dz-thumbnail>
-                    <div class="flex opacity-0 top-0 left-0 w-full h-full group-hover/thumbnail:opacity-100 transition-all">
-                        <div class="absolute flex top-0 left-0 w-full h-full items-center justify-center bg-white opacity-75"></div>
-                        <div class="absolute flex top-0 left-0 w-full h-full items-center justify-center">
-                            <button class="cursor-pointer hover:fill-red-500"
-                                data-dz-remove>
-                                <svg class="size-5">
-                                    <use href="#material-symbols-outlined-cancel"></use>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="grid text-xs min-w-0 content-evenly self-stretch">
-                <div class="overflow-hidden overflow-ellipsis whitespace-nowrap font-semibold" data-dz-name></div>
-                <div class="flex gap-2">
-                    <div class="flex gap-0.5 text-gray-700">
-                        <svg class="size-4 fill-gray-700"><use href="#material-symbols-outlined-storage"></use></svg>
-                        <span data-dz-size></span>
-                    </div>
-                    <div class="flex gap-0.5 text-gray-700">
-                        <svg class="size-4 fill-gray-700"><use href="#material-symbols-outlined-unknown-document"></use></svg>
-                        <span data-dz-type></span>
-                    </div>
+        {%- include("uploads/partials/uploaded-file-item.html.j2") %}
+    </template>
+    <template id="uploaded-file-item-thumbnail-image">
+        <img class="rounded-sm max-w-18 max-h-13 shadow-sm border border-gray-300 p-0.5"
+            data-dz-thumbnail>
+    </template>
+    <template id="uploaded-file-item-thumbnail-file">
+        <div class="rounded-sm min-w-13 min-h-13 shadow-sm border border-gray-300 p-0.5"
+            data-dz-thumbnail>
+            <div class="flex w-full h-full border border-dashed rounded-sm text-gray-600 border-gray-300 bg-white">
+                <div class="flex items-end justify-end h-full w-full p-1 text-xs"
+                    data-dz-thumbnail-ext>
                 </div>
             </div>
         </div>
     </template>
-<!--
-    <template id="uploaded-file-item-template-example">
-        <div class="dz-preview dz-file-preview">
-            <div class="dz-details">
-                <div class="dz-filename"><span data-dz-name></span></div>
-                <div class="dz-size" data-dz-size></div>
-                <img data-dz-thumbnail />
-            </div>
-            <div class="dz-progress"><span class="dz-upload" data-dz-uploadprogress></span></div>
-            <div class="dz-success-mark"><span>✔</span></div>
-            <div class="dz-error-mark"><span>✘</span></div>
-            <div class="dz-error-message"><span data-dz-errormessage></span></div>
-        </div>
-    </template>
--->
 </div>

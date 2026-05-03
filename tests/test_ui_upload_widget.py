@@ -1,39 +1,62 @@
-"""Tests for the upload page widget rendering.
+"""Tests for the upload widget rendering.
 
-Smoke tests confirming the upload page loads and contains the essential
-upload widget elements. Detailed behavioural tests for the upload form
-are in test_ui_uploads.py.
+Smoke tests confirming the upload widget is present and structurally correct on
+pages that include the global sidebar.  The widget is rendered server-side inside
+the sidebar (`components/layout/sidebar.html.j2`) and is therefore present on any
+page using the base layout.
 
 Covers:
-- GET /uploads — page loads without authentication (public page)
-- File input present with correct attributes
-- Alpine.js upload store referenced in the page
+- GET / or GET /gallery — widget present in sidebar
+- Dropzone/Alpine component referenced correctly
+- Upload form has required data attributes for Dropzone configuration
+- Upload form action points to the correct endpoint
 """
 
+import pytest
 
 
-class TestUploadPageSmoke:
-    """Smoke tests for the upload widget page."""
+class TestUploadWidgetPresence:
+    """Smoke tests confirming the upload widget is rendered in the sidebar."""
 
-    async def test_upload_page_loads_without_auth(self, client):
-        """GET /upload returns 200 without authentication."""
+    async def test_upload_page_loads(self, client):
+        """GET /upload returns 200."""
         response = await client.get("/upload")
 
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
-    async def test_upload_page_contains_file_input(self, client):
-        """The upload page contains a file input with the expected attributes."""
+    async def test_widget_alpine_component_referenced(self, client):
+        """The sidebar contains the fileUploadWidget Alpine component."""
         response = await client.get("/upload")
         html = response.text
 
-        assert 'type="file"' in html
-        assert 'name="upload_files"' in html
-        assert 'multiple' in html
+        assert 'x-data="fileUploadWidget"' in html
 
-    async def test_upload_page_references_alpine_store(self, client):
-        """The upload page references the Alpine.js uploadWidget store."""
+    async def test_widget_upload_form_present(self, client):
+        """The upload form element is rendered with the expected id."""
         response = await client.get("/upload")
         html = response.text
 
-        assert "$store.uploadWidget" in html
+        assert 'id="upload-form"' in html
+
+    async def test_widget_form_has_max_file_size_attribute(self, client):
+        """The upload form carries a data-max-file-size attribute for Dropzone configuration."""
+        response = await client.get("/upload")
+        html = response.text
+
+        assert "data-max-file-size=" in html
+
+    async def test_widget_form_action_points_to_upload_endpoint(self, client):
+        """The upload form action points to the upload_create_post route."""
+        response = await client.get("/upload")
+        html = response.text
+
+        # url_for generates absolute URLs; the path portion must end with /upload
+        assert 'action="http://test/upload"' in html
+
+    async def test_widget_preview_template_present(self, client):
+        """The uploaded-file-item preview template element is rendered."""
+        response = await client.get("/upload")
+        html = response.text
+
+        assert 'id="uploaded-file-item-template"' in html

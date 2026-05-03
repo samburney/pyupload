@@ -2,27 +2,20 @@ from typing import Annotated
 from fastapi import APIRouter, UploadFile, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
+from app.lib.error_handling import NotAuthorisedError, files_not_provided_exception
 from app.lib.upload_handler import handle_uploaded_files
-
-from app.api.auth import get_current_user
-from app.lib.error_handling import NotAuthorisedError
 
 from app.models.uploads import Upload, UploadResult
 from app.models.users import User
+
+from app.api.auth import get_current_user
 
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 
-# Exception shortcut variables
-files_not_provided_exception = HTTPException(
-    status_code=400,
-    detail="No files provided for upload."
-)
-
-
 @router.post("")
-async def create_uploaded_files(
+async def api_upload_create_post(
     current_user: Annotated[User, Depends(get_current_user)],
     upload_files: list[UploadFile]
 ) -> dict[str, list[UploadResult]]:
@@ -36,10 +29,10 @@ async def create_uploaded_files(
 
 
 @router.delete("/{id}")
-async def delete_upload(
+async def api_upload_delete(
     id: int,
     current_user: Annotated[User, Depends(get_current_user)],
-):
+) -> JSONResponse:
     """API endpoint to delete an uploaded file."""
 
     upload = await Upload.get_or_none(id=id).prefetch_related("user")

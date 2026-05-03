@@ -45,7 +45,7 @@
 - [ ] Cache cleanup scheduler
 
 ### Upload Enhancements
-- [ ] HTMX upload progress bars
+- [x] Upload progress bars *(implemented via Dropzone.js widget; per-file progress bars and queue-level progress bar)*
 - [ ] Parallel batch processing
 - [ ] Loading states and transitions for all HTMX interactions
 

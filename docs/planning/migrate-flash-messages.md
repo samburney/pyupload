@@ -198,17 +198,23 @@ Replace session-based flash messages with encrypted cookie-based messages, enabl
 
 **Tasks**:
 1. Review template usage of `get_flashed_messages()`
-2. Update if necessary to work with new implementation
-3. Test message display with info and error categories
+2. Replace Alpine.js-driven message lists with iziToast calls — one `iziToast.info()`/`iziToast.error()` call per message, rendered via a `<script>` block
+3. Keep an empty `<div id="messages" hx-swap-oob="outerHTML:#messages"></div>` so HTMX OOB swaps trigger new toasts
 4. Ensure HTMX updates work correctly
 
 **Acceptance Criteria**:
 - [ ] Template calls `get_flashed_messages()` correctly
-- [ ] Info messages display with correct styling
-- [ ] Error messages display with correct styling
-- [ ] Context error_messages still work (direct rendering)
+- [ ] Info messages fire `iziToast.info()` with correct text
+- [ ] Error messages fire `iziToast.error()` with correct text
+- [ ] Multiple simultaneous messages each appear as separate stacked toasts
+- [ ] Context `error_messages` still work (direct rendering)
 - [ ] HTMX partial updates work correctly
 - [ ] No visual regressions
+
+**Implementation Notes**:
+- iziToast is already a vendor library (added with the Dropzone upload widget)
+- SweetAlert2 was rejected for this role because it only shows one toast at a time — iziToast stacks multiple toasts naturally
+- iziToast config should be consistent with the upload widget: `timeout: 30000`, `animateInside: false`, `drag: false`
 
 **Estimated Effort**: 15 minutes
 

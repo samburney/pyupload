@@ -1,28 +1,30 @@
 import asyncio
 
-from typing import Annotated, Optional, TYPE_CHECKING
-from pydantic import BaseModel, StringConstraints
 from pathlib import Path
+from typing import Annotated, Literal, TYPE_CHECKING
+
+from pydantic import BaseModel, StringConstraints, model_validator
 from tortoise import fields, models
 from tortoise.exceptions import NoValuesFetched
 from tortoise_serializer import ModelSerializer, ContextType
 
 from app.lib.config import get_app_config
-from app.lib.helpers import MIME_TYPE_PATTERN, IMAGE_CONVERSION_DST_FORMATS, split_filename
 from app.lib.file_io import delete_file
+from app.lib.helpers import MIME_TYPE_PATTERN, IMAGE_CONVERSION_DST_FORMATS, split_filename
 from app.lib.image_processing import do_image_rotation
 
+from app.models.collections import Collection, CollectionSerializer
 from app.models.common.base import TimestampMixin, SerializerTimestampMixin
 from app.models.common.pagination import PaginationMixin
-from app.models.collections import Collection, CollectionSerializer
-from app.models.users import User, UserSerializer
 from app.models.images import ImageSerializer, ImageMetadata
 from app.models.tags import TagSerializer
+from app.models.users import User, UserSerializer
 
 
 if TYPE_CHECKING:
-    from app.models.images import Image
     from tortoise.queryset import QuerySet, QuerySetSingle
+
+    from app.models.images import Image
 
 
 config = get_app_config()
@@ -174,7 +176,7 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
         return type_split[0]
 
     @property
-    async def image_metadata(self) -> Optional[ImageMetadata]:
+    async def image_metadata(self) -> ImageMetadata | None:
         """Return the image metadata for this upload, if it exists."""
         if self.is_image:
             image = await self.images.all().first()
@@ -260,8 +262,8 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     viewed: int
     private: int
     image: ImageSerializer | None = None
-    user_collections: Optional[list[CollectionSerializer]] = None
-    filtered_collections: Optional[list[CollectionSerializer]] = None
+    user_collections: list[CollectionSerializer] | None = None
+    filtered_collections: list[CollectionSerializer] | None = None
 
     @classmethod
     async def resolve_image(cls, instance: Upload, context: ContextType) -> ImageSerializer | None:
@@ -276,7 +278,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
         return None
     
     @classmethod
-    async def resolve_user_collections(cls, instance: Upload, context: ContextType) -> Optional[list[CollectionSerializer]]:
+    async def resolve_user_collections(cls, instance: Upload, context: ContextType) -> list[CollectionSerializer] | None:
         """Resolve the user's collections that include this upload."""
         user = context.get("user")
         if user is None:
@@ -288,7 +290,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
         return []
     
     @classmethod
-    async def resolve_filtered_collections(cls, instance: Upload, context: ContextType) -> Optional[list[CollectionSerializer]]:
+    async def resolve_filtered_collections(cls, instance: Upload, context: ContextType) -> list[CollectionSerializer] | None:
         """Return whether or not this file is owned by the current user."""
         user = context.get("user")
         if user is None:
@@ -310,8 +312,8 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     is_image: bool
     is_private: bool
     short_type: str
-    is_owner: Optional[bool]
-    is_writable: Optional[bool]
+    is_owner: bool | None
+    is_writable: bool | None
 
     def autoresize_url(self, max_width: int) -> str:
         """Return a resized image URL constrained to max_width, preserving format where possible.
@@ -336,7 +338,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
         return f"{base}-{max_width}x0{out_ext}"
 
     @classmethod
-    def resolve_is_owner(cls, instance: Upload, context: ContextType) -> Optional[bool]:
+    def resolve_is_owner(cls, instance: Upload, context: ContextType) -> bool | None:
         """Return collections owned by user that are not already linked to upload."""
 
         user = context.get("user")
@@ -346,7 +348,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
         return getattr(instance, "user_id") == user.id
 
     @classmethod
-    def resolve_is_writable(cls, instance: Upload, context: ContextType) -> Optional[bool]:
+    def resolve_is_writable(cls, instance: Upload, context: ContextType) -> bool | None:
         """Return collections owned by user that are not already linked to upload."""
         return cls.resolve_is_owner(instance, context)
 
@@ -359,49 +361,66 @@ class UploadMetadata(BaseModel):
 
     # Filename metadata
     filename: Annotated[str, StringConstraints(pattern=UNIQUE_FILENAME_PATTERN)]
-    ext: Optional[Annotated[str, StringConstraints(pattern=EXTENSION_PATTERN, to_lower=True)]] = None
+    ext: Annotated[str, StringConstraints(pattern=EXTENSION_PATTERN, to_lower=True)] | None = None
     original_filename: Annotated[str, StringConstraints(strip_whitespace=True)]
     clean_filename: Annotated[str, StringConstraints(pattern=rf'^{CLEAN_FILENAME_PATTERN}$')]
     
     # Computed metadata
     size: int
     mime_type: Annotated[str, StringConstraints(pattern=MIME_TYPE_PATTERN)]
+    dot_ext: str | None = None
+    filepath: Path | None = None
 
-    @property
-    def dot_ext(self) -> str:
+    def resolve_dot_ext(self) -> str:
         return f".{self.ext}" if self.ext else ""
 
-    @property
-    def filepath(self) -> Path:
+    def resolve_filepath(self) -> Path:
         filename = f'{self.filename}{self.dot_ext}'
         return make_user_filepath(self.user_id, filename)
+
+    @model_validator(mode='after')
+    def _resolve_computed(self) -> 'UploadMetadata':
+        self.dot_ext = self.resolve_dot_ext()
+        self.filepath = self.resolve_filepath()
+        return self
 
 
 class UploadResult(BaseModel):
     """Result of an upload operation."""
 
-    status: str
+    # Mandatory properties
+    status: Literal["success", "error", "pending"]
     message: str
-    upload_id: Optional[int]
-    metadata: Optional[UploadMetadata]
 
-    @property
-    def url(self) -> str:
+    # Required properties if `status == "success"`
+    upload_id: int | None = None
+    metadata: UploadMetadata | None = None
+
+    url: str | None = None
+    view_url: str | None = None
+    download_url: str | None = None
+
+    def resolve_url(self) -> str:
         """Generate the /get/ URL for this upload."""
         if self.upload_id and self.metadata:
             return f"{config.app_base_url}/get/{self.upload_id}/{self.metadata.clean_filename}{self.metadata.dot_ext}"
         return ""
 
-    @property
-    def view_url(self) -> str:
+    def resolve_view_url(self) -> str:
         """Generate the /view/ URL for this upload."""
         if self.upload_id and self.metadata:
             return f"{config.app_base_url}/view/{self.upload_id}/{self.metadata.clean_filename}{self.metadata.dot_ext}"
         return ""
 
-    @property
-    def download_url(self) -> str:
+    def resolve_download_url(self) -> str:
         """Generate the /download/ URL for this upload."""
         if self.upload_id and self.metadata:
             return f"{config.app_base_url}/download/{self.upload_id}/{self.metadata.clean_filename}{self.metadata.dot_ext}"
         return ""
+
+    @model_validator(mode='after')
+    def _resolve_computed(self) -> 'UploadResult':
+        self.url = self.resolve_url()
+        self.view_url = self.resolve_view_url()
+        self.download_url = self.resolve_download_url()
+        return self

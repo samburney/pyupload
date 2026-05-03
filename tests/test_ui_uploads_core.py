@@ -44,34 +44,30 @@ class TestUploadGetEndpoint:
         assert "<form" in html
         assert "upload" in html.lower()
 
-    async def test_upload_page_contains_file_input(self, client):
-        """Test that upload form contains file input element."""
+    async def test_upload_page_contains_dropzone_widget(self, client):
+        """Upload page includes the Dropzone/Alpine upload widget."""
         response = await client.get("/upload")
 
         html = response.text
 
-        # Should contain file input with upload_files name
-        assert 'type="file"' in html
-        assert 'name="upload_files"' in html
+        assert 'x-data="fileUploadWidget"' in html
+        assert 'id="upload-form"' in html
 
-    async def test_upload_page_contains_submit_button(self, client):
-        """Test that upload form contains submit button."""
+    async def test_upload_page_contains_upload_button(self, client):
+        """Upload page contains the upload action button."""
         response = await client.get("/upload")
 
         html = response.text
 
-        # Should contain submit button
-        assert 'type="submit"' in html or "<button" in html
+        assert "<button" in html
 
-    async def test_upload_page_has_htmx_integration(self, client):
-        """Test that form has HTMX attributes for dynamic upload."""
+    async def test_upload_page_includes_widget_js(self, client):
+        """Upload page loads the Dropzone widget JavaScript."""
         response = await client.get("/upload")
 
         html = response.text
 
-        # Should have HTMX attributes
-        assert "hx-post" in html
-        assert "/upload" in html
+        assert "/static/js/app/uploads/widget.js" in html
 
     async def test_upload_page_includes_window_dimensions_script(self, client):
         """Test that upload page includes the window-dimensions tracking script."""
@@ -239,9 +235,9 @@ class TestUploadPostEndpoint:
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
-        # Should return HTML response
+        # Endpoint returns a JSON array of UploadResult objects
         assert response.status_code == 200
-        assert "text/html" in response.headers.get("content-type", "")
+        assert "application/json" in response.headers.get("content-type", "")
 
     async def test_upload_post_displays_success_messages(self, client, monkeypatch):
         """Test that successful uploads display success messages."""
@@ -278,10 +274,11 @@ class TestUploadPostEndpoint:
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
-        html = response.text
-
-        # Should contain success message mentioning the file
-        assert "successfully" in html.lower() or "uploaded" in html.lower()
+        # Endpoint returns JSON — success result contains status and view_url
+        results = response.json()
+        assert len(results) == 1
+        assert results[0]["status"] == "success"
+        assert results[0]["view_url"]
 
     async def test_upload_post_displays_error_messages_on_failure(self, client, monkeypatch):
         """Test that failed uploads display error messages."""
@@ -310,14 +307,12 @@ class TestUploadPostEndpoint:
             files={"upload_files": ("test.txt", BytesIO(b"content"), "text/plain")},
         )
 
+        # Endpoint returns JSON — error result contains status and message
         assert response.status_code == 200
-        # Errors are delivered via flash messages in the session cookie, rendered by
-        # the base layout on full-page responses. Verify the flash was stored in the session.
-        session_cookie = next((v for k, v in response.cookies.items() if "session" in k), None)
-        assert session_cookie is not None
-        import base64
-        session_data = base64.b64decode(session_cookie.split(".")[0] + "==").decode("utf-8", errors="replace")
-        assert "too large" in session_data
+        results = response.json()
+        assert len(results) == 1
+        assert results[0]["status"] == "error"
+        assert "too large" in results[0]["message"].lower()
 
     async def test_upload_post_handles_partial_failures(self, client, monkeypatch):
         """Test that mixed success/error results are displayed correctly."""

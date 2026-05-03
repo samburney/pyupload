@@ -4,7 +4,12 @@
 
 {%- block content %}
 {% call render_multiselect_chrome() %}
-<div class="flex flex-col grow">
+<div id="gallery-content"
+    class="flex flex-col grow"
+    hx-get="{{ request.url }}"
+    hx-trigger="refresh-content from:body delay:200ms"
+    hx-select="#gallery-content"
+    hx-swap="outerHtml">
     {%- include("components/gallery/grid.html.j2") %}
     {%- include("components/gallery/pagination.html.j2") %}
 </div>

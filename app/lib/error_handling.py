@@ -2,11 +2,22 @@ import textwrap
 
 from typing import IO
 from tempfile import SpooledTemporaryFile
+
 from PIL import Image as Pillow, ImageDraw, ImageText, ImageFont
 from tortoise.exceptions import ValidationError
 from fastapi.responses import Response, StreamingResponse
+from fastapi.exceptions import HTTPException
 
 from app.lib.helpers import IMAGE_CONVERSION_DST_FORMATS, split_filename
+
+
+files_not_provided_exception = HTTPException(
+    status_code=400,
+    detail={
+        "status": "error",
+        "message": "No files provided for upload.",
+    }
+)
 
 
 # User validation exceptions
@@ -22,10 +33,12 @@ class NotAuthorisedError(Exception):
     """Raised when a user is not authorised to access a file."""
     pass
 
+
 # Image processing exceptions
 class ImageInvalidError(Exception):
     """Exception raised when an uploaded file is not a valid image."""
     pass
+
 
 class ImageProcessingError(Exception):
     """Exception raised for errors in image metadata processing."""
