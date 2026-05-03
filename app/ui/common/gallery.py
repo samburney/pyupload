@@ -113,6 +113,7 @@ def build_text_search_filter(query: str, user: User | None = None) -> Q:
         Q(description__icontains=query)
         | Q(name__icontains=query)
         | Q(originalname__icontains=query)
+        | Q(ext__icontains=query)
         | Q(tags__name__iexact=clean_text(query, "-"))
     )
 
