@@ -114,6 +114,9 @@ async def add_uploaded_file(user: User, file: UploadFile | BinaryIO | SpooledTem
 
 
 async def save_uploaded_file(file: UploadFile | BinaryIO | SpooledTemporaryFile, metadata: UploadMetadata) -> bool:
+    if not metadata.filepath:
+        raise ValueError(f"Filepath not found for uploaded file: {metadata.filename}")
+
     # Save the uploaded file to the generated path
     try:
         with metadata.filepath.open("wb") as dest:
@@ -163,7 +166,7 @@ async def record_uploaded_file(metadata: UploadMetadata) -> Upload:
     # Clean up file if database record creation fails
     except Exception as e:
         try:
-            if metadata.filepath.exists():
+            if metadata.filepath and metadata.filepath.exists():
                 metadata.filepath.unlink()
         except Exception as cleanup_error:
             raise RuntimeError(f"Failed to create upload record and cleanup file: {cleanup_error}") from e

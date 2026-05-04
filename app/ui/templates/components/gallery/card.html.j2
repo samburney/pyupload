@@ -17,9 +17,22 @@
     {%- endif %}
         >
     {%- if upload.image %}
-    {%- set ar_decimal = (upload.image.width / upload.image.height) | round(3) %}
     {%- set thumb_max_width = 640 %}
-    {%- set thumb_max_height = (thumb_max_width / ar_decimal) | round(0, 'ceil') | int %}
+    {%- set ar_decimal = (upload.image.width / upload.image.height) %}
+
+    {# Max aspect ratio for tall images #}
+    {%- set max_tall_ar = 9 / 16 %}
+
+    {# If thumbnail too tall, clamp to 9:16 box and crop the rest. #}
+    {%- if ar_decimal < max_tall_ar %}
+        {%- set thumb_max_height = (thumb_max_width / max_tall_ar) | int %}
+        {%- set aspect_classes = 'max-h-[calc(100cqw*16/9)] object-cover object-center' %}
+
+    {# Otherwise scale to column width, let the height be its natural scaled size. #}
+    {%- else %}
+        {%- set thumb_max_height = (thumb_max_width / ar_decimal) | int %}
+        {%- set aspect_classes = '' %}
+    {%- endif %}
     <a href="{{ upload.view_url }}"
         aria-label="{{ upload.image.width }}x{{ upload.image.height }} Open upload {{ upload.display_name }}"
         hx-get="{{ upload.view_url }}"
@@ -40,13 +53,17 @@
                 </svg>
             </div>
         </div>
-        <img class="h-min w-full rounded-md transition-normal duration-150 hover:brightness-80"
-            alt="{{ upload.display_name }}"
-            src="{{ upload.autoresize_url(thumb_max_width) }}?t={{ upload.updated_at.timestamp() | int }}"
-            x-show="loaded"
-            x-transition.opacity.duration.150ms
-            x-cloak
-            @load="loaded = true">
+        <div class="@container flex">
+            <img class="w-full h-auto
+                {{ aspect_classes }}
+                rounded-md transition-normal duration-150 hover:brightness-80"
+                alt="{{ upload.display_name }}"
+                src="{{ upload.autoresize_url(thumb_max_width) }}?t={{ upload.updated_at.timestamp() | int }}"
+                x-show="loaded"
+                x-transition.opacity.duration.150ms
+                x-cloak
+                @load="loaded = true">
+        </div>
         <div class="absolute hidden top-0 left-0 w-full h-full items-center justify-center htmx-indicator">
             <svg class="size-12 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
                 <use href="#icon-loading-spinner"></use>
@@ -66,6 +83,16 @@
             </div>
         </div>
     </a>
+    {%- elif upload.is_vector %}
+    <div class="@container flex">
+        <a href="{{ upload.view_url }}" 
+           aria-label="View {{ upload.display_name }}"
+           class="w-full flex justify-center items-center bg-gray-50/50 rounded-md transition-normal duration-150 hover:brightness-95">
+            <img class="h-auto max-h-[calc(100cqw*16/9)] object-contain p-4"
+                alt="{{ upload.display_name }}"
+                src="{{ url_for('get_upload_get', id=upload.id, filename=upload.cleanname + upload.dot_ext) }}?t={{ upload.updated_at.timestamp() | int }}">
+        </a>
+    </div>
     {%- else %}
     <a class="block border border-dashed text-gray-600 hover:text-gray-400 border-gray-600 hover:border-gray-400 rounded-md object-cover w-16 h-16 mx-auto"
         aria-label="Download {{ upload.display_name }}"

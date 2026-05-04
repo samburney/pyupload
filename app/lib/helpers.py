@@ -27,7 +27,6 @@ IMAGE_FORMATS = {
     '.gif': 'image/gif',
     '.webp': 'image/webp',
     '.bmp': 'image/bmp',
-    '.svg': 'image/svg+xml',
 }
 
 # Supported image formats for additional processing
@@ -65,6 +64,11 @@ IMAGE_SHORT_DIMENSIONS = {
     'fhd': '1920x1080',
     'qhd': '2560x1440',
     '4k': '3840x2160',
+}
+
+# Supported vector formats
+VECTOR_FORMATS = {
+    '.svg': 'image/svg+xml',
 }
 
 

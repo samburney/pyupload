@@ -10,7 +10,7 @@ from tortoise_serializer import ModelSerializer, ContextType
 
 from app.lib.config import get_app_config
 from app.lib.file_io import delete_file
-from app.lib.helpers import MIME_TYPE_PATTERN, IMAGE_CONVERSION_DST_FORMATS, split_filename
+from app.lib.helpers import MIME_TYPE_PATTERN, IMAGE_CONVERSION_DST_FORMATS, VECTOR_FORMATS, split_filename
 from app.lib.image_processing import do_image_rotation
 
 from app.models.collections import Collection, CollectionSerializer
@@ -154,6 +154,15 @@ class Upload(models.Model, TimestampMixin, PaginationMixin):
 
             raise RuntimeError("Images relationship has not been fetched.")
 
+        return False
+
+    @property
+    def is_vector(self) -> bool:
+        """Return whether or not this file is a valid vector file type."""
+
+        if self.type in VECTOR_FORMATS.values():
+            return True
+        
         return False
 
     @property
@@ -310,6 +319,7 @@ class UploadSerializer(ModelSerializer[Upload], SerializerTimestampMixin):
     view_url: str
     download_url: str
     is_image: bool
+    is_vector: bool
     is_private: bool
     short_type: str
     is_owner: bool | None
