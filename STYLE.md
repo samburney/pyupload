@@ -518,12 +518,12 @@ Jinja2 comments (`{# #}`) annotate template-level concerns — context variable 
 
 ## CSS
 
-This project uses **Tailwind CSS v4**.  The source file is `input.css`; the compiled output is `app/static/css/tailwind.css`.
+This project uses **Tailwind CSS v4**.  The source file is `tailwind.css`; the compiled output is `app/static/css/app/tailwind.css`.
 
 
 ### File Structure
 
-`input.css` follows this top-to-bottom order:
+`tailwind.css` follows this top-to-bottom order:
 
 1. `@import "tailwindcss"` and `@plugin` declarations
 2. `@source` directive
@@ -575,7 +575,7 @@ Use **`@utility`** for any class applied directly to elements in templates.
 
 ### Indentation
 
-4-space indentation throughout `input.css`.
+4-space indentation throughout `tailwind.css`.
 
 
 ---

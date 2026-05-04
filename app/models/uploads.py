@@ -3,7 +3,7 @@ import asyncio
 from pathlib import Path
 from typing import Annotated, Literal, TYPE_CHECKING
 
-from pydantic import BaseModel, StringConstraints, model_validator
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 from tortoise import fields, models
 from tortoise.exceptions import NoValuesFetched
 from tortoise_serializer import ModelSerializer, ContextType
@@ -369,7 +369,7 @@ class UploadMetadata(BaseModel):
     size: int
     mime_type: Annotated[str, StringConstraints(pattern=MIME_TYPE_PATTERN)]
     dot_ext: str | None = None
-    filepath: Path | None = None
+    filepath: Path | None = Field(default=None, exclude=True)
 
     def resolve_dot_ext(self) -> str:
         return f".{self.ext}" if self.ext else ""

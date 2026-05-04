@@ -71,11 +71,9 @@ async def search_index_get(
     uploads = [await UploadSerializer.from_tortoise_orm(u) for u in upload_models]
 
     is_htmx = bool(request.headers.get("HX-Request"))
-    template_name = (
-        "search/partials/results_output.html.j2"
-        if is_htmx
-        else "search/results.html.j2"
-    )
+    template_name = "search/results.html.j2"
+    if is_htmx:
+        template_name = "search/partials/results_output.html.j2"
 
     breadcrumbs.push(
         query,

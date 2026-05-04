@@ -133,7 +133,7 @@ document.addEventListener('alpine:init', () => {
                         animateInside: false,
                         drag: false,
                     });
-                };
+                }
 
                 this.queueComplete = true;
             });

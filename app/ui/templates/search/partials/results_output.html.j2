@@ -1,7 +1,12 @@
 {%- from "components/gallery/multiselect-chrome.html.j2" import render_multiselect_chrome with context %}
 
 {% call render_multiselect_chrome() %}
-<div class="flex flex-col grow">
+<div id="results-output"
+    class="flex flex-col grow"
+    hx-get="{{ request.url }}"
+    hx-trigger="refresh-content from:body delay:200ms"
+    hx-select="#results-output"
+    hx-swap="outerHTML">
     {%- include "components/gallery/grid.html.j2" %}
     {%- include "components/gallery/pagination.html.j2" %}
 </div>

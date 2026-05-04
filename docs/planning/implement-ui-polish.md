@@ -293,7 +293,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - [ ] All tests passing
 
 **Implementation Notes**:
-- **Current State**: Flash messages already fully implemented with Alpine.js, transitions, and dismiss functionality
+- **Superseded**: Flash messages are being migrated from the Alpine.js `#messages` system to iziToast (see `migrate-flash-messages.md`). Once that migration is complete, icons, auto-dismiss, and close button behaviour will be configured via iziToast options rather than template changes. The tasks above apply only if the Alpine.js system is retained.
 - Icons: Use Heroicons or inline SVG
   - Info: `ℹ️` or info circle icon
   - Success/Ok: `✓` or checkmark icon

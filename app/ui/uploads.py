@@ -82,7 +82,7 @@ async def upload_create_post(
 ) -> list[UploadResult]:
     """Handle multiple uploaded files."""
 
-    if not upload_files or len(upload_files) == 0:
+    if not upload_files:
         raise files_not_provided_exception
 
     results = await handle_uploaded_files(user=current_user, files=upload_files)
