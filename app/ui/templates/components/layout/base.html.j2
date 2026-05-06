@@ -14,10 +14,11 @@
             toggleSidebar(state=!this.sidebarOpen, save=true) {
                 this.sidebarOpen = state;
 
-                // Save the new state to the cookie
                 if (save === true) {
                     document.cookie = `sidebar_open=${this.sidebarOpen}; path=/; max-age=31536000;`;
                 }
+
+                window.dispatchEvent(new Event('resize'));
             },
         }">
         {%- include "components/common/icons-sprite.html.j2" %}
