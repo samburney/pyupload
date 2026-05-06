@@ -48,7 +48,8 @@
 
                         <!-- Desktop menu - right side buttons -->
                         <div class="hidden sm:flex items-center space-x-4">
-                            <a href="/upload" class="button">Upload</a>
+                            <button class="button"
+                                @click="toggleSidebar(true, false); document.querySelector('#file-upload-widget div:first-child')?.focus();">Upload</button>
                             <!-- User dropdown -->
                             <div class="relative" @click.away="userOpen = false">
                                 <div class="split-button split-button-narrow split-button-ghost">

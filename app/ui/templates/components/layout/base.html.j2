@@ -6,31 +6,65 @@
         <title>{{ config.app_site_name }}</title>
         {%- include "components/layout/header-includes.html.j2" %}
     </head>
-    <body id="body" hx-ext="response-targets" class="flex flex-col min-h-screen">
+    <body id="body" class="flex flex-col min-h-screen"
+        hx-ext="response-targets"
+        x-data="{
+            sidebarOpen: {{ 'true' if sidebar_open else 'false' }},
+
+            toggleSidebar(state=!this.sidebarOpen, save=true) {
+                this.sidebarOpen = state;
+
+                // Save the new state to the cookie
+                if (save === true) {
+                    document.cookie = `sidebar_open=${this.sidebarOpen}; path=/; max-age=31536000;`;
+                }
+            },
+        }">
         {%- include "components/common/icons-sprite.html.j2" %}
         {%- include "components/common/material-symbols-sprite.html.j2" %}
         <section class="sm:mx-2 mb-2">
-        {%- include "components/layout/navbar.html.j2" %}
+            {%- include "components/layout/navbar.html.j2" %}
         </section>
         <section class="mx-2">
-        {%- include "components/layout/messages.html.j2" %}
+            {%- include "components/layout/messages.html.j2" %}
         </section>
-        <main class="mx-2 mb-2 flex flex-col grow">
-            <div class="container mx-auto flex flex-col gap-2 lg:gap-4">
-            {%- include("components/layout/breadcrumbs.html.j2") %}
-                <div class="flex grow md:gap-2 lg:gap-4">
-                    <div id="content" class="flex flex-col gap-2 lg:gap-4 grow min-w-0">
-                    {%- block content %}{% endblock %}
+        <section class="mx-2">
+            <div class="container mx-auto flex flex-col grow min-w-0">
+                <div class="flex w-full h-6 mb-2 items-center">
+                    {%- include("components/layout/breadcrumbs.html.j2") %}
+                    <div class="flex ml-auto w-8 border-y border-l border-gray-100 rounded-tl-sm rounded-bl-sm shadow-sm shadow-gray-300 justify-center [clip-path:inset(-10px_0px_-10px_-10px)] cursor-pointer
+                        hover:fill-blue-500"
+                        @click="toggleSidebar()">
+                        <svg class="size-6 {{ '-scale-100' if sidebar_open else 'scale-100' }}"
+                            :class="{
+                                '-scale-100': sidebarOpen,
+                                'scale-100': !sidebarOpen,
+                            }">
+                            <use href="#material-symbols-outlined-menu-open"></use>
+                        </svg>
                     </div>
-                    <aside id="sidebar" class="flex-none w-40 lg:w-64">
-                        <div class="flex flex-col gap-2">
+                </div>
+                <div class="flex">
+                    <main class="flex flex-col grow min-w-0 gap-2">
+                        <div id="content" class="flex flex-col">
+                            {%- block content %}{% endblock %}
+                        </div>
+                    </main>
+                    <aside id="sidebar"
+                        class="flex-none overflow-hidden transition-[width] ease-in-out
+                            {{ 'sm:ml-2 lg:ml-4 w-40 lg:w-64' if sidebar_open else 'sm:ml-0 lg:ml-0 w-0 lg:w-0' }}"
+                        :class="{
+                            'sm:ml-2 lg:ml-4 w-40 lg:w-64': sidebarOpen,
+                            'sm:ml-0 lg:ml-0 w-0 lg:w-0': !sidebarOpen,
+                        }">
+                        <div class="flex flex-col gap-2 w-40 lg:w-64">
                             {%- include "components/layout/sidebar.html.j2" %}
                             {%- block sidebar %}{% endblock %}
                         </div>
                     </aside>
                 </div>
             </div>
-        </main>
+        </section>
         <footer class="bg-gray-100 border-t border-gray-300 py-2">
             <div class="container mx-auto text-center text-xs text-gray-600">
                 <p>

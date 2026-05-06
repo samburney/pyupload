@@ -1,5 +1,6 @@
 import json
 
+from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 from app.lib.config import get_app_config
@@ -11,9 +12,15 @@ from app.ui.common.session import get_flashed_messages
 config = get_app_config()
 
 
-def app_config_context_processor(request):
+def app_config_context_processor(request: Request):
     """Context processor to add app config to templates."""
-    return {"config": config}
+
+    context = {
+        "config": config,
+        "sidebar_open": request.cookies.get("sidebar_open", "true") == "true",
+    }
+
+    return context
 
 
 templates = Jinja2Templates(
