@@ -41,8 +41,10 @@
             </div>
 
             <p
-                class="absolute bottom-2 left-0 flex w-full justify-center text-xs sm:text-sm md:text-base font-medium bg-black/25 p-1">
-                <a href="{{ upload.view_url }}" class="text-white hover:text-gray-300">
+                class="absolute bottom-2 left-0 flex w-full justify-center text-xs sm:text-sm md:text-base font-medium bg-black/25 p-1 min-w-0">
+                <a href="{{ upload.view_url }}"
+                    title="{{ upload.description }}{{ upload.dot_ext }}"
+                    class="text-white hover:text-gray-300 whitespace-nowrap overflow-hidden text-ellipsis">
                     {{ upload.description }}{{ upload.dot_ext }}
                 </a>
             </p>
