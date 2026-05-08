@@ -46,10 +46,15 @@ def get_paginated_gallery_etag(
         else:
             signature_parts.append(f"{upload.upload_count}:{upload.file_size}:{updated_at}")
 
+    # Include sidebar state
+    signature_parts.append(f"sidebar_open_{request.cookies.get('sidebar_open', 'true')}")
+
     # Include messages in request header
     flashes = request.session.get("_flashes", [])
     if len(flashes) > 0:
         signature_parts.append(json.dumps(flashes))
+
+    print(signature_parts)
 
     digest = hashlib.sha1("|".join(signature_parts).encode("utf-8")).hexdigest()
     return f'W/"{etag_prefix}-{digest}"'
