@@ -1,5 +1,0 @@
-<form id="search" action="{{ request.url_for('search_index_get') }}" method="get">
-    <label for="query">Search</label>
-    <input id="query" name="query" type="text" value="{{ request.query_params.get('query', '') }}" placeholder="Search">
-    <button type="submit">Submit</button>
-</form>

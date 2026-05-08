@@ -31,9 +31,27 @@
         </section>
         <section class="mx-2">
             <div class="container mx-auto flex flex-col grow min-w-0">
-                <div class="flex w-full h-6 mb-2 items-center">
-                    {%- include("components/layout/breadcrumbs.html.j2") %}
-                    <div class="flex ml-auto w-8 border-y border-l border-gray-100 rounded-tl-sm rounded-bl-sm shadow-sm shadow-gray-300 justify-center [clip-path:inset(-10px_0px_-10px_-10px)] cursor-pointer
+                <div class="grid grid-cols-[1fr_auto_1fr] w-full h-6 mb-2 items-center">
+                    <div>{%- include("components/layout/breadcrumbs.html.j2") %}</div>
+                    <div class="h-6 rounded-sm
+                        has-focus:inset-shadow-sm has-focus:inset-shadow-gray-300">
+                        <form id="search" action="{{ request.url_for('search_index_get') }}" method="get" class="flex items-center">
+                            <input id="query" name="query" type="text"
+                                value="{{ request.query_params.get('query', '') }}"
+                                placeholder="Search"
+                                aria-label="Search"
+                                class="bg-transparent border-none py-0.5 px-1.5 text-sm
+                                    focus:border-none focus:outline-none focus:ring-0">
+                            <button type="submit"
+                                class="bg-transparent flex p-0.5 mr-0.5 items-center justify-center rounded-sm">
+                                <svg class="size-4">
+                                    <use href="#material-symbols-outlined-search"></use>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="flex justify-self-end w-8 border-y border-l border-gray-100 rounded-tl-sm rounded-bl-sm
+                        shadow-sm shadow-gray-300 justify-center [clip-path:inset(-10px_0px_-10px_-10px)] cursor-pointer
                         hover:fill-blue-500"
                         @click="toggleSidebar()">
                         <svg class="size-6 {{ '-scale-100' if sidebar_open else 'scale-100' }}"

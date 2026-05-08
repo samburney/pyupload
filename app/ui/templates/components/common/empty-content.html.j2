@@ -91,9 +91,9 @@
   </p>
 
   <div class="mt-6 space-y-2 w-full grid grid-cols-2 gap-2">
-    <a href="/uploads" class="button">
-      Upload
-    </a>
+    <button class="button"
+        @click="toggleSidebar(true, false); document.querySelector('#file-upload-widget div:first-child')?.focus();">Upload
+    </button>
     <a href="/" class="button button-outline">
       Home
     </a>

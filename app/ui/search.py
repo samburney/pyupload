@@ -12,6 +12,7 @@ from app.ui.common.gallery import (
     GalleryPaginationDefaultParams,
     build_text_search_filter,
 )
+from app.ui.common.responses import error_template_response
 from app.ui.common.security import get_current_user
 from app.ui.common.templating import templates
 from app.ui.common.uploads import default_readable_query_filter
@@ -34,16 +35,7 @@ async def search_index_get(
     """Render the search page and optional search results."""
 
     if not query:
-        response = templates.TemplateResponse(
-            request=request,
-            name="search/index.html.j2",
-            context={
-                "current_user": current_user,
-                "breadcrumbs": breadcrumbs.get_all(),
-            },
-        )
-
-        return response
+        return await error_template_response(request, ["No search query provided."])
 
     uploads_query = build_text_search_filter(query, user=current_user)
     uploads_query &= default_readable_query_filter(user=current_user)
@@ -75,6 +67,7 @@ async def search_index_get(
     if is_htmx:
         template_name = "search/partials/results_output.html.j2"
 
+    breadcrumbs.replace(0, "Browse", request.url_for("index_get"))
     breadcrumbs.push(
         query,
         f'{request.url_for("search_index_get")}{pagination.page_url()}',

@@ -39,7 +39,6 @@
                             <a href="/popular" class="hidden lg:inline hover:text-gray-300 text-white">Popular</a>
                             <a href="/all" class="hidden lg:inline hover:text-gray-300 text-white">All</a>
                             <a href="/tags" class="hidden lg:inline hover:text-gray-300 text-white">Tags</a>
-                            <a href="/search" class="hover:text-gray-300 text-white">Search</a>
                             {% if current_user and current_user.is_authenticated %}
                             <a href="/uploads" class="hidden md:inline hover:text-gray-300 text-white">Your Uploads</a>
                             <a href="/collections" class="hidden md:inline hover:text-gray-300 text-white">Your Collections</a>
@@ -49,7 +48,8 @@
                         <!-- Desktop menu - right side buttons -->
                         <div class="hidden sm:flex items-center space-x-4">
                             <button class="button"
-                                @click="toggleSidebar(true, false); document.querySelector('#file-upload-widget div:first-child')?.focus();">Upload</button>
+                                @click="toggleSidebar(true, false); document.querySelector('#file-upload-widget div:first-child')?.focus();">Upload
+                            </button>
                             <!-- User dropdown -->
                             <div class="relative" @click.away="userOpen = false">
                                 <div class="split-button split-button-narrow split-button-ghost">
