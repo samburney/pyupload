@@ -12,8 +12,9 @@
             method="post"
             enctype="multipart/form-data"
             class="w-full p-1 md:p-4"
-            data-max-file-size="{{ max_file_size_mb }}"
-            {% if accepted_files != '*' %}data-accepted-files="{{ accepted_files }}"{% endif %}>
+            data-max-file-size="{{ current_user.max_file_size_mb if current_user else config.unregistered_max_file_size_mb }}"
+            {%- set allowed_mime_types = current_user.allowed_mime_types | join(',') if current_user else config.allowed_mime_types %}
+            {%- if allowed_mime_types != '*' %}data-accepted-files="{{ allowed_mime_types }}"{% endif %}>
             <div class="flex flex-col gap-4 items-center">
                 <svg id="browse-files-button"
                     class="w-16 h-14 mt-4 py-2.25 px-4.25 rounded-md cursor-pointer

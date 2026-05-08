@@ -51,29 +51,6 @@ async def _render_upload_component(request: Request, current_user: User, upload_
     )
 
 
-@router.get("/upload", response_class=HTMLResponse)
-async def show_upload_page_get(
-    request: Request,
-    current_user: Annotated[User, Depends(get_current_user)],
-) -> HTMLResponse:
-    """Render the upload page."""
-
-    max_file_size_mb = current_user.max_file_size_mb if current_user else config.unregistered_max_file_size_mb
-    accepted_files = ",".join(current_user.allowed_mime_types) if current_user else config.unregistered_allowed_types
-
-    response = templates.TemplateResponse(
-        request,
-        "uploads/index.html.j2",
-        context={
-            "current_user": current_user,
-            "max_file_size_mb": max_file_size_mb,
-            "accepted_files": accepted_files,
-        },
-    )
-
-    return response
-
-
 @router.post("/upload", response_model=list[UploadResult])
 async def upload_create_post(
     request: Request,
