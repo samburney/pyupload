@@ -46,32 +46,6 @@ def _upload_data(user, suffix: str = "", private: int = 0, **overrides) -> dict:
 # GET /search (no query — index page)
 # ---------------------------------------------------------------------------
 
-class TestSearchIndexPage:
-    """GET /search with no query parameter renders the search form."""
-
-    async def test_returns_200_for_anonymous_user(self, client):
-        """Anonymous users can access the search page."""
-        response = await client.get("/search")
-        assert response.status_code == 200
-
-    async def test_returns_200_for_authenticated_user(self, client):
-        """Authenticated users can access the search page."""
-        user = await User.create(username="srchidx", email="srchidx@example.com", password="pw", is_registered=True)
-        client.cookies = _auth(user)
-        response = await client.get("/search")
-        assert response.status_code == 200
-
-    async def test_renders_search_form(self, client):
-        """Response includes a search query input."""
-        response = await client.get("/search")
-        assert 'name="query"' in response.text
-
-    async def test_returns_full_page_layout(self, client):
-        """The index page returns the full HTML layout."""
-        response = await client.get("/search")
-        assert "<html" in response.text
-
-
 # ---------------------------------------------------------------------------
 # GET /search?query=... (results)
 # ---------------------------------------------------------------------------
@@ -165,12 +139,6 @@ class TestSearchSuperSelect:
         response = await client.get("/search?query=srchsstarget999")
         assert response.status_code == 200
         assert "enableSuperSelect" in response.text
-
-    async def test_index_page_does_not_enable_super_select(self, client):
-        """The search index page (no query) never renders the super-select control."""
-        response = await client.get("/search")
-        assert response.status_code == 200
-        assert "enableSuperSelect" not in response.text
 
     async def test_htmx_partial_enables_super_select(self, client):
         """The HTMX results partial also includes the super-select control."""

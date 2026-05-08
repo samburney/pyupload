@@ -16,6 +16,7 @@ from app.lib.file_serving import serve_file, validate_file_request
 from app.models.uploads import Upload, UploadResult, UploadSerializer
 from app.models.users import User
 
+from app.ui.common.breadcrumbs import Breadcrumbs
 from app.ui.common.gallery import (
     get_request_context_filter,
     render_multiselect_sidebar,
@@ -29,6 +30,7 @@ from app.ui.common.uploads import get_upload_or_404_for_read, get_upload_or_404_
 
 config = get_app_config()
 router = APIRouter(tags=["uploads"])
+breadcrumb_handler = Breadcrumbs(router=router, route_title="Browse")
 
 
 async def _render_upload_component(request: Request, current_user: User, upload_model: Upload, template: str, context: dict | None = None, status_code=200) -> Response:
@@ -148,6 +150,7 @@ async def view_upload_page_get(
     id: int,
     filename: str,
     current_user: Annotated[User, Depends(get_current_user)],
+    breadcrumbs: Annotated[Breadcrumbs, Depends(breadcrumb_handler.handle_request)],
     modal_width: int | None = None,
 ) -> Response:
     """View an uploaded file."""
@@ -178,9 +181,15 @@ async def view_upload_page_get(
     # Serialize upload for template
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
+    breadcrumbs.push(upload.description, request.url_for(
+        "view_upload_page_get",
+        id=id, filename=filename,
+    ))
+
     # Template context
     context = {
         "current_user": current_user,
+        "breadcrumbs": breadcrumbs.get_all(),
         "upload": upload,
         "filtered_collections": upload.filtered_collections,
     }

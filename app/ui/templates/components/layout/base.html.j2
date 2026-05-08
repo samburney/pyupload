@@ -31,9 +31,9 @@
         </section>
         <section class="mx-2">
             <div class="container mx-auto flex flex-col grow min-w-0">
-                <div class="grid grid-cols-[1fr_auto_1fr] w-full h-6 mb-2 items-center">
-                    <div>{%- include("components/layout/breadcrumbs.html.j2") %}</div>
-                    <div class="h-6 rounded-sm
+                <div class="grid grid-cols-3 w-full h-6 mb-2 items-center">
+                    <div class="min-w-0 overflow-hidden">{%- include("components/layout/breadcrumbs.html.j2") %}</div>
+                    <div class="justify-self-center h-6 rounded-sm
                         has-focus:inset-shadow-sm has-focus:inset-shadow-gray-300">
                         <form id="search" action="{{ request.url_for('search_index_get') }}" method="get" class="flex items-center">
                             <input id="query" name="query" type="text"

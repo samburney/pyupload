@@ -1,6 +1,6 @@
 {% if breadcrumbs and breadcrumbs | length %}
 <nav aria-label="Breadcrumb">
-  <ol class="flex overflow-hidden rounded-md text-sm text-gray-900">
+  <ol class="flex min-w-0 overflow-hidden rounded-md text-sm text-gray-900">
     <li>
       <a href="/" class="block h-6 bg-gray-200 px-2 leading-6 transition-colors hover:text-gray-900 content-center">
         <svg class="size-5 fill-gray-700 hover:fill-gray-900" viewBox="0 0 24 24">
@@ -9,7 +9,7 @@
       </a>
     </li>
     {% for breadcrumb in breadcrumbs %}
-    <li class="relative flex items-center">
+    <li class="relative flex items-center {% if loop.last %}min-w-0{% endif %}">
       {% if loop.first %}
       <svg class="absolute inset-y-0 -start-px h-6 w-4 text-gray-200 rtl:rotate-180" viewBox="0 0 20 20" preserveAspectRatio="none" fill="currentColor">
         <polygon points="0,0 0,20 20,10"></polygon>
@@ -20,7 +20,7 @@
       </svg>
       {% endif %}
 
-      <span class="block h-6 pr-4 pl-6 leading-6 transition-colors">
+      <span class="block h-6 pr-4 pl-6 leading-6 transition-colors {% if loop.last %}truncate{% endif %}">
       {% if not loop.last %}
         <a href="{{ breadcrumb.url }}" class="hover:underline">{{ breadcrumb.title }}</a>
       {% else %}

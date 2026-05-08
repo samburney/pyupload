@@ -15,7 +15,7 @@ from app.ui.common.session import flash_message
 from app.ui.common.responses import error_template_response
 from app.ui.common.uploads import build_writable_upload_queryset
 
-from app.ui.uploads import view_upload_page_get
+from app.ui.uploads import view_upload_page_get, breadcrumb_handler
 
 
 router = APIRouter(prefix="/images", tags=["images"])
@@ -75,6 +75,7 @@ async def rotate_selected_images_post(
             id=upload.id,
             filename=upload.filename,
             current_user=current_user,
+            breadcrumbs=breadcrumb_handler.handle_request(request),
         )
 
     # Gallery: HX-Location in-place refresh
