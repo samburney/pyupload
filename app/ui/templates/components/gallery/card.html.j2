@@ -42,6 +42,7 @@
         hx-select-oob="#messages"
         hx-target-4*="#messages"
         hx-vals="js:{modal_width: calculateMaxImageSize({{ upload.image.width }}, {{ upload.image.height }}).width}"
+        hx-indicator=".hidden-indicator"
         x-data="{ loaded: false }"
         x-init="loaded = $el.querySelector('img')?.complete || false" class="relative">
         <div class="space-y-8 animate-pulse md:space-y-0 md:space-x-8 rtl:space-x-reverse md:flex md:items-center text-gray-500"
