@@ -1,0 +1,72 @@
+
+<!-- Merged Nav + Breadcrumbs bar for mobile -->
+<div class="container mx-auto flex flex-col grow min-w-0">
+    <div class="grid grid-cols-[auto_60px_24px] w-full content-center bg-gray-800 p-1
+        sm:grid-cols-[auto_max-content_40px] sm:bg-transparent sm:p-0">
+        <!-- Desktop Breadcrumbs -->
+        <div class="hidden sm:flex items-center min-w-0 overflow-hidden">
+            {%- include("components/layout/breadcrumbs.html.j2") %}
+        </div>
+
+        <!-- Desktop search -->
+        <div class="hidden sm:flex items-center sm:justify-end md:justify-center">
+            <div class="h-6 rounded-sm
+                outline-1 outline-gray-200
+                has-focus:inset-shadow-sm has-focus:inset-shadow-gray-300">
+                <form action="{{ request.url_for('search_index_get') }}" method="get" class="flex items-center">
+                    <input id="query" name="query" type="text"
+                        value="{{ request.query_params.get('query', '') }}"
+                        placeholder="Search"
+                        aria-label="Search"
+                        class="bg-transparent border-none py-0.5 px-1.5 text-sm
+                            focus:border-none focus:outline-none focus:ring-0">
+                    <button type="submit"
+                        class="bg-transparent flex p-0.5 mr-0.5 items-center justify-center rounded-sm">
+                        <svg class="size-4">
+                            <use href="#material-symbols-outlined-search"></use>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Desktop menu button -->
+        <div class="hidden sm:flex w-8 justify-self-end items-center border-y border-l border-gray-200 rounded-tl-sm rounded-bl-sm
+            justify-center [clip-path:inset(-10px_0px_-10px_-10px)] cursor-pointer
+            hover:fill-gray-500"
+            @click="toggleSidebar()">
+            <svg class="size-6 {{ '-scale-100' if sidebar_open else 'scale-100' }}"
+                :class="{
+                    '-scale-100': sidebarOpen,
+                    'scale-100': !sidebarOpen,
+                }">
+                <use href="#material-symbols-outlined-menu-open"></use>
+            </svg>
+        </div>
+
+        <!-- Mobile Logo (TODO: Make admin configurable) -->
+        <div class="pl-1 sm:hidden">
+            <a href="/"
+                class="text-xl font-bold text-white">
+                sU
+            </a>
+        </div>
+
+        <!-- Mobile upload button -->
+        <div class="sm:hidden">
+            <button class="button button-xs"
+                @click="toggleSidebar(true, false); document.querySelector('#file-upload-widget div:first-child')?.focus();">Upload
+            </button>
+        </div>
+
+        <!-- Mobile menu button -->
+        <button class="sm:hidden text-white"
+            @click="toggleSidebar()"
+            aria-label="Toggle mobile menu">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                </path>
+            </svg>
+        </button>
+    </div>
+</div>

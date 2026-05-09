@@ -23,68 +23,37 @@
         }">
         {%- include "components/common/icons-sprite.html.j2" %}
         {%- include "components/common/material-symbols-sprite.html.j2" %}
-        <section class="sm:mx-2 mb-2">
+        <section class="sm:mb-1 sm:mx-2">
             {%- include "components/layout/navbar.html.j2" %}
         </section>
-        <section class="mx-2">
+        <section class="mb-1 sm:mx-2">
+            {%- include "components/layout/breadcrumbs-navbar.html.j2" %}
+        </section>
+        <section class="sm:mx-2">
             {%- include "components/layout/messages.html.j2" %}
         </section>
-        <section class="mx-2">
-            <div class="container mx-auto flex flex-col grow min-w-0">
-                <div class="grid grid-cols-3 w-full h-6 mb-2 items-center">
-                    <div class="min-w-0 overflow-hidden">{%- include("components/layout/breadcrumbs.html.j2") %}</div>
-                    <div class="justify-self-center h-6 rounded-sm
-                        has-focus:inset-shadow-sm has-focus:inset-shadow-gray-300">
-                        <form id="search" action="{{ request.url_for('search_index_get') }}" method="get" class="flex items-center">
-                            <input id="query" name="query" type="text"
-                                value="{{ request.query_params.get('query', '') }}"
-                                placeholder="Search"
-                                aria-label="Search"
-                                class="bg-transparent border-none py-0.5 px-1.5 text-sm
-                                    focus:border-none focus:outline-none focus:ring-0">
-                            <button type="submit"
-                                class="bg-transparent flex p-0.5 mr-0.5 items-center justify-center rounded-sm">
-                                <svg class="size-4">
-                                    <use href="#material-symbols-outlined-search"></use>
-                                </svg>
-                            </button>
-                        </form>
+        <section class="mx-1 sm:mx-2">
+            <div class="container mx-auto flex grow min-w-0">
+                <main class="flex flex-col grow min-w-0 gap-2">
+                    <div id="content" class="flex flex-col">
+                        {%- block content %}{% endblock %}
                     </div>
-                    <div class="flex justify-self-end w-8 border-y border-l border-gray-100 rounded-tl-sm rounded-bl-sm
-                        shadow-sm shadow-gray-300 justify-center [clip-path:inset(-10px_0px_-10px_-10px)] cursor-pointer
-                        hover:fill-blue-500"
-                        @click="toggleSidebar()">
-                        <svg class="size-6 {{ '-scale-100' if sidebar_open else 'scale-100' }}"
-                            :class="{
-                                '-scale-100': sidebarOpen,
-                                'scale-100': !sidebarOpen,
-                            }">
-                            <use href="#material-symbols-outlined-menu-open"></use>
-                        </svg>
+                </main>
+                <aside id="sidebar"
+                    class="flex-none overflow-hidden transition-[width] ease-in-out
+                        {{ 'sm:ml-2 lg:ml-4 w-40 lg:w-64' if sidebar_open else 'sm:ml-0 lg:ml-0 w-0 lg:w-0' }}"
+                    :class="{
+                        'sm:ml-2 lg:ml-4 w-40 lg:w-64': sidebarOpen,
+                        'sm:ml-0 lg:ml-0 w-0 lg:w-0': !sidebarOpen,
+                    }">
+                    <div class="flex flex-col gap-2 w-40 lg:w-64">
+                        {%- include "components/layout/sidebar.html.j2" %}
+                        {%- block sidebar %}{% endblock %}
                     </div>
-                </div>
-                <div class="flex">
-                    <main class="flex flex-col grow min-w-0 gap-2">
-                        <div id="content" class="flex flex-col">
-                            {%- block content %}{% endblock %}
-                        </div>
-                    </main>
-                    <aside id="sidebar"
-                        class="flex-none overflow-hidden transition-[width] ease-in-out
-                            {{ 'sm:ml-2 lg:ml-4 w-40 lg:w-64' if sidebar_open else 'sm:ml-0 lg:ml-0 w-0 lg:w-0' }}"
-                        :class="{
-                            'sm:ml-2 lg:ml-4 w-40 lg:w-64': sidebarOpen,
-                            'sm:ml-0 lg:ml-0 w-0 lg:w-0': !sidebarOpen,
-                        }">
-                        <div class="flex flex-col gap-2 w-40 lg:w-64">
-                            {%- include "components/layout/sidebar.html.j2" %}
-                            {%- block sidebar %}{% endblock %}
-                        </div>
-                    </aside>
-                </div>
+                </aside>
             </div>
         </section>
-        <footer class="bg-gray-100 border-t border-gray-300 py-2">
+        <footer class="mt-auto bg-gray-100 border-t border-gray-300 py-2">
             <div class="container mx-auto text-center text-xs text-gray-600">
                 <p>
                     pyupload is Copyright &copy;2025 <a href="http://www.sifnt.net.au/" class="text-gray-900 font-semibold hover:underline">sifnt</a>.
@@ -104,9 +73,10 @@
                 <span class="hidden 2xl:block 3xl:hidden">2xl</span>
                 <span class="hidden 3xl:block 4xl:hidden">3xl</span>
                 <span class="hidden 4xl:block">4xl</span>
+                <script>document.head.insertAdjacentHTML('beforeend', '<style>* { outline: 1px solid red !important; }</style>');</script>
             </div>
             {%- endif %}
         </footer>
-        <div class="hidden hidden-indicator"
+        <div class="hidden hidden-indicator"></div>
     </body>
 </html>

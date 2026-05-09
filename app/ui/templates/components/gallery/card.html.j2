@@ -3,10 +3,13 @@
 {% include "components/uploads/sidebar-details.html.j2" %}
 {% endif %}
 <div id="gallery-card-{{ upload.id }}"
-    class="relative group/card rounded-lg p-3 mb-4 border border-gray-100 shadow-sm shadow-gray-300
-            h-min break-inside-avoid-column flex-col justify-center transition-all
-            duration-150 hover:shadow-md hover:shadow-gray-300 hover:scale-101
-            has-checked:outline-3 has-checked:outline-blue-500"
+    class="relative group/card
+        rounded-lg p-1 mb-1 border border-gray-100 shadow-sm shadow-gray-300 break-inside-avoid-column 
+        sm:p-3 sm:mb-2 md:mb-4
+        sm:h-min sm:flex-col sm:justify-center sm:transition-all
+        sm:duration-150
+        sm:hover:shadow-md sm:hover:shadow-gray-300 sm:hover:scale-101
+        sm:has-checked:outline-3 sm:has-checked:outline-blue-500"
     {%- if current_user and current_user.id == upload.user.id %}
     @click.self="toggleSelected($el.querySelector('input[type=checkbox]').value);"
     @click.capture="if (selectedCount > 0 && !$event.target.closest('input[type=checkbox]')) {
@@ -45,7 +48,8 @@
         hx-indicator=".hidden-indicator"
         x-data="{ loaded: false }"
         x-init="loaded = $el.querySelector('img')?.complete || false" class="relative">
-        <div class="space-y-8 animate-pulse md:space-y-0 md:space-x-8 rtl:space-x-reverse md:flex md:items-center text-gray-500"
+        <div class="space-y-8 animate-pulse text-gray-500
+            md:space-y-0 md:space-x-8 md:flex md:items-center"
             x-show="!loaded">
             <div class="flex items-center justify-center w-full bg-neutral-quaternary rounded-base bg-gray-200 rounded-md"
                 style="max-width: {{ thumb_max_width }}px; aspect-ratio: {{ ar_decimal }};">
@@ -55,9 +59,9 @@
             </div>
         </div>
         <div class="@container flex">
-            <img class="w-full h-auto
+            <img class="w-full h-auto rounded-t-md
                 {{ aspect_classes }}
-                rounded-md transition-normal duration-150 hover:brightness-80"
+                sm:rounded-md transition-normal duration-150 hover:brightness-80"
                 alt="{{ upload.display_name }}"
                 src="{{ upload.autoresize_url(thumb_max_width) }}?t={{ upload.updated_at.timestamp() | int }}"
                 x-show="loaded"
@@ -88,7 +92,7 @@
     <div class="@container flex">
         <a href="{{ upload.view_url }}" 
            aria-label="View {{ upload.display_name }}"
-           class="w-full flex justify-center items-center bg-gray-50/50 rounded-md transition-normal duration-150 hover:brightness-95">
+           class="flex w-full justify-center items-center bg-gray-50/50 transition-normal duration-150 hover:brightness-95">
             <img class="h-auto max-h-[calc(100cqw*16/9)] object-contain p-4"
                 alt="{{ upload.display_name }}"
                 src="{{ url_for('get_upload_get', id=upload.id, filename=upload.cleanname + upload.dot_ext) }}?t={{ upload.updated_at.timestamp() | int }}">
@@ -103,9 +107,10 @@
         </div>
     </a>
     {%- endif %}
-    <div class="mt-2">
+    <div class="mt-0.5 sm:mt-2">
         <dl>
-            <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 mt-2">
+            <div class="hidden flex-wrap items-center gap-2 text-xs text-gray-500 mt-2
+                sm:flex">
                 <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
                     {%- if not upload.private %}
                     <svg class="size-4{% if current_user and upload.user.id == current_user.id %} text-blue-600{% else %} text-gray-700{% endif %}"
@@ -152,8 +157,9 @@
                     </div>
                 </dd>
             </div>
-            <div class="mt-2">
-                <dd class="text-md overflow-hidden overflow-ellipsis whitespace-nowrap"
+            <div class="sm:mt-2">
+                <dd class="text-sm text-center overflow-hidden overflow-ellipsis whitespace-nowrap
+                    sm:text-md sm:text-left"
                     title="{{ upload.display_name }}">
                         <a href="{{ upload.view_url }}" class="text-gray-900 hover:underline">
                             {{ upload.display_name }}

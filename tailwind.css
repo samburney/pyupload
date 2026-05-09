@@ -368,7 +368,7 @@
 
 /* Pagination */
 @utility pagination {
-    @apply flex justify-center pt-2 pb-4;
+    @apply flex justify-center py-2 sm:pb-4 md:py-4;
 }
 
 @utility page-item {

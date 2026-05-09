@@ -1,104 +1,78 @@
-            <nav class="bg-gray-800 sm:bg-transparent">
-                <div class="container bg-gray-900 text-white mx-auto sm:rounded sm:mt-2 sm:px-4 sm:py-2">
-                    <div class="flex items-center justify-between"
-                        x-data="{ browseOpen: false, userOpen: false, mobileMenuOpen: false }">
-                        <!-- Logo -->
-                        <a href="/" class="text-xl font-bold text-white">sU</a>
+<nav class="hidden sm:flex bg-transparent">
+    <div class="container bg-gray-900 text-white mx-auto rounded mt-2 px-4 py-2">
+        <div class="flex items-center justify-between"
+            x-data="{ browseOpen: false, userOpen: false }">
 
-                        <!-- Mobile menu button -->
-                        <button class="sm:hidden text-white" @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Toggle mobile menu">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
-                                </path>
-                            </svg>
+            <!-- Logo TODO: Make admin configurable -->
+            <a href="/" class="text-xl font-bold text-white">sU</a>
+
+            <!-- Desktop menu - center navigation -->
+            <div class="flex items-center space-x-6">
+                <!-- Browse dropdown -->
+                <div class="relative lg:hidden" @click.away="browseOpen = false">
+                    <div class="split-button split-button-ghost split-button-narrow">
+                        <a class="split-button-action" href="/">Browse</a>
+                        <button class="split-button-toggle px-1"
+                                type="button"
+                                aria-label="Toggle user menu"
+                                @click="browseOpen = !browseOpen">
+                            <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
                         </button>
-
-                        <!-- Desktop menu - center navigation -->
-                        <div class="hidden sm:flex items-center space-x-6">
-                            <!-- Browse dropdown -->
-                            <div class="relative lg:hidden" @click.away="browseOpen = false">
-                                <div class="split-button split-button-ghost split-button-narrow">
-                                    <a class="split-button-action" href="/">Browse</a>
-                                    <button class="split-button-toggle px-1"
-                                            type="button"
-                                            aria-label="Toggle user menu"
-                                            @click="browseOpen = !browseOpen">
-                                        <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
-                                    </button>
-                                </div>
-                                <div class="absolute left-0 mt-2 w-40 bg-white text-gray-900 rounded shadow-lg z-10"
-                                    x-cloak
-                                    x-show="browseOpen">
-                                    <a href="/random" class="block px-4 py-2 hover:bg-gray-100">Random</a>
-                                    <a href="/popular" class="block px-4 py-2 hover:bg-gray-100">Popular</a>
-                                    <a href="/all" class="block px-4 py-2 hover:bg-gray-100">All</a>
-                                    <a href="/tags" class="block px-4 py-2 hover:bg-gray-100">Tags</a>
-                                </div>
-                            </div>
-                            <a href="/random" class="hidden lg:inline hover:text-gray-300 text-white">Random</a>
-                            <a href="/popular" class="hidden lg:inline hover:text-gray-300 text-white">Popular</a>
-                            <a href="/all" class="hidden lg:inline hover:text-gray-300 text-white">All</a>
-                            <a href="/tags" class="hidden lg:inline hover:text-gray-300 text-white">Tags</a>
-                            {% if current_user and current_user.is_authenticated %}
-                            <a href="/uploads" class="hidden md:inline hover:text-gray-300 text-white">Your Uploads</a>
-                            <a href="/collections" class="hidden md:inline hover:text-gray-300 text-white">Your Collections</a>
-                            {% endif %}
-                        </div>
-
-                        <!-- Desktop menu - right side buttons -->
-                        <div class="hidden sm:flex items-center space-x-4">
-                            <button class="button"
-                                @click="toggleSidebar(true, false); document.querySelector('#file-upload-widget div:first-child')?.focus();">Upload
-                            </button>
-                            <!-- User dropdown -->
-                            <div class="relative" @click.away="userOpen = false">
-                                <div class="split-button split-button-narrow split-button-ghost">
-                                    {% if current_user and current_user.is_registered %}
-                                    <a class="split-button-action" href="/profile">{{ current_user.username }}</a>
-                                    {% else %}
-                                    <a class="split-button-action" href="/login">Not Logged In</a>
-                                    {% endif %}
-                                    <button class="split-button-toggle px-1"
-                                            type="button"
-                                            aria-label="Toggle user menu"
-                                            @click="userOpen = !userOpen">
-                                        <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
-                                    </button>
-                                </div>
-                                <div class="menu" role="menu"
-                                    x-show="userOpen" x-cloak>
-                                    {% if not current_user or not current_user.is_registered %}
-                                    <a href="/login" class="menu-item hover:bg-gray-100" role="menuitem">Log in</a>
-                                    <a href="/register" class="menu-item hover:bg-gray-100" role="menuitem">Register</a>
-                                    {% endif %}
-                                    {% if current_user and current_user.is_authenticated %}
-                                    <a href="/profile" class="menu-item hover:bg-gray-100" role="menuitem">Profile</a>
-                                    <a href="/uploads" class="menu-item hover:bg-gray-100" role="menuitem">Uploads</a>
-                                    <a href="/collections" class="menu-item hover:bg-gray-100" role="menuitem">Collections</a>
-                                    <a href="/logout" class="menu-item hover:bg-gray-100" role="menuitem">Log out</a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-
-                        <!-- Mobile menu -->
-                        <div x-show="mobileMenuOpen" x-cloak class="sm:hidden mt-4 space-y-2">
-                            <a href="/random" class="block hover:text-gray-300 text-white">Random</a>
-                            <a href="/popular" class="block hover:text-gray-300 text-white">Popular</a>
-                            <a href="/all" class="block hover:text-gray-300 text-white">All</a>
-                            <a href="/tags" class="block hover:text-gray-300 text-white">Tags</a>
-                            <a href="/uploads" class="block hover:text-gray-300 text-white">Your Uploads</a>
-                            <a href="/collections" class="block hover:text-gray-300 text-white">Your Collections</a>
-                            <a href="/search" class="block hover:text-gray-300 text-white">Search</a>
-                            <a href="/uploads"
-                                class="block bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-center text-white">Upload</a>
-                            <div class="pt-2 border-t border-gray-700">
-                                <a href="/login" class="block hover:text-gray-300 text-white">Log in</a>
-                                <a href="/register" class="block hover:text-gray-300 text-white">Register</a>
-                                <a href="/logout" class="block hover:text-gray-300 text-white">Log out</a>
-                            </div>
-                        </div>
+                    </div>
+                    <div class="absolute left-0 mt-2 w-40 bg-white text-gray-900 rounded shadow-lg z-10"
+                        x-cloak
+                        x-show="browseOpen">
+                        <a href="/random" class="block px-4 py-2 hover:bg-gray-100">Random</a>
+                        <a href="/popular" class="block px-4 py-2 hover:bg-gray-100">Popular</a>
+                        <a href="/all" class="block px-4 py-2 hover:bg-gray-100">All</a>
+                        <a href="/tags" class="block px-4 py-2 hover:bg-gray-100">Tags</a>
                     </div>
                 </div>
-            </nav>
+                <a href="/random" class="hidden lg:inline hover:text-gray-300 text-white">Random</a>
+                <a href="/popular" class="hidden lg:inline hover:text-gray-300 text-white">Popular</a>
+                <a href="/all" class="hidden lg:inline hover:text-gray-300 text-white">All</a>
+                <a href="/tags" class="hidden lg:inline hover:text-gray-300 text-white">Tags</a>
+                {% if current_user and current_user.is_authenticated %}
+                <a href="/uploads" class="hidden md:inline hover:text-gray-300 text-white">Your Uploads</a>
+                <a href="/collections" class="hidden md:inline hover:text-gray-300 text-white">Your Collections</a>
+                {% endif %}
+            </div>
+
+            <!-- Desktop menu - right side buttons -->
+            <div class="flex items-center space-x-4">
+                <button class="button"
+                    @click="toggleSidebar(true, false); document.querySelector('#file-upload-widget div:first-child')?.focus();">Upload
+                </button>
+                <!-- User dropdown -->
+                <div class="relative" @click.away="userOpen = false">
+                    <div class="split-button split-button-narrow split-button-ghost">
+                        {% if current_user and current_user.is_registered %}
+                        <a class="split-button-action" href="/profile">{{ current_user.username }}</a>
+                        {% else %}
+                        <a class="split-button-action" href="/login">Not Logged In</a>
+                        {% endif %}
+                        <button class="split-button-toggle px-1"
+                                type="button"
+                                aria-label="Toggle user menu"
+                                @click="userOpen = !userOpen">
+                            <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+                        </button>
+                    </div>
+                    <div class="menu" role="menu"
+                        x-show="userOpen" x-cloak>
+                        {% if not current_user or not current_user.is_registered %}
+                        <a href="/login" class="menu-item hover:bg-gray-100" role="menuitem">Log in</a>
+                        <a href="/register" class="menu-item hover:bg-gray-100" role="menuitem">Register</a>
+                        {% endif %}
+                        {% if current_user and current_user.is_authenticated %}
+                        <a href="/profile" class="menu-item hover:bg-gray-100" role="menuitem">Profile</a>
+                        <a href="/uploads" class="menu-item hover:bg-gray-100" role="menuitem">Uploads</a>
+                        <a href="/collections" class="menu-item hover:bg-gray-100" role="menuitem">Collections</a>
+                        <a href="/logout" class="menu-item hover:bg-gray-100" role="menuitem">Log out</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

@@ -1,6 +1,6 @@
 {% if stacks and stacks | length > 0 %}
 <article id="gallery-grid"
-    class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 mb-4">
+    class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
     {% for stack in stacks %}
     {% include("components/common/stack-card.html.j2") %}
     {% endfor %}
