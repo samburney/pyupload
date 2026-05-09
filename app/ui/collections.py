@@ -29,6 +29,22 @@ router = APIRouter(prefix="/collections", tags=["collections"])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="Collections")
 
 
+async def _get_collection_display_name(name_unique: str) -> str:
+    collection = await Collection.get_or_none(name_unique=name_unique)
+    return collection.name if collection else name_unique
+
+
+@Breadcrumbs.register("collections_view_get")
+async def _collection_view_crumbs(bc: Breadcrumbs, path_params: dict = {}, context: dict = {}, **_) -> None:
+    bc.stack = []
+    name_unique = path_params.get("name", "")
+    display_name = context.get("collection_name") or await _get_collection_display_name(name_unique)
+    if user := context.get("current_user"):
+        bc.push(user.username, bc.request.url_for("show_profile_page"))
+    bc.push("Collections", bc.request.url_for("collections_index_get"))
+    bc.push(display_name, bc.request.url_for("collections_view_get", name=name_unique))
+
+
 @router.get("", response_class=Response)
 async def collections_index_get(
     request: Request,
@@ -110,9 +126,10 @@ async def collections_view_get(
             request, ["This collection has no uploads yet."], 200, collection.name
         )
 
-    breadcrumbs.replace(0, current_user.username, request.url_for("show_profile_page"))
-    breadcrumbs.push(title="Collections", url=request.url_for("collections_index_get"))
-    breadcrumbs.push(title=collection.name, url=request.url_for("collections_view_get", name=collection.name_unique))
+    await _collection_view_crumbs(breadcrumbs, path_params={"name": collection.name_unique}, context={
+        "current_user": current_user,
+        "collection_name": collection.name,
+    })
 
     # Template context
     context = {

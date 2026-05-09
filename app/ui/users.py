@@ -31,6 +31,14 @@ router = APIRouter(tags=["users"])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="User")
 
 
+@Breadcrumbs.register("user_uploads_get")
+async def _user_uploads_crumbs(bc: Breadcrumbs, context: dict = {}, **_) -> None:
+    bc.stack = []
+    if user := context.get("current_user"):
+        bc.push(user.username, bc.request.url_for("show_profile_page"))
+    bc.push("Uploads", bc.request.url_for("user_uploads_get"))
+
+
 class ProfilePaginationParams(PaginationParams):
     """Pagination parameters for the profile page."""
 
@@ -106,8 +114,7 @@ async def user_uploads_get(
 ) -> Response:
     """Render the current user's uploads as a gallery."""
 
-    breadcrumbs.replace(0, current_user.username, request.url_for("show_profile_page"))
-    breadcrumbs.push(title="Uploads", url=request.url_for("user_uploads_get"))
+    await _user_uploads_crumbs(breadcrumbs, context={"current_user": current_user})
 
     context_filter = Q(user=current_user)
 

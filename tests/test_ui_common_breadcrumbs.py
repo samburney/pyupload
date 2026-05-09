@@ -9,15 +9,22 @@ Covers:
 - pop removes the last breadcrumb
 - replace swaps a breadcrumb at the given index
 - get_all returns the current stack
+- register decorator stores builders by endpoint name
+- populate_from_referrer calls the builder for the matching referrer route
+- populate_from_referrer returns False when no referrer or no matching builder
+- populate_from_referrer restores the stack when the builder raises
+- populate_from_referrer ignores cross-origin referrers
+- HX-Current-URL takes precedence over Referer
 - Integration: /gallery/ response includes breadcrumb nav markup
 - Integration: /gallery/random response includes breadcrumb nav markup with "Random"
 - Integration: / (root) response includes breadcrumb nav markup
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from fastapi import APIRouter, Request
 from starlette.datastructures import URL
+from starlette.routing import Match
 
 from app.ui.common.breadcrumbs import Breadcrumb, Breadcrumbs
 
@@ -224,3 +231,202 @@ class TestBreadcrumbsIntegration:
         response = await client.get("/gallery/random")
         assert response.status_code == 200
         assert '<span class="font-semibold">Random</span>' in response.text
+
+
+# ---------------------------------------------------------------------------
+# Helpers shared by registry / populate tests
+# ---------------------------------------------------------------------------
+
+def _make_referrer_request(url: str = "http://test/view/1/file.txt", headers: dict | None = None, routes: list | None = None) -> Mock:
+    request = Mock(spec=Request)
+    request.url = URL(url)
+    request.base_url = URL("http://test/")
+    request.headers = headers or {}
+    request.app = Mock()
+    request.app.routes = routes or []
+    return request
+
+
+def _make_bc(request: Mock, route_title: str | None = None) -> Breadcrumbs:
+    handler = Breadcrumbs(router=APIRouter(), route_title=route_title)
+    return handler.handle_request(request)
+
+
+def _make_matching_route(endpoint_name: str, path_params: dict | None = None) -> Mock:
+    """Return a mock route that matches FULL and exposes the given endpoint name."""
+    async def _endpoint(): pass
+    _endpoint.__name__ = endpoint_name
+
+    route = Mock()
+    route.matches.return_value = (Match.FULL, {"endpoint": _endpoint, "path_params": path_params or {}})
+    return route
+
+
+# ---------------------------------------------------------------------------
+# Breadcrumbs.register
+# ---------------------------------------------------------------------------
+
+class TestBreadcrumbsRegister:
+    def test_register_stores_builder(self):
+        async def builder(bc, **_): pass
+        Breadcrumbs.register("_reg_test_single")(builder)
+        try:
+            assert Breadcrumbs._builders["_reg_test_single"] is builder
+        finally:
+            del Breadcrumbs._builders["_reg_test_single"]
+
+    def test_register_stores_multiple_endpoint_names(self):
+        async def builder(bc, **_): pass
+        Breadcrumbs.register("_reg_test_a", "_reg_test_b")(builder)
+        try:
+            assert Breadcrumbs._builders["_reg_test_a"] is builder
+            assert Breadcrumbs._builders["_reg_test_b"] is builder
+        finally:
+            del Breadcrumbs._builders["_reg_test_a"]
+            del Breadcrumbs._builders["_reg_test_b"]
+
+    def test_register_returns_original_function(self):
+        async def builder(bc, **_): pass
+        result = Breadcrumbs.register("_reg_test_ret")(builder)
+        try:
+            assert result is builder
+        finally:
+            del Breadcrumbs._builders["_reg_test_ret"]
+
+
+# ---------------------------------------------------------------------------
+# Breadcrumbs.populate_from_referrer
+# ---------------------------------------------------------------------------
+
+class TestPopulateFromReferrer:
+    @pytest.mark.anyio
+    async def test_returns_false_when_no_referrer_header(self):
+        bc = _make_bc(_make_referrer_request(headers={}))
+        assert await bc.populate_from_referrer() is False
+
+    @pytest.mark.anyio
+    async def test_returns_false_when_no_registered_builder_for_route(self):
+        route = _make_matching_route("_pfr_test_unregistered_xyz")
+        bc = _make_bc(_make_referrer_request(headers={"referer": "http://test/some/page"}, routes=[route]))
+        assert await bc.populate_from_referrer() is False
+
+    @pytest.mark.anyio
+    async def test_calls_registered_builder_and_returns_true(self):
+        called = {}
+
+        async def builder(bc, path_params, query_params, context, **_):
+            bc.stack = []
+            bc.push("Built Crumb", "http://test/built")
+            called["done"] = True
+
+        Breadcrumbs._builders["_pfr_test_calls"] = builder
+        try:
+            route = _make_matching_route("_pfr_test_calls")
+            bc = _make_bc(_make_referrer_request(headers={"referer": "http://test/some/page"}, routes=[route]))
+            bc.stack = [Breadcrumb(title="Old", url="http://test/")]
+
+            result = await bc.populate_from_referrer()
+
+            assert result is True
+            assert called.get("done") is True
+            assert len(bc.stack) == 1
+            assert bc.stack[0].title == "Built Crumb"
+        finally:
+            del Breadcrumbs._builders["_pfr_test_calls"]
+
+    @pytest.mark.anyio
+    async def test_restores_stack_when_builder_raises(self):
+        async def failing_builder(bc, **_):
+            raise RuntimeError("builder boom")
+
+        Breadcrumbs._builders["_pfr_test_restore"] = failing_builder
+        try:
+            route = _make_matching_route("_pfr_test_restore")
+            bc = _make_bc(_make_referrer_request(headers={"referer": "http://test/some/page"}, routes=[route]))
+            bc.stack = [Breadcrumb(title="Saved", url="http://test/")]
+
+            with pytest.raises(RuntimeError, match="builder boom"):
+                await bc.populate_from_referrer()
+
+            assert len(bc.stack) == 1
+            assert bc.stack[0].title == "Saved"
+        finally:
+            del Breadcrumbs._builders["_pfr_test_restore"]
+
+    @pytest.mark.anyio
+    async def test_ignores_cross_origin_referrer(self):
+        route = _make_matching_route("_pfr_test_cross_origin")
+        bc = _make_bc(_make_referrer_request(headers={"referer": "http://evil.com/page"}, routes=[route]))
+        assert await bc.populate_from_referrer() is False
+
+    @pytest.mark.anyio
+    async def test_hx_current_url_takes_precedence_over_referer(self):
+        seen = {}
+
+        async def hx_builder(bc, **_):
+            bc.stack = []
+            bc.push("HX Page", "http://test/hx-page")
+            seen["source"] = "hx"
+
+        Breadcrumbs._builders["_pfr_test_hx"] = hx_builder
+        try:
+            route = _make_matching_route("_pfr_test_hx")
+            bc = _make_bc(_make_referrer_request(
+                headers={"HX-Current-URL": "http://test/hx-page", "referer": "http://test/ref-page"},
+                routes=[route],
+            ))
+            await bc.populate_from_referrer()
+            assert seen.get("source") == "hx"
+        finally:
+            del Breadcrumbs._builders["_pfr_test_hx"]
+
+    @pytest.mark.anyio
+    async def test_passes_path_params_to_builder(self):
+        received = {}
+
+        async def builder(bc, path_params, **_):
+            received["path_params"] = path_params
+
+        Breadcrumbs._builders["_pfr_test_path_params"] = builder
+        try:
+            route = _make_matching_route("_pfr_test_path_params", path_params={"name": "my-slug"})
+            bc = _make_bc(_make_referrer_request(headers={"referer": "http://test/things/my-slug"}, routes=[route]))
+            await bc.populate_from_referrer()
+            assert received["path_params"] == {"name": "my-slug"}
+        finally:
+            del Breadcrumbs._builders["_pfr_test_path_params"]
+
+    @pytest.mark.anyio
+    async def test_passes_query_params_to_builder(self):
+        received = {}
+
+        async def builder(bc, query_params, **_):
+            received["query_params"] = query_params
+
+        Breadcrumbs._builders["_pfr_test_query_params"] = builder
+        try:
+            route = _make_matching_route("_pfr_test_query_params")
+            bc = _make_bc(_make_referrer_request(
+                headers={"referer": "http://test/search?query=cats&sort=asc"},
+                routes=[route],
+            ))
+            await bc.populate_from_referrer()
+            assert received["query_params"] == {"query": "cats", "sort": "asc"}
+        finally:
+            del Breadcrumbs._builders["_pfr_test_query_params"]
+
+    @pytest.mark.anyio
+    async def test_passes_context_to_builder(self):
+        received = {}
+
+        async def builder(bc, context, **_):
+            received["context"] = context
+
+        Breadcrumbs._builders["_pfr_test_context"] = builder
+        try:
+            route = _make_matching_route("_pfr_test_context")
+            bc = _make_bc(_make_referrer_request(headers={"referer": "http://test/page"}, routes=[route]))
+            await bc.populate_from_referrer(context={"current_user": "alice"})
+            assert received["context"] == {"current_user": "alice"}
+        finally:
+            del Breadcrumbs._builders["_pfr_test_context"]

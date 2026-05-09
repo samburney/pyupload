@@ -181,6 +181,7 @@ async def view_upload_page_get(
     # Serialize upload for template
     upload = await UploadSerializer.from_tortoise_orm(upload_model, context={"user": current_user})
 
+    await breadcrumbs.populate_from_referrer(context={"current_user": current_user})
     breadcrumbs.push(upload.description, request.url_for(
         "view_upload_page_get",
         id=id, filename=filename,

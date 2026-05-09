@@ -1,3 +1,4 @@
+import urllib.parse
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -22,6 +23,14 @@ router = APIRouter(prefix="/search", tags=["search"])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="Search")
 
 _PAGINATION_KEYS = {"page", "page_size", "sort_order", "sort_by", "infinite_scroll"}
+
+
+@Breadcrumbs.register("search_index_get")
+async def _search_crumbs(bc: Breadcrumbs, query_params: dict = {}, **_) -> None:
+    bc.stack = []
+    bc.push("Browse", bc.request.url_for("index_get"))
+    if q := query_params.get("query"):
+        bc.push(q, f'{bc.request.url_for("search_index_get")}?query={urllib.parse.quote(q)}')
 
 
 @router.get("", response_class=Response)
@@ -67,11 +76,7 @@ async def search_index_get(
     if is_htmx:
         template_name = "search/partials/results_output.html.j2"
 
-    breadcrumbs.replace(0, "Browse", request.url_for("index_get"))
-    breadcrumbs.push(
-        query,
-        f'{request.url_for("search_index_get")}{pagination.page_url()}',
-    )
+    await _search_crumbs(breadcrumbs, query_params={"query": query})
 
     response = templates.TemplateResponse(
         request=request,

@@ -32,6 +32,13 @@ router = APIRouter(prefix="/tags", tags=["tags"])
 breadcrumb_handler = Breadcrumbs(router=router, route_title="Tags")
 
 
+@Breadcrumbs.register("tags_view_get")
+async def _tag_view_crumbs(bc: Breadcrumbs, path_params: dict = {}, **_) -> None:
+    bc.stack = []
+    bc.push("Tags", bc.request.url_for("tags_index_get"))
+    bc.push(path_params["name"], bc.request.url_for("tags_view_get", name=path_params["name"]))
+
+
 @router.get("", response_class=Response)
 async def tags_index_get(
     request: Request,
@@ -111,7 +118,7 @@ async def tags_view_get(
             request, [f"No uploads found for tag: {name}"], 404, "Tag uploads not found."
         )
 
-    breadcrumbs.push(title=tag.name, url=request.url_for("tags_view_get", name=tag.name))
+    await _tag_view_crumbs(breadcrumbs, path_params={"name": tag.name})
 
     # Template context
     context = {

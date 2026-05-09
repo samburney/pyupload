@@ -3,6 +3,7 @@
 - GET /view/{id} — SEO redirect to canonical URL with filename
 - GET /view/{id}/{filename} — render upload view page
 - View page content: file preview, metadata panel, sharing options, and edit form visibility
+- Breadcrumb trail: referrer-based breadcrumbs from Browse, Search, Tags, Collections, User Uploads
 """
 
 import pytest
@@ -323,3 +324,210 @@ class TestViewUploadPageContent:
         response = await client.get(f"/view/{upload.id}/{upload.cleanname}.{upload.ext}")
 
         assert 'id="upload-description"' not in response.text
+
+
+# ---------------------------------------------------------------------------
+# Breadcrumb trail — referrer-based contextual breadcrumbs
+# ---------------------------------------------------------------------------
+
+def _bc_upload_data(user, suffix: str = "") -> dict:
+    return {
+        "user": user,
+        "description": f"bc test {suffix}",
+        "name": f"bcview{suffix}_20250309-000000_a1b2c3d4",
+        "cleanname": f"bcview{suffix}",
+        "originalname": f"bcview{suffix}.txt",
+        "ext": "txt",
+        "size": 1024,
+        "type": "text/plain",
+        "extra": "0",
+        "private": 0,
+    }
+
+
+@pytest.fixture(autouse=True)
+def mock_bc_file_exists(request, monkeypatch):
+    """Make bcview* filenames appear to exist so validate_file_request passes."""
+    if "TestUploadViewBreadcrumbs" in request.node.parent.name:
+        original_exists = Path.exists
+
+        def _exists(self: Path) -> bool:
+            if "bcview" in self.name:
+                return True
+            return original_exists(self)
+
+        monkeypatch.setattr(Path, "exists", _exists)
+
+
+class TestUploadViewBreadcrumbs:
+    """Integration tests confirming that the referrer header shapes the breadcrumb trail."""
+
+    async def _setup(self, suffix: str):
+        user = await User.create(
+            username=f"bcuser{suffix}",
+            email=f"bcuser{suffix}@example.com",
+            password="pw",
+            is_registered=True,
+        )
+        upload = await Upload.create(**_bc_upload_data(user, suffix))
+        return user, upload
+
+    async def test_no_referrer_shows_browse_and_filename(self, client):
+        """Without a referrer the default Browse > filename trail is shown."""
+        _, upload = await self._setup("noreferrer")
+        response = await client.get(f"/view/{upload.id}/{upload.cleanname}.{upload.ext}")
+        assert response.status_code == 200
+        assert "Browse" in response.text
+        assert upload.description in response.text
+
+    async def test_browse_referrer_shows_browse_crumb(self, client):
+        """Referrer from / produces a Browse crumb."""
+        _, upload = await self._setup("browseref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+
+    async def test_all_referrer_shows_tiered_crumbs(self, client):
+        """Referrer from /all produces Browse > All > filename trail."""
+        _, upload = await self._setup("allref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/all"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+        assert "All" in response.text
+
+    async def test_gallery_all_referrer_shows_tiered_crumbs(self, client):
+        """Referrer from /gallery/all also produces Browse > All > filename trail."""
+        _, upload = await self._setup("galleryallref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/gallery/all"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+        assert "All" in response.text
+
+    async def test_popular_referrer_shows_tiered_crumbs(self, client):
+        """Referrer from /popular produces Browse > Popular > filename trail."""
+        _, upload = await self._setup("popularref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/popular"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+        assert "Popular" in response.text
+
+    async def test_random_referrer_shows_tiered_crumbs(self, client):
+        """Referrer from /random produces Browse > Random > filename trail."""
+        _, upload = await self._setup("randomref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/random"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+        assert "Random" in response.text
+
+    async def test_gallery_random_referrer_shows_tiered_crumbs(self, client):
+        """Referrer from /gallery/random also produces Browse > Random > filename trail."""
+        _, upload = await self._setup("galleryrandomref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/gallery/random"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+        assert "Random" in response.text
+
+    async def test_search_referrer_shows_query_in_breadcrumbs(self, client):
+        """Referrer from search results produces Browse > {query} > filename trail."""
+        _, upload = await self._setup("searchref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/search?query=myquery"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+        assert "myquery" in response.text
+
+    async def test_search_referrer_without_query_shows_browse_only(self, client):
+        """Search referrer with no query string produces only Browse crumb."""
+        _, upload = await self._setup("searchnoq")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/search"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+
+    async def test_tag_referrer_shows_tag_in_breadcrumbs(self, client):
+        """Referrer from a tag view produces Tags > {tag} > filename trail."""
+        _, upload = await self._setup("tagref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/tags/view/landscape"},
+        )
+        assert response.status_code == 200
+        assert "Tags" in response.text
+        assert "landscape" in response.text
+
+    async def test_collection_referrer_shows_collections_in_breadcrumbs(self, client):
+        """Referrer from a collection view produces Collections > {name} > filename trail."""
+        _, upload = await self._setup("colref")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/collections/view/my-col"},
+        )
+        assert response.status_code == 200
+        assert "Collections" in response.text
+
+    async def test_user_uploads_referrer_shows_uploads_in_breadcrumbs(self, client):
+        """Referrer from user uploads page produces {username} > Uploads > filename trail."""
+        user, upload = await self._setup("useruploads")
+        token = create_access_token({"sub": user.username})
+        client.cookies = {"access_token": token}
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/uploads"},
+        )
+        assert response.status_code == 200
+        assert "Uploads" in response.text
+
+    async def test_hx_current_url_takes_precedence_over_referer(self, client):
+        """HX-Current-URL is preferred over Referer when both are present."""
+        _, upload = await self._setup("hxpriority")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={
+                "HX-Current-URL": "http://test/search?query=htmxquery",
+                "Referer": "http://test/",
+            },
+        )
+        assert response.status_code == 200
+        assert "htmxquery" in response.text
+
+    async def test_cross_origin_referrer_uses_default_trail(self, client):
+        """Cross-origin Referer is ignored; the default Browse trail is shown."""
+        _, upload = await self._setup("crossorigin")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://evil.com/some/page"},
+        )
+        assert response.status_code == 200
+        assert "Browse" in response.text
+
+    async def test_upload_filename_always_appears_as_last_crumb(self, client):
+        """The upload description is always the final breadcrumb regardless of referrer."""
+        _, upload = await self._setup("lastcrumb")
+        response = await client.get(
+            f"/view/{upload.id}/{upload.cleanname}.{upload.ext}",
+            headers={"Referer": "http://test/tags/view/nature"},
+        )
+        assert response.status_code == 200
+        assert upload.description in response.text

@@ -21,6 +21,38 @@ router = APIRouter(tags=["main"])
 breadcrumb_handler = Breadcrumbs(router=router)
 
 
+async def _browse_crumbs(bc: Breadcrumbs, **_) -> None:
+    bc.stack = []
+    bc.push("Browse", str(bc.request.base_url))
+
+
+Breadcrumbs.register("index_get", "gallery_index_get")(_browse_crumbs)
+
+
+@Breadcrumbs.register("all_get", "gallery_all_get")
+async def _all_crumbs(bc: Breadcrumbs, **_) -> None:
+    # Produces: Browse > All
+    bc.stack = []
+    bc.push("Browse", str(bc.request.base_url))
+    bc.push("All", str(bc.request.url_for("all_get")))
+
+
+@Breadcrumbs.register("popular_get", "gallery_popular_get")
+async def _popular_crumbs(bc: Breadcrumbs, **_) -> None:
+    # Produces: Browse > Popular
+    bc.stack = []
+    bc.push("Browse", str(bc.request.base_url))
+    bc.push("Popular", str(bc.request.url_for("popular_get")))
+
+
+@Breadcrumbs.register("random_get", "gallery_random_get")
+async def _random_crumbs(bc: Breadcrumbs, **_) -> None:
+    # Produces: Browse > Random
+    bc.stack = []
+    bc.push("Browse", str(bc.request.base_url))
+    bc.push("Random", str(bc.request.url_for("random_get")))
+
+
 @router.get("/", response_class=HTMLResponse)
 async def index_get(
     request: Request,
@@ -29,7 +61,7 @@ async def index_get(
 ) -> Response:
     """Render the main index page."""
 
-    breadcrumbs.push(title="Browse", url=f"{request.base_url}")
+    await _browse_crumbs(breadcrumbs)
 
     return await gallery_index_get(request, pagination, breadcrumbs)
 
@@ -42,7 +74,7 @@ async def all_get(
 ) -> Response:
     """Render the all uploads gallery."""
 
-    breadcrumbs.push(title="Browse", url=f"{request.base_url}")
+    await _browse_crumbs(breadcrumbs)
 
     return await gallery_all_get(request, pagination, breadcrumbs)
 
@@ -55,7 +87,7 @@ async def popular_get(
 ) -> Response:
     """Render the popular uploads gallery."""
 
-    breadcrumbs.push(title="Browse", url=f"{request.base_url}")
+    await _browse_crumbs(breadcrumbs)
 
     return await gallery_popular_get(request, pagination, breadcrumbs)
 
@@ -68,7 +100,7 @@ async def random_get(
 ) -> Response:
     """Render the random uploads gallery."""
 
-    breadcrumbs.push(title="Browse", url=f"{request.base_url}")
+    await _browse_crumbs(breadcrumbs)
 
     return await gallery_random_get(request, pagination, breadcrumbs)
 
