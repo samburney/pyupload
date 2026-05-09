@@ -26,6 +26,15 @@ Polish the user interface with improved navigation, responsive design refinement
 - Forms are functional with HTMX and baseline Tailwind styling, but need consistency and validation polish
 - Navbar links include unimplemented routes that need cleanup (/uploads, /search, /random, /popular, /all) — `/tags` and `/collections` are now implemented
 
+### Review Snapshot (2026-05-09)
+- Mobile navbar redesigned: desktop `navbar.html.j2` now hidden on mobile (`hidden sm:flex`); `mobileMenuOpen` Alpine state and dropdown mobile menu removed entirely
+- New `breadcrumbs-navbar.html.j2` merges the mobile navbar and desktop breadcrumbs bar into a single component: on mobile shows logo, upload button, and hamburger (calling `toggleSidebar()`); on desktop shows breadcrumbs, search, and sidebar toggle
+- Mobile navigation links (Browse, Uploads, Login, etc.) are no longer in the navbar — they will live in the permanent sidebar (Step 1 tasks superseded by sidebar approach)
+- Gallery card (`card.html.j2`) now has mobile-specific sizing: smaller padding/margin, metadata row hidden, title centred and smaller; `sm:` prefix gates hover effects and selection outline
+- Gallery grid (`grid.html.j2`) now uses `columns-2` on mobile (intentional density), `sm:columns-1`, scaling back up through `md`/`xl`/`2xl`
+- Breadcrumb last-item truncation fixed: `truncate block` added to inner span, `min-w-0` on parent — Step 5 task 6 complete
+- Base layout flattened: removed inner `grid grid-cols-3` wrapper; breadcrumbs/search/toggle now in `breadcrumbs-navbar.html.j2`; `main` and `aside` are direct flex children
+
 ### Review Snapshot (2026-04-26)
 - `/search` route implemented in `app/ui/search.py` — keyword search across upload description, name, originalname, and tag names; collection name search when authenticated
 - Full-page and HTMX partial rendering (`search/index.html.j2`, `search/results.html.j2`, `search/partials/results_output.html.j2`, `search/partials/query_form.html.j2`)
@@ -320,7 +329,7 @@ Polish the user interface with improved navigation, responsive design refinement
 3. [x] Create breadcrumb component template
 4. [x] Add breadcrumbs to deep pages only (not home/top-level) *(gallery/random and gallery/index)*
 5. [x] Style breadcrumbs with separators *(SVG polygon cap for first, stroked chevron for subsequent)*
-6. [ ] Make breadcrumbs responsive (truncate on mobile)
+6. [x] Make breadcrumbs responsive (truncate on mobile)
 7. [ ] Add structured data for SEO (schema.org BreadcrumbList)
 8. [x] Ensure last item is not a link (current page shown bold, not linked)
 

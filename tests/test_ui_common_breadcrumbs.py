@@ -230,7 +230,7 @@ class TestBreadcrumbsIntegration:
         """Current page breadcrumb should be bold text, not an anchor."""
         response = await client.get("/gallery/random")
         assert response.status_code == 200
-        assert '<span class="font-semibold">Random</span>' in response.text
+        assert '<span class="font-semibold truncate block">Random</span>' in response.text
 
 
 # ---------------------------------------------------------------------------
