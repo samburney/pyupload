@@ -1,7 +1,7 @@
 <div id="upload-details"
         class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
     {% include "components/uploads/description.html.j2" %}
-    <dl class="flex flex-col gap-0.5 ml-1 mt-2">
+    <dl class="flex flex-col gap-0.5 ml-1">
         <dd class="inline-flex shrink-0 items-center gap-2">
             {% if not upload.private %}
             <svg class="size-3 lg:size-4{% if current_user and upload.user.id == current_user.id %} text-blue-600{% else %} text-gray-700{% endif %}"
@@ -60,4 +60,10 @@
         </dd>
         {% endif %}
     </dl>
+    <div class="flex mt-2 items-center justify-center gap-1 lg:gap-2">
+        {% include "components/uploads/download-button.html.j2" %}
+        {% if not upload.is_private %}
+        {% include "components/uploads/share-button.html.j2" %}
+        {% endif %}
+    </div>
 </div>

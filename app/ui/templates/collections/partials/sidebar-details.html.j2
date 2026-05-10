@@ -1,0 +1,61 @@
+<div id="upload-details"
+        class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
+    <p class="text-xs uppercase font-semibold wrap-break-word">
+        {{ collection.name | upper | replace("_", " ") }}
+    </p>
+    <ul class="flex flex-col gap-0.5 ml-1 mt-2">
+        <li class="inline-flex shrink-0 items-center gap-2">
+            <svg class="size-3 lg:size-4 {{ 'text-blue-700' if collection.selection_detail.is_writable else 'text-gray-700' }}"
+                aria-hidden="true"
+                viewBox="0 0 24 24">
+                <use href="#icon-user-public"></use>
+            </svg>
+            <div class="text-xs lg:text-sm">
+                {%- if collection.selection_detail.owners | length == 1 %}
+                <p>{{ (collection.selection_detail.owners | first).username }}</p>
+                {%- else %}
+                <p class="italic">Various owners</p>
+                {%- endif %}
+            </div>
+        </li>
+        <li class="inline-flex shrink-0 items-center gap-2">
+            <svg class="size-3 lg:size-4 text-gray-500"
+                aria-hidden="true"
+                viewBox="0 0 32 32">
+                <use href="#icon-file-type"></use>
+            </svg>
+            <div class="text-xs lg:text-sm">
+                {%- if collection.selection_detail.file_types | length == 1 %}
+                <p>{{ collection.selection_detail.file_types | first }}</p>
+                {%- else %}
+                <p class="italic">Various file types</p>
+                {%- endif %}
+            </div>
+        </li>
+        <li class="inline-flex shrink-0 items-center gap-2">
+            <svg class="size-3 lg:size-4 text-gray-500"
+                aria-hidden="true"
+                viewBox="0 0 24 24">
+                <use href="#icon-file-size"></use>
+            </svg>
+            <div class="text-xs lg:text-sm">
+                <p class="italic">{{ collection.selection_detail.file_size | humanize_bytes }}</p>
+            </div>
+        </li>
+    </ul>
+    <div class="flex mt-2 items-center justify-center gap-1 lg:gap-2">
+        {%- if collection.download_archive is not defined or not collection.download_archive or collection.download_archive.status == 'ready' %}
+        {%- from "components/gallery/macro_download-button.html.j2" import multiselect_download_button with context %}
+        {{
+            multiselect_download_button(
+                request=request,
+                selection_detail=collection.selection_detail,
+                button_id="collection-download-button",
+                hx_vals={"collection_id": collection.id}
+            )
+        }}
+        {%- else %}
+        {%- include "components/archives/download-button.html.j2" %}
+        {%- endif %}
+    </div>
+</div>

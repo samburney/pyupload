@@ -1,15 +1,4 @@
-<div class="flex flex-col p-2 rounded-md border border-gray-100 shadow-md">
-    <h3>{{ collection.name }}</h3>
-    <ul>
-        <li>Owner: {{ collection.user.username }}</li>
-        <li>Uploads: {{ collection.selection_detail.upload_count }}</li>
-        <li>
-            File types:
-            <ul>
-                {% for file_type in collection.selection_detail.file_types %}
-                <li>{{ file_type }}</li>
-                {% endfor %}
-        </li>
-        <li>Total size: {{ collection.selection_detail.file_size | humanize_bytes }}</li>
-    </ul>
+<div id="collection-sidebar" class="flex flex-col gap-1 lg:gap-2">
+    <h2 class="mb-0 mt-1">Collection</h2>
+    {%- include "collections/partials/sidebar-details.html.j2" %}
 </div>

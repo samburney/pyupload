@@ -2,14 +2,9 @@
 {% if sidebar_target is not defined %}{% set sidebar_target = "upload-sidebar" %}{% endif %}
 {% set selected_uploads = [upload] %}
 <div id="{{ sidebar_target }}"
-    class="flex flex-col w-full gap-1 lg:gap-2">
+    class="flex flex-col gap-1 lg:gap-2">
     <input type="hidden" name="selected_ids" value="{{ upload.id }}" />
-    <div class="flex w-full items-center justify-center gap-1 lg:gap-2">
-        {% include "components/uploads/download-button.html.j2" %}
-        {% if not upload.is_private %}
-        {% include "components/uploads/share-button.html.j2" %}
-        {% endif %}
-    </div>
+    <h3 class="mb-0 mt-1">Upload Details</h3>
     {% include "components/uploads/sidebar-details.html.j2" %}
     {% include "components/common/sidebar-actions.html.j2" %}
 </div>

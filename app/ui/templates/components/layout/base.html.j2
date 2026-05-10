@@ -10,9 +10,11 @@
         hx-ext="response-targets"
         x-data="{
             sidebarOpen: {{ 'true' if sidebar_open else 'false' }},
+            sidebarAnimating: false,
 
             toggleSidebar(state=!this.sidebarOpen, save=true) {
                 this.sidebarOpen = state;
+                this.sidebarAnimating = true;
 
                 if (save === true) {
                     document.cookie = `sidebar_open=${this.sidebarOpen}; path=/; max-age=31536000;`;
@@ -32,7 +34,7 @@
         <section class="sm:mx-2">
             {%- include "components/layout/messages.html.j2" %}
         </section>
-        <section class="mx-1 sm:mx-2">
+        <section class="mx-1 sm:mx-2 grow">
             <div class="container mx-auto flex grow min-w-0">
                 <main class="flex flex-col grow min-w-0 gap-2">
                     <div id="content" class="flex flex-col">
@@ -40,11 +42,13 @@
                     </div>
                 </main>
                 <aside id="sidebar"
-                    class="flex-none overflow-hidden transition-[width] ease-in-out
-                        {{ 'sm:ml-2 lg:ml-4 w-40 lg:w-64' if sidebar_open else 'sm:ml-0 lg:ml-0 w-0 lg:w-0' }}"
+                    class="flex-none transition-[width] ease-in-out mb-1 md:mb-2
+                        {{ 'sm:ml-2 lg:ml-4 w-40 lg:w-64' if sidebar_open else 'sm:ml-0 lg:ml-0 w-0 lg:w-0 overflow-hidden' }}"
+                    @transitionend="sidebarAnimating = false"
                     :class="{
                         'sm:ml-2 lg:ml-4 w-40 lg:w-64': sidebarOpen,
                         'sm:ml-0 lg:ml-0 w-0 lg:w-0': !sidebarOpen,
+                        'overflow-hidden': !sidebarOpen || sidebarAnimating,
                     }">
                     <div class="flex flex-col gap-2 w-40 lg:w-64">
                         {%- include "components/layout/sidebar.html.j2" %}
@@ -53,7 +57,7 @@
                 </aside>
             </div>
         </section>
-        <footer class="mt-auto bg-gray-100 border-t border-gray-300 py-2">
+        <footer class="bg-gray-100 border-t border-gray-300 py-2">
             <div class="container mx-auto text-center text-xs text-gray-600">
                 <p>
                     pyupload is Copyright &copy;2025 <a href="http://www.sifnt.net.au/" class="text-gray-900 font-semibold hover:underline">sifnt</a>.

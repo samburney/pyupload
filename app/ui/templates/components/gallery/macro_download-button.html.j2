@@ -1,0 +1,9 @@
+{% macro multiselect_download_button(
+    request,
+    selection_detail,
+    button_id="archive-download-button",
+    hx_include=none,
+    hx_vals=none
+) %}
+{% include "components/gallery/download-button.html.j2" %}
+{% endmacro %}
