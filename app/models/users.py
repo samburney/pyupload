@@ -113,7 +113,7 @@ class User(models.Model, TimestampMixin):
 
 # Pydantic models for Users
 # tortoise-serializer model
-class UserSerializer(ModelSerializer, SerializerTimestampMixin):
+class UserSerializer(ModelSerializer[User], SerializerTimestampMixin):
     id: int
     username: str
     email: str

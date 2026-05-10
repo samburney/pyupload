@@ -135,6 +135,7 @@ async def collections_view_get(
     context = {
         "current_user": current_user,
         "breadcrumbs": breadcrumbs.get_all(),
+        "collection": collection,
         "uploads": uploads,
         "pagination": pagination,
         "enable_super_select": True,
@@ -153,7 +154,7 @@ async def collections_view_get(
         return not_modified
 
     # Build response with cache headers
-    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+    response = templates.TemplateResponse(request, "collections/view.html.j2", context=context)
     response.headers.update(get_cache_headers(etag=etag))
 
     return response

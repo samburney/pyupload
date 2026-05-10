@@ -6,7 +6,7 @@ from tortoise_serializer import ContextType
 from app.models.common.pagination import PaginationParams
 from app.models.collections import Collection, CollectionSerializer
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
-from app.models.users import User
+from app.models.users import User, UserSerializer
 
 from app.ui.common.gallery import (
     SelectionDetail,
@@ -31,6 +31,7 @@ class CollectionSelectionDetail(CollectionSerializer):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     selection_detail: SelectionDetail
+    user: UserSerializer
     is_owner: bool
 
     # Resolve standard `Upload` models here to reduce model bloat
@@ -41,6 +42,13 @@ class CollectionSelectionDetail(CollectionSerializer):
     readable_uploads: list[UploadSerializer] | None = None
     writable_uploads: list[UploadSerializer] | None = None
     
+    @classmethod
+    async def resolve_user(cls, instance: Collection, context: ContextType) -> UserSerializer:
+        user_model = User.get(id=instance.user_id)  # type: ignore[attr-defined]
+        user = await UserSerializer.from_single_queryset(user_model)
+
+        return user
+
     @classmethod
     async def resolve_is_owner(cls, instance: Collection, context: ContextType) -> bool:
         user = context.get("user")

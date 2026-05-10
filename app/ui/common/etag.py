@@ -54,8 +54,6 @@ def get_paginated_gallery_etag(
     if len(flashes) > 0:
         signature_parts.append(json.dumps(flashes))
 
-    print(signature_parts)
-
     digest = hashlib.sha1("|".join(signature_parts).encode("utf-8")).hexdigest()
     return f'W/"{etag_prefix}-{digest}"'
 
