@@ -208,7 +208,7 @@
         @apply flex items-center px-2 rounded-r-md cursor-pointer transition-colors;
 
         & svg {
-            stroke-width: 1.5;
+            fill: currentColor;
             @apply size-4;
         }
     }
@@ -247,9 +247,8 @@
     & > .split-button-toggle {
         @apply hover:bg-green-400;
 
-        /* Bolder chevrons on dark/ghost variants to maintain visibility */
         & svg {
-            stroke-width: 2.5;
+            @apply size-4.5;
         }
     }
 }
@@ -264,9 +263,8 @@
     & > .split-button-toggle {
         @apply hover:bg-red-400;
 
-        /* Bolder chevrons on dark/ghost variants to maintain visibility */
         & svg {
-            stroke-width: 2.5;
+            @apply size-4.5;
         }
     }
 }
@@ -281,9 +279,8 @@
     & > .split-button-toggle {
         @apply hover:bg-gray-600;
 
-        /* Bolder chevrons on dark/ghost variants to maintain visibility */
         & svg {
-            stroke-width: 2.5;
+            @apply size-4.5;
         }
     }
 }
@@ -298,9 +295,8 @@
     & > .split-button-toggle {
         @apply text-white hover:text-gray-300;
 
-        /* Bolder chevrons on dark/ghost variants to maintain visibility */
         & svg {
-            stroke-width: 2.5;
+            @apply size-4.5;
         }
     }
 }
@@ -326,10 +322,6 @@
 
     & > .split-button-toggle {
         @apply px-1;
-        
-        & svg {
-            @apply size-3;
-        }
     }
 }
 
@@ -342,10 +334,6 @@
 
     & > .split-button-toggle {
         @apply px-0.5;
-        
-        & svg {
-            @apply size-3;
-        }
     }
 }
 
@@ -393,6 +381,10 @@
 
 @utility next-previous-page {
     @apply grid size-8 place-content-center;
+
+    & svg {
+        fill: currentColor;
+    }
 }
 
 /* Tag input */

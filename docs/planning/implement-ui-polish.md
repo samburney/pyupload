@@ -107,7 +107,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - `GalleryPaginationDefaultParams` moved from `app/ui/gallery.py` to `app/ui/common/gallery.py` for broader reuse
 - `Tag.view_url` property added; `Tag` now mixes in `PaginationMixin`; `TagSerializer` exposes `view_url`
 - New templates: `components/common/stack-card.html.j2`, `components/common/stack-grid.html.j2`, `tags/index.html.j2`
-- New SVG sprite icons: `cards-stack`, `event`, `storage`, `unknown-document`
+- New Material Symbols added to sprite: `cards-stack`, `event`, `storage`, `unknown-document`
 - ETag system extended to handle `SelectionDetail` objects alongside `UploadSerializer`
 - `/tags` navbar link is now a valid route — remove from "unimplemented routes" lists in Steps 1 and 2
 - All 1072 tests pass; new test class `TestTagsIndexEndpoint` covers visibility rules, pagination, ETag/304 behavior
@@ -116,7 +116,7 @@ Polish the user interface with improved navigation, responsive design refinement
 ### Review Snapshot (2026-03-09)
 - Implemented `/random` gallery discovery page with random uploads display
 - Added breadcrumbs template and layout integration (`layout/breadcrumbs.html.j2`, updated `base.html.j2`)
-- Added home icon to SVG sprite for breadcrumbs
+- Added home icon to Material Symbols sprite for breadcrumbs
 - Core random endpoint redirect from `/random` to `/gallery/random` working
 - Breadcrumb template functional; automation of breadcrumb logic deferred to future enhancement
 - Next feature: `/popular` page (most viewed) — plan to extract shared gallery view logic at this point
@@ -303,7 +303,7 @@ Polish the user interface with improved navigation, responsive design refinement
 
 **Implementation Notes**:
 - **Superseded**: Flash messages are being migrated from the Alpine.js `#messages` system to iziToast (see `migrate-flash-messages.md`). Once that migration is complete, icons, auto-dismiss, and close button behaviour will be configured via iziToast options rather than template changes. The tasks above apply only if the Alpine.js system is retained.
-- Icons: Use Heroicons or inline SVG
+- Icons: Use Material Symbols
   - Info: `ℹ️` or info circle icon
   - Success/Ok: `✓` or checkmark icon
   - Warning: `⚠️` or exclamation triangle

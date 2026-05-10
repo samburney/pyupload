@@ -91,7 +91,7 @@ Tag cards currently display a small dashed-border placeholder with just the tag 
 3. [ ] Render each upload as an absolutely-positioned `.pile-card` div with `transition-all duration-200`
 4. [ ] Assign each card a rotation class selected from a preset list using `(upload.id * 7) % preset_count`, giving deterministic but visually varied rotations
 5. [ ] **Image cards**: render `<img>` using `autoresize_url(200)` with `object-cover`
-6. [ ] **Non-image cards**: render a placeholder with a neutral background, the `#icon-file-type` SVG, and `upload.dot_ext` label
+6. [ ] **Non-image cards**: render a placeholder with a neutral background, the `#material-symbols-outlined-unknown-document` icon, and `upload.dot_ext` label
 7. [ ] **Empty state** (no uploads): render a dashed-border placeholder consistent with existing app style
 
 **Tests**:

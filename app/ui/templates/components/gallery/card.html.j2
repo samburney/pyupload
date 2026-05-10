@@ -4,7 +4,7 @@
 {% endif %}
 <div id="gallery-card-{{ upload.id }}"
     class="relative group/card
-        rounded-lg p-1 mb-1 border border-gray-100 shadow-sm shadow-gray-300 break-inside-avoid-column 
+        rounded-lg p-1 mb-1 border border-gray-100 shadow-sm shadow-gray-300 break-inside-avoid-column
         sm:p-3 sm:mb-2 md:mb-4
         sm:h-min sm:flex-col sm:justify-center sm:transition-all
         sm:duration-150
@@ -53,8 +53,8 @@
             x-show="!loaded">
             <div class="flex items-center justify-center w-full bg-neutral-quaternary rounded-base bg-gray-200 rounded-md"
                 style="max-width: {{ thumb_max_width }}px; aspect-ratio: {{ ar_decimal }};">
-                <svg class="text-fg-disabled" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
-                    <use href="#icon-placeholder-image"></use>
+                <svg class="fill-gray-400" aria-hidden="true">
+                    <use href="#material-symbols-outlined-broken-image"></use>
                 </svg>
             </div>
         </div>
@@ -70,8 +70,8 @@
                 @load="loaded = true">
         </div>
         <div class="absolute hidden top-0 left-0 w-full h-full items-center justify-center htmx-indicator">
-            <svg class="size-12 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
-                <use href="#icon-loading-spinner"></use>
+            <svg class="size-12 animate-spin fill-blue-500">
+                <use href="#material-symbols-outlined-progress-activity"></use>
             </svg>
         </div>
         <div class="absolute bottom-0 right-0 flex flex-row w-full">
@@ -79,8 +79,8 @@
                 class="flex flex-row grow gap-2 mb-2 items-center text-gray-100 bg-linear-to-r from-black/0 from-60% to-black/30 pr-2 py-0.5">
             </div>
             <div class="flex flex-row gap-2 mb-2 items-center text-gray-100 bg-black/30 pr-3 py-0.5">
-                <svg class="size-4 fill-gray-100" viewBox="0 0 24 24">
-                    <use href="#icon-image-dimensions"></use>
+                <svg class="size-4 fill-gray-100" aria-hidden="true">
+                    <use href="#material-symbols-outlined-aspect-ratio"></use>
                 </svg>
                 <div class="mt-1.5 sm:mt-0">
                     <p class="text-xs font-medium">{{ upload.image.width }}x{{ upload.image.height }}</p>
@@ -90,7 +90,7 @@
     </a>
     {%- elif upload.is_vector %}
     <div class="@container flex">
-        <a href="{{ upload.view_url }}" 
+        <a href="{{ upload.view_url }}"
            aria-label="View {{ upload.display_name }}"
            class="flex w-full justify-center items-center bg-gray-50/50 transition-normal duration-150 hover:brightness-95">
             <img class="h-auto max-h-[calc(100cqw*16/9)] object-contain p-4"
@@ -113,44 +113,45 @@
                 sm:flex">
                 <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
                     {%- if not upload.private %}
-                    <svg class="size-4{% if current_user and upload.user.id == current_user.id %} text-blue-600{% else %} text-gray-700{% endif %}"
-                        viewBox="0 0 24 24">
-                        <use href="#icon-user-public"></use>
+                    <svg class="size-4{% if current_user and upload.user.id == current_user.id %} fill-blue-600{% else %} fill-gray-700{% endif %}"
+                        aria-hidden="true"
+                       >
+                        <use href="#material-symbols-outlined-person"></use>
                     </svg>
                     {%- else %}
-                    <svg class="size-4 text-green-400" viewBox="0 0 32 32">
-                        <use href="#icon-user-private"></use>
+                    <svg class="size-4 fill-green-400" aria-hidden="true">
+                        <use href="#material-symbols-outlined-lock-person"></use>
                     </svg>
                     {%- endif %}
                     <p class="font-medium">{{ upload.user.username }}</p>
                 </dd>
                 <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
-                    <svg class="size-4 text-gray-500" viewBox="0 0 32 32">
-                        <use href="#icon-file-type"></use>
+                    <svg class="size-4 fill-gray-500" aria-hidden="true">
+                        <use href="#material-symbols-outlined-unknown-document"></use>
                     </svg>
                     <div class="mt-1.5 sm:mt-0">
                         <p class="font-medium">{{ upload.short_type }}</p>
                     </div>
                 </dd>
                 <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
-                    <svg class="size-4 text-gray-500" viewBox="0 0 24 24">
-                        <use href="#icon-file-size"></use>
+                    <svg class="size-4 fill-gray-500" aria-hidden="true">
+                        <use href="#material-symbols-outlined-storage"></use>
                     </svg>
                     <div class="mt-1.5 sm:mt-0">
                         <p class="font-medium">{{ upload.size | humanize_bytes }}</p>
                     </div>
                 </dd>
                 <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
-                    <svg class="size-4 text-gray-500" viewBox="0 0 122.88 68.18">
-                        <use href="#icon-view-count"></use>
+                    <svg class="size-4 fill-gray-500" aria-hidden="true">
+                        <use href="#material-symbols-outlined-visibility"></use>
                     </svg>
                     <div class="mt-1.5 sm:mt-0">
                         <p class="font-medium">{{ upload.viewed }}</p>
                     </div>
                 </dd>
                 <dd class="sm:inline-flex sm:shrink-0 sm:items-center sm:gap-1">
-                    <svg class="size-4 text-gray-500" viewBox="0 0 122.88 122.88">
-                        <use href="#icon-calendar"></use>
+                    <svg class="size-4 fill-gray-500" aria-hidden="true">
+                        <use href="#material-symbols-outlined-event"></use>
                     </svg>
                     <div class="mt-1.5 sm:mt-0">
                         <p class="font-medium">{{ upload.created_at | ago }}</p>
@@ -170,18 +171,18 @@
     </div>
     {%- if current_user and current_user.id == upload.user.id %}
     <input name="selected_upload_ids" value="{{ upload.id }}" type="checkbox"
-        class="absolute top-6 left-6 bg-transparent rounded-full invisible 
+        class="absolute top-6 left-6 bg-transparent rounded-full invisible
             checked:bg-blue-500 checked:visible
             group-hover/card:visible"
         x-model="selectedIds"
-        @change="if (superSelected) { 
-            if ($el.checked) { 
-                deselectedIds = deselectedIds.filter(id => id !== $el.value) 
-            } else { 
+        @change="if (superSelected) {
+            if ($el.checked) {
+                deselectedIds = deselectedIds.filter(id => id !== $el.value)
+            } else {
                 if (!deselectedIds.includes($el.value)) {
-                    deselectedIds.push($el.value) 
+                    deselectedIds.push($el.value)
                 }
-            } 
+            }
         }" />
     {%- endif %}
 </div>

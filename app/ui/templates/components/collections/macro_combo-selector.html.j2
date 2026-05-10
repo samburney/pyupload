@@ -10,7 +10,7 @@
                     type="button"
                     aria-label="Toggle collections menu"
                     @click="menu = !menu">
-                <svg fill="none" stroke="currentColor" class="size-4" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+                <svg class="size-4" aria-hidden="true"><use href="#material-symbols-outlined-arrow-drop-down"></use></svg>
             </button>
         </div>
         <div
@@ -33,7 +33,7 @@
                                 hx-swap="innerHTML"
                                 hx-select-oob="#messages"
                                 hx-target-4*="#messages">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <svg class="size-full" aria-hidden="true"><use href="#material-symbols-outlined-add"></use></svg>
                         </button>
                         <input class="text-sm p-0 m-0 ring-0 bg-transparent border-none field-sizing-content min-w-3xs
                         placeholder:text-gray-500 placeholder:italic"
@@ -52,7 +52,7 @@
                 {% include "components/collections/combo-selector-items.html.j2" %}
             </ul>
             <div id="collections-loading" class="absolute top-0 left-0 bg-black/10 w-full h-full flex justify-center items-center htmx-indicator">
-                <svg class="size-6 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><use href="#icon-loading-spinner"></use></svg>
+                <svg class="size-6 animate-spin fill-blue-500"><use href="#material-symbols-outlined-progress-activity"></use></svg>
             </div>
         </div>
     </fieldset>

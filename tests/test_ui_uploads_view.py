@@ -232,7 +232,7 @@ class TestViewUploadPageContent:
 
         response = await client.get(f"/view/{upload.id}/{upload.cleanname}.{upload.ext}")
 
-        assert "icon-view-count" in response.text
+        assert "material-symbols-outlined-visibility" in response.text
 
     async def test_metadata_shows_upload_date_icon(self, client):
         """Metadata panel includes the upload date field."""
@@ -241,7 +241,7 @@ class TestViewUploadPageContent:
 
         response = await client.get(f"/view/{upload.id}/{upload.cleanname}.{upload.ext}")
 
-        assert "icon-calendar" in response.text
+        assert "material-symbols-outlined-event" in response.text
 
     async def test_image_metadata_shows_dimensions(self, client):
         """Image uploads show width × height in the metadata panel."""
