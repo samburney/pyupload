@@ -1,9 +1,10 @@
 <div id="upload-details"
-        class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
-    <p class="text-xs uppercase font-semibold wrap-break-word">
+        class="flex flex-col w-full gap-2 p-3 items-center bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
+    <p class="w-full text-xs uppercase font-semibold wrap-break-word">
         {{ collection.name | upper | replace("_", " ") }}
     </p>
-    <ul class="flex flex-col gap-0.5 ml-1 mt-2">
+    {%- if collection.selection_detail.upload_count %}
+    <ul class="flex flex-col w-full gap-0.5 ml-1 mt-2">
         <li class="inline-flex shrink-0 items-center gap-2">
             <svg class="size-3 lg:size-4 {{ 'fill-blue-700' if collection.selection_detail.is_writable else 'fill-gray-700' }}"
                 aria-hidden="true"
@@ -43,7 +44,9 @@
             </div>
         </li>
     </ul>
-    <div class="flex mt-2 items-center justify-center gap-1 lg:gap-2">
+    {%- endif %}
+    <div class="flex flex-col w-full mt-2 items-center justify-center gap-1 lg:gap-2">
+    {%- if collection.selection_detail.upload_count %}
         {%- from "components/gallery/macro_download-button.html.j2" import multiselect_download_button %}
         {{
             multiselect_download_button(
@@ -54,5 +57,24 @@
                 hx_vals={"collection_id": collection.id}
             )
         }}
+    {%- endif %}
+    {%- if collection.user.id == current_user.id %}
+        <button type="button"
+            class="px-4 py-2 w-full button button-neutral max-lg:button-md border-red-100 hover:text-red-600 hover:bg-red-200 hover:border-red-500"
+            hx-trigger="confirmed"
+            hx-delete="{{ request.url_for('delete_collection_delete', id=collection.id) }}"
+            hx-vals='{ "redirect": {{ request.headers.get("referer", request.url_for("index_get") | string) | tojson }} }'
+            hx-target-4*="#messages"
+            @click="sweetConfirm($el, {
+                title: 'Confirm delete',
+                html: 'Are you sure you wish to delete the collection named <strong>{{ collection.name }}</strong>?  This action will not remove any uploads.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Delete',
+                confirmButtonColor: '#fb2c36'
+            });">
+            Delete
+        </button>
+    {%- endif %}
     </div>
 </div>

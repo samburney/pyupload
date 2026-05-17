@@ -1,10 +1,13 @@
 import asyncio
 
 from typing import Annotated
+from urllib import parse
 
-from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import Response, HTMLResponse
+from fastapi import APIRouter, Request, Depends, Form, Query
+from fastapi.responses import Response, HTMLResponse, RedirectResponse
 from fastapi.exceptions import HTTPException
+
+from app.lib.config import logger
 
 from app.models.collections import Collection
 from app.models.users import User
@@ -17,9 +20,10 @@ from app.ui.common.etag import (
     check_etag_and_return_304_if_match,
     get_cache_headers,
 )
-from app.ui.common.responses import error_template_response, info_template_response
+from app.ui.common.responses import error_template_response
 from app.ui.common.gallery import GalleryPaginationDefaultParams, get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user
+from app.ui.common.session import flash_message
 from app.ui.common.templating import templates
 from app.ui.common.uploads import (
     build_readable_upload_queryset,
@@ -108,7 +112,7 @@ async def collections_view_get(
     collection_model = Collection.get(name_unique=name)
     collection = await CollectionSelectionDetail.from_single_queryset_or_none(collection_model, context={"user": current_user})
 
-    if not collection or not collection.readable_upload_models:
+    if not collection:
         return await error_template_response(
             request, [f"Collection could not be found: {name}"], 404, "Collection not found."
         )
@@ -124,10 +128,6 @@ async def collections_view_get(
     # Get uploads for this page
     await collection.fetch_readable_uploads(user=current_user, pagination=pagination)
     uploads = collection.readable_uploads
-    if not uploads:
-        return await info_template_response(
-            request, ["This collection has no uploads yet."], 200, collection.name
-        )
 
     await _collection_view_crumbs(breadcrumbs, path_params={"name": collection.name_unique}, context={
         "current_user": current_user,
@@ -147,7 +147,7 @@ async def collections_view_get(
 
     etag = get_paginated_gallery_etag(
         request=request,
-        uploads=uploads,
+        uploads=uploads if uploads else [],
         pagination=pagination,
         user_id=current_user.id if current_user else None,
     )
@@ -332,3 +332,44 @@ async def update_upload_collections_patch(
     )
 
     return response
+
+
+@router.delete("/{id}", response_class=Response)
+async def delete_collection_delete(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_authenticated_user)],
+    id: int,
+    redirect: Annotated[str, Query()] | None = None,
+) -> Response:
+    """Handle deletion of collection"""
+
+    collection_model = await Collection.get_or_none(id=id, user=current_user)
+    if not collection_model:
+        error_message = f"Collection with ID {id} not found or insufficient permissions."
+        return await error_template_response(request, [error_message], status_code=400)
+
+    collection_name = collection_model.name
+
+    try:
+        await collection_model.delete()
+    except Exception as e:
+        error_message = f"An error occurred whilst attempting to delete a collection: {collection_name}.  Error message: {e}."
+        logger.exception(error_message)
+        return await error_template_response(request, [error_message], status_code=500)
+
+    flash_message(request, f"Collection successfully deleted: {collection_name}")
+
+    if not redirect:
+        return RedirectResponse(request.url_for("index_get"))
+    else:
+        parsed_url = parse.urlparse(str(redirect))
+        redirect_url = parse.urlunparse((
+            request.url.scheme,
+            request.url.netloc,
+            parsed_url.path,
+            parsed_url.params,
+            parsed_url.query,
+            parsed_url.fragment,
+        ))
+
+        return Response(status_code=204, headers={"HX-Redirect": redirect_url})

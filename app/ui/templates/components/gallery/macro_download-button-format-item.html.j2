@@ -9,6 +9,18 @@
         <svg class="size-5 fill-green-500"><use href="#material-symbols-outlined-cloud-done"></use></svg>
         Download as {{ format | upper }}
     </a>
+    {% elif download_archive and download_archive.status == "pending" %}
+    <button type="button" style="cursor: wait;"
+        class="inline-flex gap-2 w-full p-2 text-left text-gray-500 cursor-wait" disabled>
+        <svg class="size-5 fill-yellow-500"><use href="#material-symbols-outlined-schedule"></use></svg>
+        {{ format | upper }} queued...
+    </button>
+    {% elif download_archive and download_archive.status == "processing" %}
+    <button type="button" style="cursor: wait;"
+        class="inline-flex gap-2 w-full p-2 text-left text-gray-500 cursor-wait" disabled>
+        <svg class="size-5 fill-blue-500 animate-spin"><use href="#material-symbols-outlined-progress-activity"></use></svg>
+        {{ format | upper }} processing...
+    </button>
     {% else %}
     <button type="button"
         class="inline-flex gap-2 w-full p-2 text-left text-gray-700 cursor-pointer"
