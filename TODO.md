@@ -32,8 +32,8 @@
 ### Collections & Organization
 - [x] Tags navbar link and browsing page (/tags)
 - [x] Collections navbar link and browsing page (/collections)
-- [ ] Collection management UI *(partial: collection assignment (add/remove) implemented via upload view page; collection creation possible via same UI; collection browsing implemented; edit and delete not yet implemented)*
-  - [ ] Create/edit/delete collections *(partial: collection creation supported via upload view page; browsing at `/collections` and `/collections/view/{name_unique}` implemented)*
+- [ ] Collection management UI *(partial: collection assignment (add/remove) implemented via upload view page; collection creation possible via same UI; collection browsing and delete implemented; edit not yet implemented)*
+  - [ ] Create/edit/delete collections *(partial: collection creation supported via upload view page; browsing at `/collections` and `/collections/view/{name_unique}` implemented; delete at `DELETE /collections/{id}` implemented)*
   - [x] Collection browsing pages
 - [ ] Tag system UI *(partial: inline tag editing and read-only display on upload view page implemented; any authenticated user can tag any upload; tag browsing implemented; standalone management pages remain)*
   - [x] Tag browsing pages

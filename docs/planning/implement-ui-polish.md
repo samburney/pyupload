@@ -26,6 +26,15 @@ Polish the user interface with improved navigation, responsive design refinement
 - Forms are functional with HTMX and baseline Tailwind styling, but need consistency and validation polish
 - Navbar links include unimplemented routes that need cleanup (/uploads, /search, /random, /popular, /all) — `/tags` and `/collections` are now implemented
 
+### Review Snapshot (2026-05-17)
+- Permanent sidebar widgets added: `gallery_sidebar_widgets` block introduced in `gallery/index.html.j2` allowing per-view widget injection above the multiselect sidebar — see `implement-permanent-sidebar.md`
+- Collection view sidebar updated with collection stats (owners, file types, file size), multi-format download button, and owner-only delete button (`collections/partials/sidebar-details.html.j2`)
+- Tag view page (`tags/view.html.j2`) added, extending `gallery/index.html.j2` with a tag details sidebar via the `gallery_sidebar_widgets` block
+- Gallery viewport height chain fixed: `flex flex-col` added to the main content `<section>` in `base.html.j2` and `grow` added to `#content` div — empty-state gallery content now vertically centres correctly
+- Archive download button refactored to support multiple formats: `components/gallery/download-button.html.j2` and `macro_download-button-format-item.html.j2` updated; pending/processing archives show inline status and polling in the gallery button; dropdown shows per-format status
+- Collection delete: `DELETE /collections/{id}` endpoint added with same-origin redirect validation; 57/57 archive tests passing
+- Step 3 partial progress: gallery viewport height fix, gallery card/grid mobile sizing (see Review Snapshot 2026-05-09); remaining tasks (touch targets, horizontal scroll, real-device testing) still outstanding
+
 ### Review Snapshot (2026-05-09)
 - Mobile navbar redesigned: desktop `navbar.html.j2` now hidden on mobile (`hidden sm:flex`); `mobileMenuOpen` Alpine state and dropdown mobile menu removed entirely
 - New `breadcrumbs-navbar.html.j2` merges the mobile navbar and desktop breadcrumbs bar into a single component: on mobile shows logo, upload button, and hamburger (calling `toggleSidebar()`); on desktop shows breadcrumbs, search, and sidebar toggle
@@ -264,6 +273,7 @@ Polish the user interface with improved navigation, responsive design refinement
 - Minimum touch target: 44x44px (Apple HIG)
 - Check for `overflow-x: hidden` on body if needed
 - Test in both portrait and landscape orientations
+- **Progress on `implement-permanent-sidebar` branch**: Viewport height chain fixed (`flex flex-col` on `<section>`, `grow` on `#content` in `base.html.j2`); gallery card and grid mobile sizing completed (see Review Snapshot 2026-05-09). Tasks 3–7 and all tests remain outstanding and require real-device or browser validation.
 
 **Dependencies**:
 - Step 1 must be complete
@@ -642,3 +652,47 @@ Polish the user interface with improved navigation, responsive design refinement
 
 **Dependencies**:
 - All previous steps must be complete
+
+---
+
+## Step 12: Permanent Per-View Sidebar Widgets
+
+**Files**:
+- `app/ui/templates/gallery/index.html.j2`
+- `app/ui/templates/collections/partials/sidebar-details.html.j2`
+- `app/ui/templates/tags/partials/sidebar-details.html.j2`
+- `app/ui/templates/tags/partials/sidebar.html.j2`
+- `app/ui/templates/tags/view.html.j2`
+- `app/ui/archives.py`
+- `app/ui/tags.py`
+- `app/ui/collections.py`
+
+**Tasks**:
+1. [x] Add `gallery_sidebar_widgets` block to `gallery/index.html.j2` above the multiselect sidebar
+2. [x] Add permanent collection details sidebar with stats, multi-format download button, and owner-only delete button
+3. [x] Add tag details sidebar and `tags/view.html.j2` template extending gallery index
+4. [x] Fix gallery viewport height chain so empty-state content vertically centres
+5. [x] Implement `DELETE /collections/{id}` with same-origin redirect validation
+6. [x] Refactor archive download button to support multiple formats with per-format status in dropdown
+
+**Tests**:
+1. [ ] Test collection sidebar renders stats correctly
+2. [ ] Test collection sidebar shows delete button for owner only, not for other authenticated users
+3. [ ] Test collection delete redirects correctly
+4. [ ] Test tag sidebar renders stats correctly
+5. [ ] Test empty gallery vertically centres
+
+**Acceptance Criteria**:
+- [x] Per-view sidebar widgets inject correctly above the multiselect sidebar
+- [x] Collection sidebar shows stats, multi-format download options, and delete for owners
+- [x] Tag sidebar shows stats and download options
+- [x] Gallery content vertically centres when empty
+- [x] 57/57 archive tests passing
+- [ ] Sidebar-specific tests written and passing
+
+**Implementation Notes**:
+- See `implement-permanent-sidebar.md` for full implementation detail
+- Mobile navigation links (Browse, Uploads, Login, etc.) referenced in Review Snapshot 2026-05-09 are planned to live in the permanent sidebar in a future iteration
+
+**Dependencies**:
+- Step 5 (breadcrumbs) must be complete for tag/collection view pages to have correct breadcrumb context
