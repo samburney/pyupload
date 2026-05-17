@@ -1,0 +1,26 @@
+{% macro multiselect_download_button_format_item(format) %}
+{%- if download_archives %}
+{%- set download_archive = download_archives | selectattr("format", "equalto", format) | first %}
+{%- endif %}
+<li role="menuitem" class="p-0!">
+    {% if download_archive and download_archive.status == "ready" %}
+    <a href="{{ request.url_for('download_archive_get', download_archive_id=download_archive.id, download_archive_filename=download_archive.filename) }}"
+        class="inline-flex gap-2 w-full p-2 text-left text-gray-700 cursor-pointer">
+        <svg class="size-5 fill-green-500"><use href="#material-symbols-outlined-cloud-done"></use></svg>
+        Download as {{ format | upper }}
+    </a>
+    {% else %}
+    <button type="button"
+        class="inline-flex gap-2 w-full p-2 text-left text-gray-700 cursor-pointer"
+        hx-post="{{ request.url_for('request_uploads_archive_post', download_format=format) }}"
+        hx-target="#{{ button_id }}"
+        hx-target-4*="#messages"
+        {%- if hx_vals %}hx-vals="{{ hx_vals | tojson | e }}"{% endif %}
+        {%- if hx_include %}hx-include="{{ hx_include }}"{% endif %}
+        hx-select="#{{ button_id }} > div">
+        <svg class="size-5"><use href="#material-symbols-outlined-cloud-sync"></use></svg>
+        Download as {{ format | upper }}
+    </button>
+    {% endif %}
+</li>
+{% endmacro %}

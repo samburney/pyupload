@@ -44,18 +44,15 @@
         </li>
     </ul>
     <div class="flex mt-2 items-center justify-center gap-1 lg:gap-2">
-        {%- if collection.download_archive is not defined or not collection.download_archive or collection.download_archive.status == 'ready' %}
-        {%- from "components/gallery/macro_download-button.html.j2" import multiselect_download_button with context %}
+        {%- from "components/gallery/macro_download-button.html.j2" import multiselect_download_button %}
         {{
             multiselect_download_button(
                 request=request,
                 selection_detail=collection.selection_detail,
+                download_archives=download_archives,
                 button_id="collection-download-button",
                 hx_vals={"collection_id": collection.id}
             )
         }}
-        {%- else %}
-        {%- include "components/archives/download-button.html.j2" %}
-        {%- endif %}
     </div>
 </div>

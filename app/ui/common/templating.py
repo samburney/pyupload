@@ -3,13 +3,21 @@ import json
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
-from app.lib.config import get_app_config
+from app.lib.config import get_app_config, logger
 from app.lib.helpers import sanitised_markdown, time_ago, humanize_bytes, split_filename
 
 from app.ui.common.session import get_flashed_messages
 
 
 config = get_app_config()
+
+
+def _do_logger(message):
+    """Internal function to handle logger, but return an empty string"""
+
+    logger.debug(message)
+
+    return ""
 
 
 def app_config_context_processor(request: Request):
@@ -27,6 +35,7 @@ templates = Jinja2Templates(
     directory="app/ui/templates",
     context_processors=[app_config_context_processor]
 )
+templates.env.globals['debug'] = _do_logger
 templates.env.globals['get_flashed_messages'] = get_flashed_messages
 templates.env.filters['markdown'] = sanitised_markdown
 templates.env.filters['ago'] = time_ago

@@ -1,15 +1,15 @@
 {%- if request.headers.get('hx-request', None) and request.headers.get('hx-target', None) and request.session.get('_flashes', None) %}
 {%- include "components/common/messages.html.j2" %}
 {%- endif %}
-<div id="archive-download-button" class="flex items-center">
+<div id="{{ download_button_name }}" class="flex items-center">
     {% if download_archive is defined and download_archive.status != 'failed' %}
     <div class="relative"
         {%- if download_archive.status != 'ready'%}
         hx-trigger="every 2s"
         hx-get="{{ request.url_for('update_archive_status_get', download_archive_id=download_archive.id) }}"
-        hx-select="#archive-download-button > div"
-        hx-target="#archive-download-button"
-        hx-target-4*="#archive-download-button"
+        hx-select="#{{ download_button_name }} > div"
+        hx-target="#{{ download_button_name }}"
+        hx-target-4*="#{{ download_button_name }}"
         {%- endif %}
         >
         {%- if download_archive.status == 'pending' %}

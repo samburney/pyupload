@@ -9,6 +9,7 @@ from fastapi.exceptions import HTTPException
 from app.models.collections import Collection
 from app.models.users import User
 
+from app.ui.common.archives import get_selected_uploads_archives
 from app.ui.common.breadcrumbs import Breadcrumbs
 from app.ui.common.collections import CollectionSelectionDetail, CollectionPaginationDefaultParams
 from app.ui.common.etag import (
@@ -107,10 +108,12 @@ async def collections_view_get(
     collection_model = Collection.get(name_unique=name)
     collection = await CollectionSelectionDetail.from_single_queryset_or_none(collection_model, context={"user": current_user})
 
-    if not collection:
+    if not collection or not collection.readable_upload_models:
         return await error_template_response(
             request, [f"Collection could not be found: {name}"], 404, "Collection not found."
         )
+
+    download_archives = await get_selected_uploads_archives(uploads=collection.readable_upload_models, user=current_user)
 
     # Update pagination count totals
     pagination.count = len(collection.readable_upload_models)
@@ -139,6 +142,7 @@ async def collections_view_get(
         "uploads": uploads,
         "pagination": pagination,
         "enable_super_select": True,
+        "download_archives": download_archives,
     }
 
     etag = get_paginated_gallery_etag(

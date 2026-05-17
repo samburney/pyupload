@@ -40,13 +40,10 @@
         </li>
     </ul>
     <div class="flex mt-2 items-center justify-center gap-1 lg:gap-2">
-        {%- if download_archive is not defined or not download_archive or download_archive.status == 'ready' %}
         {%- from "components/gallery/macro_download-button.html.j2" import multiselect_download_button %}
         {{ multiselect_download_button(request=request,
                                        selection_detail=selection_detail,
+                                       download_archives=download_archives,
                                        hx_include="[name='super_selected'],[name='selected_ids'],[name='deselected_ids']") }}
-        {%- else %}
-        {%- include "components/archives/download-button.html.j2" %}
-        {%- endif %}
     </div>
 </div>

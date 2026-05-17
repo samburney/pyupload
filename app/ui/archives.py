@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
+from urllib import parse
 
 from fastapi import APIRouter, Depends, Form, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.exceptions import HTTPException
+from tortoise.expressions import Q
 
 from app.models.uploads import Upload
 from app.models.users import User
@@ -18,6 +20,8 @@ from app.models.download_archives import (
 from app.lib.config import get_app_config
 from app.lib.helpers import make_unique_filename, clean_text, sanitise_filename
 from app.lib.scheduler import schedule_archive_job
+
+from app.models.collections import Collection
 
 from app.ui.common.gallery import get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user
@@ -42,18 +46,46 @@ async def request_uploads_archive_post(
     """Request download archive of selected files"""
 
     # If this isn't a HTMX request, bail out now
-    if not request.headers.get('hx-request', False):
-        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+    if not request.headers.get("hx-request", False):
+        raise HTTPException(status_code=400, detail="Not a valid HTMX request")
 
     # Validate requested format
     try:
         archive_format = ArchiveFormatsEnum(download_format)
     except ValueError:
         flash_message(request, f"An invalid archive format was requested: {download_format}", "error")
-        return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=400)
+        return templates.TemplateResponse(request, "components/common/messages.html.j2", status_code=400)
+
+    # Default context filter based on selected uploads, but also support request from context-specific download buttons
+    current_url_path: str = ""
+    current_url = request.headers.get("hx-current-url")
+    if current_url:
+        parsed_url = parse.urlparse(current_url)
+        current_url_path = parsed_url.path
+
+    archive_download_button_name: str = request.headers.get("hx-target", "archive-download-button")
+
+    # Collection
+    if archive_download_button_name == "collection-download-button" and current_url_path.startswith("/collections/"):
+        collection_slug = current_url_path.lower().split("/")[-1]
+        collection_model = await Collection.get_or_none(user=current_user, name_unique=collection_slug)
+        if not collection_model:
+            flash_message(request, f"You do not have permission to download the specified collection: {collection_slug}.", "error")
+            return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=403)
+
+        context_filter = Q(collections__id=collection_model.id)
+        super_selected = True
+
+    # Tag
+    elif archive_download_button_name == "tag-download-button" and current_url_path.startswith("/tags/"):
+        context_filter = None
+        raise NotImplementedError("Tag download button not implemented yet.")
+
+    # Standard selection button - get context from request context filter
+    else:
+        context_filter = await get_request_context_filter(request)
 
     # Filter selected uploads to only those readable by the current_user
-    context_filter = await get_request_context_filter(request)
     upload_models: list[Upload] = await get_readable_selected_upload_models(current_user, selected_ids, super_selected, deselected_ids, context_filter)
     if not upload_models:
         flash_message(request, "You do not have permission to download any of the selected uploads.", "error")
@@ -83,7 +115,8 @@ async def request_uploads_archive_post(
         name="components/archives/download-button.html.j2",
         context={
             "download_archive": download_archive_model,
-        }
+            "download_button_name": archive_download_button_name,
+        },
     )
 
     return response
@@ -111,7 +144,7 @@ async def profile_archive_list_get(
         {
             "current_user": current_user,
             "download_archives": download_archives,
-        }
+        },
     )
 
     return response
@@ -129,6 +162,8 @@ async def update_archive_status_get(
     if not request.headers.get('hx-request', False):
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
+    archive_download_button_name: str = request.headers.get("hx-target", "archive-download-button")
+
     # Get DownloadArchive model
     download_archive_model = await DownloadArchive.get_or_none(id=download_archive_id, user=current_user)
     if not download_archive_model:
@@ -137,6 +172,9 @@ async def update_archive_status_get(
             request=request,
             name="components/archives/download-button.html.j2",
             status_code=404,
+            context={
+                "download_button_name": archive_download_button_name,
+            },
         )
         return response
 
@@ -149,7 +187,8 @@ async def update_archive_status_get(
         name="components/archives/download-button.html.j2",
         context={
             "download_archive": download_archive_model,
-        }
+            "download_button_name": archive_download_button_name,
+        },
     )
 
     return response
@@ -167,6 +206,8 @@ async def cancel_pending_archive_post(
     if not request.headers.get('hx-request', False):
         raise HTTPException(status_code=400, detail='Not a valid HTMX request')
 
+    archive_download_button_name: str = request.headers.get("hx-target", "archive-download-button")
+
     # Get DownloadArchive model
     download_archive_model = await DownloadArchive.get_or_none(id=download_archive_id,
                                                                user=current_user,
@@ -177,6 +218,9 @@ async def cancel_pending_archive_post(
             request=request,
             name="components/archives/download-button.html.j2",
             status_code=404,
+            context={
+                "download_button_name": archive_download_button_name,
+            },
         )
         return response
 

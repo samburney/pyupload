@@ -1,8 +1,12 @@
-{%- include "components/common/messages.html.j2" %}
+{% from "components/gallery/macro_download-button-format-item.html.j2" import multiselect_download_button_format_item with context %}
+{% include "components/common/messages.html.j2" %}
 <div id="{{ button_id }}" class="flex justify-center items-center">
     <div class="relative" x-data="{ open: false }">
         <div class="split-button split-button-ok md:max-lg:split-button-md">
-            {%- if download_archive is not defined or not download_archive or download_archive.status != 'ready' %}
+            {%- if download_archives %}
+            {%- set download_archive = download_archives | selectattr("format", "equalto", "zip") | first %}
+            {%- endif %}
+            {% if not download_archive or download_archive.status != "ready" %}
             <button type="button"
                 class="split-button-action text-center"
                 hx-post="{{ request.url_for('request_uploads_archive_post', download_format='zip') }}"
@@ -33,54 +37,10 @@
             x-show="open"
             @click="open = false"
             @click.outside="open = false">
-            <li role="menuitem" class="p-0!">
-                <button type="button"
-                    class="w-full p-2 text-left text-gray-700 cursor-pointer"
-                    hx-post="{{ request.url_for('request_uploads_archive_post', download_format='zip') }}"
-                    hx-target="#{{ button_id }}"
-                    hx-target-4*="#messages"
-                    {%- if hx_vals %}hx-vals="{{ hx_vals | tojson | e }}"{% endif %}
-                    {%- if hx_include %}hx-include="{{ hx_include }}"{% endif %}
-                    hx-select="#{{ button_id }} > div">
-                    Download as ZIP
-                </button>
-            </li>
-            <li role="menuitem" class="p-0!">
-                <button type="button"
-                    class="w-full p-2 text-left text-gray-700 cursor-pointer"
-                    hx-post="{{ request.url_for('request_uploads_archive_post', download_format='tar.gz') }}"
-                    hx-target="#{{ button_id }}"
-                    hx-target-4*="#messages"
-                    {%- if hx_vals %}hx-vals="{{ hx_vals | tojson | e }}"{% endif %}
-                    {%- if hx_include %}hx-include="{{ hx_include }}"{% endif %}
-                    hx-select="#{{ button_id }} > div">
-                    Download as TAR.GZ
-                </button>
-            </li>
-            <li role="menuitem" class="p-0!">
-                <button type="button"
-                    class="w-full p-2 text-left text-gray-700 cursor-pointer"
-                    hx-post="{{ request.url_for('request_uploads_archive_post', download_format='tar.bz2') }}"
-                    hx-target="#{{ button_id }}"
-                    hx-target-4*="#messages"
-                    {%- if hx_vals %}hx-vals="{{ hx_vals | tojson | e }}"{% endif %}
-                    {%- if hx_include %}hx-include="{{ hx_include }}"{% endif %}
-                    hx-select="#{{ button_id }} > div">
-                    Download as TAR.BZ2
-                </button>
-            </li>
-            <li role="menuitem" class="p-0!">
-                <button type="button"
-                    class="w-full p-2 text-left text-gray-700 cursor-pointer"
-                    hx-post="{{ request.url_for('request_uploads_archive_post', download_format='tar.zstd') }}"
-                    hx-target="#{{ button_id }}"
-                    hx-target-4*="#messages"
-                    {%- if hx_vals %}hx-vals="{{ hx_vals | tojson | e }}"{% endif %}
-                    {%- if hx_include %}hx-include="{{ hx_include }}"{% endif %}
-                    hx-select="#{{ button_id }} > div">
-                    Download as TAR.ZSTD
-                </button>
-            </li>
+            {{ multiselect_download_button_format_item(format='zip') }}
+            {{ multiselect_download_button_format_item(format='tar.gz') }}
+            {{ multiselect_download_button_format_item(format='tar.bz2') }}
+            {{ multiselect_download_button_format_item(format='tar.zstd') }}
         </ul>
     </div>
 </div>

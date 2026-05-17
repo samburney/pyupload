@@ -1,7 +1,7 @@
 import random
 import re
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any, Literal
 from urllib.parse import parse_qs, urlparse
 
@@ -16,15 +16,11 @@ from app.lib.helpers import clean_text, split_filename
 
 from app.models.collections import Collection, CollectionSerializerSelected
 from app.models.common.pagination import PaginationParams
-from app.models.download_archives import (
-    ArchiveStatusEnum,
-    DownloadArchive,
-    DownloadArchiveSerializer,
-)
 from app.models.tags import Tag, TagSerializerSelected
 from app.models.uploads import Upload, UploadSerializer, UPLOAD_PREFETCH_MODELS
 from app.models.users import User, UserSerializer
 
+from app.ui.common.archives import get_selected_uploads_archives
 from app.ui.common.breadcrumbs import Breadcrumbs
 from app.ui.common.etag import (
     check_etag_and_return_304_if_match,
@@ -308,27 +304,7 @@ async def render_multiselect_sidebar(
             status_code=403,
         )
 
-    # Match selected uploads against any existing DownloadArchives for this user
-    selected_upload_ids = sorted(upload.id for upload in selected_uploads)
-    download_archive = None
-    download_archive_expires_at = datetime.now(tz=timezone.utc) - timedelta(
-        hours=config.archive_max_age_hours
-    )
-    download_archive_models = await (
-        DownloadArchive.filter(
-            user=user,
-            created_at__gt=download_archive_expires_at,
-            status__not=ArchiveStatusEnum.failed,
-            upload_ids=selected_upload_ids,
-        )
-        .order_by("-created_at")
-        .prefetch_related("user")
-    )
-
-    # If there's multiple, just get the newest one
-    if download_archive_models:
-        download_archive_model = download_archive_models[0]
-        download_archive = await DownloadArchiveSerializer.from_tortoise_orm(download_archive_model)
+    download_archives = await get_selected_uploads_archives(uploads=selected_uploads, user=user)
 
     # Get selection details
     selection_detail = await get_selection_detail(selected_uploads, user)
@@ -337,7 +313,7 @@ async def render_multiselect_sidebar(
     context = {
         "current_user": user,
         "selected_uploads": selected_uploads,
-        "download_archive": download_archive,
+        "download_archives": download_archives,
         "selection_detail": selection_detail,
     }
     response = templates.TemplateResponse(

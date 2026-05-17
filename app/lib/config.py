@@ -34,6 +34,7 @@ class AppConfig:
     # Set up shared logger for app
     if debug:
         logging.basicConfig(level=logging.INFO)
+        logging.getLogger("app").setLevel(logging.DEBUG)
     logger = logging.getLogger(__name__)
 
     # Web server configuration
