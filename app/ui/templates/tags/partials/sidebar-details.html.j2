@@ -1,0 +1,60 @@
+<div id="upload-details"
+        class="flex flex-col w-full gap-2 p-3 bg-gray-100 border border-gray-200 shadow-inner shadow-gray-300 rounded-md">
+    <p class="text-xs uppercase font-semibold wrap-break-word">
+        {{ tag.name | upper | replace("_", " ") }}
+    </p>
+    <ul class="flex flex-col gap-0.5 ml-1 mt-2">
+        <li class="inline-flex shrink-0 items-center gap-2">
+            <svg class="size-3 lg:size-4 {{ 'fill-blue-700' if tag.selection_detail.is_writable else 'fill-gray-700' }}"
+                aria-hidden="true"
+               >
+                <use href="#material-symbols-outlined-person"></use>
+            </svg>
+            <div class="text-xs lg:text-sm">
+                {%- if tag.selection_detail.owners | length == 1 %}
+                <p>{{ (tag.selection_detail.owners | first).username }}</p>
+                {%- else %}
+                <p class="italic">Various owners</p>
+                {%- endif %}
+            </div>
+        </li>
+        <li class="inline-flex shrink-0 items-center gap-2">
+            <svg class="size-3 lg:size-4 fill-gray-500"
+                aria-hidden="true"
+               >
+                <use href="#material-symbols-outlined-unknown-document"></use>
+            </svg>
+            <div class="text-xs lg:text-sm">
+                {%- if tag.selection_detail.file_types | length == 1 %}
+                <p>{{ tag.selection_detail.file_types | first }}</p>
+                {%- else %}
+                <p class="italic">Various file types</p>
+                {%- endif %}
+            </div>
+        </li>
+        <li class="inline-flex shrink-0 items-center gap-2">
+            <svg class="size-3 lg:size-4 fill-gray-500"
+                aria-hidden="true"
+               >
+                <use href="#material-symbols-outlined-storage"></use>
+            </svg>
+            <div class="text-xs lg:text-sm">
+                <p class="italic">{{ tag.selection_detail.file_size | humanize_bytes }}</p>
+            </div>
+        </li>
+    </ul>
+    {%- if current_user.is_authenticated %}
+    <div class="flex mt-2 items-center justify-center gap-1 lg:gap-2">
+        {%- from "components/gallery/macro_download-button.html.j2" import multiselect_download_button %}
+        {{
+            multiselect_download_button(
+                request=request,
+                selection_detail=tag.selection_detail,
+                download_archives=download_archives,
+                button_id="tag-download-button",
+                hx_vals={"tag_id": tag.id}
+            )
+        }}
+    </div>
+    {%- endif %}
+</div>

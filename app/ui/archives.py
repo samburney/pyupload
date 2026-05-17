@@ -22,6 +22,7 @@ from app.lib.helpers import make_unique_filename, clean_text, sanitise_filename
 from app.lib.scheduler import schedule_archive_job
 
 from app.models.collections import Collection
+from app.models.tags import Tag
 
 from app.ui.common.gallery import get_request_context_filter
 from app.ui.common.security import get_current_authenticated_user
@@ -71,15 +72,22 @@ async def request_uploads_archive_post(
         collection_model = await Collection.get_or_none(user=current_user, name_unique=collection_slug)
         if not collection_model:
             flash_message(request, f"You do not have permission to download the specified collection: {collection_slug}.", "error")
-            return templates.TemplateResponse(request, 'components/common/messages.html.j2', status_code=403)
+            return templates.TemplateResponse(request, "components/common/messages.html.j2", status_code=403)
 
         context_filter = Q(collections__id=collection_model.id)
         super_selected = True
 
     # Tag
     elif archive_download_button_name == "tag-download-button" and current_url_path.startswith("/tags/"):
-        context_filter = None
-        raise NotImplementedError("Tag download button not implemented yet.")
+        tag_slug = current_url_path.lower().split("/")[-1]
+        tag_model = await Tag.get_or_none(name=tag_slug)
+        if not current_user.is_authenticated or not tag_model:
+            flash_message(request, f"You do not have permission to download the specified tag: {tag_slug}.", "error")
+            return templates.TemplateResponse(request, "components/common/messages.html.j2", status_code=403)
+
+        context_filter = Q(tags__id=tag_model.id)
+        super_selected = True
+
 
     # Standard selection button - get context from request context filter
     else:

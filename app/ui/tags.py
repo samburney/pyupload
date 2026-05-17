@@ -11,6 +11,7 @@ from app.lib.helpers import make_clean_tag
 from app.models.tags import Tag
 from app.models.users import User
 
+from app.ui.common.archives import get_selected_uploads_archives
 from app.ui.common.breadcrumbs import Breadcrumbs
 from app.ui.common.etag import (
     get_paginated_gallery_etag,
@@ -99,10 +100,14 @@ async def tags_view_get(
     tag_model = Tag.get(name=name)
     tag = await TagSelectionDetail.from_single_queryset_or_none(tag_model, context={"user": current_user})
 
-    if not tag:
+    if not tag or not tag.readable_upload_models:
         return await error_template_response(
             request, [f"Tag could not be found: {name}"], 404, "Tag not found."
         )
+
+    download_archives = None
+    if current_user:
+        download_archives = await get_selected_uploads_archives(uploads=tag.readable_upload_models, user=current_user)
 
     # Update pagination count totals
     pagination.count = len(tag.readable_upload_models)
@@ -124,9 +129,11 @@ async def tags_view_get(
     context = {
         "current_user": current_user,
         "breadcrumbs": breadcrumbs.get_all(),
+        "tag": tag,
         "uploads": uploads,
         "pagination": pagination,
         "enable_super_select": True,
+        "download_archives": download_archives,
     }
 
     etag = get_paginated_gallery_etag(
@@ -142,7 +149,7 @@ async def tags_view_get(
         return not_modified
 
     # Build response with cache headers
-    response = templates.TemplateResponse(request, "gallery/index.html.j2", context=context)
+    response = templates.TemplateResponse(request, "tags/view.html.j2", context=context)
     response.headers.update(get_cache_headers(etag=etag))
 
     return response
