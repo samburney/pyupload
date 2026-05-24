@@ -1,5 +1,3 @@
-import jwt
-
 from typing import Annotated
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import Response, HTMLResponse, RedirectResponse

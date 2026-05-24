@@ -55,7 +55,7 @@ async def gallery_all_get(
     pagination.sort_order = "asc"
     pagination.infinite_scroll = True
     breadcrumbs.push(title="All", url=f"{request.base_url}all")
-    return await render_gallery_index(request, pagination, breadcrumbs)
+    return await render_gallery_index(request, pagination, breadcrumbs, page_title="Browse All")
 
 
 @router.get("/popular", response_class=Response)
@@ -69,7 +69,7 @@ async def gallery_popular_get(
     pagination.sort_by = "viewed"
     pagination.sort_order = "desc"
     breadcrumbs.push(title="Popular", url=f"{request.base_url}popular")
-    return await render_gallery_index(request, pagination, breadcrumbs)
+    return await render_gallery_index(request, pagination, breadcrumbs, page_title="Popular Uploads")
 
 
 @router.post('/update-selected')
@@ -139,6 +139,7 @@ async def gallery_random_get(
     breadcrumbs.push("Random", request.url_for("gallery_random_get"))
     context = {
         "current_user": current_user,
+        "page_title": "Random Uploads",
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,

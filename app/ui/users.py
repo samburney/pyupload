@@ -95,6 +95,7 @@ If you would like to upgrade to a full account, please [login](/login) or [regis
         name="users/profile.html.j2",
         context={
             "current_user": current_user,
+            "page_title": "User Profile",
             "breadcrumbs": breadcrumbs.get_all(),
             "uploads": uploads,
             "pagination": pagination,
@@ -122,6 +123,7 @@ async def user_uploads_get(
         request=request,
         pagination=pagination,
         breadcrumbs=breadcrumbs,
+        page_title="Your Uploads",
         context_filter=context_filter,
         user=current_user,
     )

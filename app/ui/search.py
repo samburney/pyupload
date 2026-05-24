@@ -29,6 +29,7 @@ _PAGINATION_KEYS = {"page", "page_size", "sort_order", "sort_by", "infinite_scro
 async def _search_crumbs(bc: Breadcrumbs, query_params: dict = {}, **_) -> None:
     bc.stack = []
     bc.push("Browse", bc.request.url_for("index_get"))
+    bc.push("Search")
     if q := query_params.get("query"):
         bc.push(q, f'{bc.request.url_for("search_index_get")}?query={urllib.parse.quote(q)}')
 
@@ -85,6 +86,7 @@ async def search_index_get(
             "current_user": current_user,
             "uploads": uploads,
             "pagination": pagination,
+            "page_title": f"Search Result: {query}",
             "breadcrumbs": breadcrumbs.get_all(),
             "enable_super_select": True,
         },

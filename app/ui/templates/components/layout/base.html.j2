@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ config.app_site_name }}</title>
+        <title>{{ config.app_site_name }}{{ " // " + page_title if page_title is defined and page_title else "" }}</title>
         {%- include "components/layout/header-includes.html.j2" %}
     </head>
     <body id="body" class="flex flex-col min-h-screen"
@@ -36,6 +36,13 @@
         <section class="mx-1 sm:mx-2 grow flex flex-col">
             <div class="container mx-auto flex grow min-w-0">
                 <main class="flex flex-col grow min-w-0 gap-2">
+                    {%- block page_title %}
+                    {%- if page_title is defined and page_title %}
+                    <h1 id="page-title" class="mt-1 text-lg font-semibold">
+                        {{ page_title }}
+                    </h1>
+                    {%- endif %}
+                    {%- endblock %}
                     <div id="content" class="flex flex-col grow">
                         {%- block content %}{% endblock %}
                     </div>

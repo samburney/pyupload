@@ -60,6 +60,7 @@ async def tags_index_get(
     # Template context
     context = {
         "current_user": current_user,
+        "page_title": "Tags",
         "breadcrumbs": breadcrumbs.get_all(),
         "stacks": tags,
         "pagination": pagination,
@@ -128,6 +129,7 @@ async def tags_view_get(
     # Template context
     context = {
         "current_user": current_user,
+        "page_title": tag.name,
         "breadcrumbs": breadcrumbs.get_all(),
         "tag": tag,
         "uploads": uploads,

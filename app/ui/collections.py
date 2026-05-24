@@ -73,6 +73,7 @@ async def collections_index_get(
     # Template context
     context = {
         "current_user": current_user,
+        "page_title": "Collections",
         "breadcrumbs": breadcrumbs.get_all(),
         "stacks": collections,
         "pagination": pagination,
@@ -137,6 +138,7 @@ async def collections_view_get(
     # Template context
     context = {
         "current_user": current_user,
+        "page_title": collection.name,
         "breadcrumbs": breadcrumbs.get_all(),
         "collection": collection,
         "uploads": uploads,

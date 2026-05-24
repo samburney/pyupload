@@ -329,6 +329,7 @@ async def render_gallery_index(
     request: Request,
     pagination: GalleryPaginationDefaultParams,
     breadcrumbs: Breadcrumbs,
+    page_title: str | None = None,
     context_filter: Q | None = None,
     user: User | None = None,
 ) -> Response:
@@ -360,6 +361,7 @@ async def render_gallery_index(
 
     context = {
         "current_user": current_user,
+        "page_title": page_title,
         "breadcrumbs": breadcrumbs.get_all(),
         "uploads": uploads,
         "pagination": pagination,
