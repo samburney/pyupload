@@ -190,6 +190,7 @@ async def view_upload_page_get(
     # Template context
     context = {
         "current_user": current_user,
+        "page_title": upload.description,
         "breadcrumbs": breadcrumbs.get_all(),
         "upload": upload,
         "filtered_collections": upload.filtered_collections,
@@ -365,8 +366,32 @@ async def toggle_selected_uploads_private_patch(
     return response
 
 
+@router.get("/uploads/{id}/description", response_class=Response)
+async def get_upload_description_get(
+        request: Request,
+        id: int,
+        current_user: Annotated[User, Depends(get_current_authenticated_user)],
+) -> Response:
+    """Fetch the description of an upload."""
+
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+
+    upload_model = await get_upload_or_404_for_update(id, current_user)
+
+    return await _render_upload_component(
+        request,
+        current_user,
+        upload_model,
+        "uploads/partials/page_title.html.j2",
+        context={
+            "page_title": upload_model.description,
+        }
+    )
+
+
 @router.patch("/uploads/{id}/description", response_class=Response)
-async def toggle_upload_description_patch(
+async def update_upload_description_patch(
         request: Request,
         id: int,
         current_user: Annotated[User, Depends(get_current_authenticated_user)],
@@ -374,20 +399,32 @@ async def toggle_upload_description_patch(
 ) -> Response:
     """Update the description of an upload."""
 
+    if not request.headers.get('hx-request', False):
+        raise HTTPException(status_code=400, detail='Not a valid HTMX request')
+
     upload_model = await get_upload_or_404_for_update(id, current_user)
+    new_description = html.escape(description).strip()
 
     validation_errors = {}
-    try:
-        upload_model.description = html.escape(description).strip()
-        await upload_model.save()
-    except ValidationError as e:
-        validation_errors = parse_tortoise_validation_errors(e)
+    if not new_description:
+        validation_errors = {"description": "New description cannot be empty"}
+
+    else:
+        try:
+            upload_model.description = new_description
+            await upload_model.save()
+        except ValidationError as e:
+            validation_errors = parse_tortoise_validation_errors(e)
 
     return await _render_upload_component(
         request,
         current_user,
         upload_model,
-        "components/uploads/description.html.j2",
-        context={"validation_errors": validation_errors},
+        "uploads/partials/page_title.html.j2",
+        context={
+            "page_title": upload_model.description,
+            "validation_errors": validation_errors,
+            "new_description": new_description,
+        },
         status_code=400 if validation_errors else 200,
     )

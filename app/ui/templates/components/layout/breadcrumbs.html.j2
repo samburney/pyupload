@@ -9,7 +9,7 @@
       </a>
     </li>
     {% for breadcrumb in breadcrumbs %}
-    <li class="relative flex items-center {% if loop.last %}min-w-0{% endif %}">
+    <li class="relative flex items-center {% if loop.last %}min-w-0{% endif %}" {% if loop.last %} data-breadcrumb-last{% endif %}>
       {% if loop.first %}
       <svg class="absolute inset-y-0 -start-px h-6 w-4 text-gray-200 rtl:rotate-180" viewBox="0 0 20 20" preserveAspectRatio="none" fill="currentColor">
         <polygon points="0,0 0,20 20,10"></polygon>

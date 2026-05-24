@@ -1,0 +1,89 @@
+{% if upload.is_writable %}
+<form id="page-title"
+    @submit.prevent
+    class="flex w-fit mt-1 gap-2 items-end"
+    x-data="{ showEditBtn: false, editMode: false }"
+    @mouseenter="if (!editMode) { showEditBtn = true }"
+    @mouseleave="if (!editMode) { showEditBtn = false }"
+    @htmx:after-swap="if ($event.detail.xhr.status === 200) { editMode = false; }">
+    <h1 class="mb-0 text-lg font-semibold pb-px
+        hover:underline hover:underline-offset-8"
+        x-show="!editMode"
+        @click="if (!editMode) { showEditBtn = false; editMode = true; $focus.focus($refs.descriptionField); }">
+        {{ page_title }}
+    </h1>
+    <div class="flex flex-col">
+        <textarea name="description"
+            class="m-0 p-0 border-0 border-b bg-transparent field-sizing-content resize-none text-lg font-semibold
+                focus:ring-0 focus:outline-2 focus:outline-blue-500
+                {{ 'border-red-500' if validation_errors and validation_errors.description else 'border-black' }}"
+            x-ref="descriptionField"
+            x-cloak
+            x-show="editMode"
+            @focus="editMode = true"
+            @keydown.enter.prevent="htmx.trigger(htmx.find(htmx.closest($el, 'form'), 'button[name=save]'), 'click')"
+            @keyup.escape="htmx.trigger(htmx.find(htmx.closest($el, 'form'), 'button[name=cancel]'), 'click')">
+            {{- upload.display_name if new_description is not defined else new_description -}}
+        </textarea>
+        {%- if validation_errors %}
+        <div class="validation-error wrap-break-word" data-validation>
+            {{ validation_errors.description | default(None) }}
+        </div>
+        {%- endif %}
+    </div>
+    <div class="flex flex-row gap-1">
+        <button name="edit" type="button" class="hover:cursor-pointer"
+            x-show="showEditBtn"
+            x-cloak
+            @click="showEditBtn = false; editMode = true; $focus.focus($refs.descriptionField);">
+            <svg class="size-4">
+                <use href="#material-symbols-outlined-edit"></use>
+            </svg>
+        </button>
+        <button name="save" type="button" class="p-0.5 rounded-sm shadow-sm bg-blue-500 fill-white
+            hover:bg-white hover:fill-blue-500 hover:outline-1 hover:outline-blue-500 hover:cursor-pointer"
+            x-show="editMode && !showEditBtn"
+            x-cloak
+            hx-patch="/uploads/{{ upload.id }}/description"
+            hx-select="#page-title > *"
+            hx-target="#page-title"
+            hx-target-400="#page-title"
+            hx-select-oob="#messages,#upload-description">
+            <svg class="size-4">
+                <use href="#material-symbols-outlined-save"></use>
+            </svg>
+        </button>
+        <button name="cancel" type="button" class="p-0.5 rounded-sm shadow-sm bg-red-500 fill-white
+            hover:bg-white hover:fill-red-500 hover:outline-1 hover:outline-red-500 hover:cursor-pointer"
+            x-show="editMode && !showEditBtn"
+            x-cloak
+            hx-get="{{ request.url_for('get_upload_description_get', id=upload.id) }}"
+            hx-select="#page-title"
+            hx-target="#page-title"
+            hx-swap="outerHTML">
+            <svg class="size-4">
+                <use href="#material-symbols-outlined-cancel"></use>
+            </svg>
+        </button>
+    </div>
+</form>
+{% else %}
+<h1 id="page-title" class="mt-1 mb-0 text-lg font-semibold">
+    {{ page_title }}
+</h1>
+{% endif %}
+
+{# OOB swaps — only on successful save #}
+{% if request.headers.get("hx-request") and not validation_errors %}
+{# Last breadcrumb #}
+<li class="relative flex items-center min-w-0" hx-swap-oob="outerHTML:li[data-breadcrumb-last]" data-breadcrumb-last>
+    <svg class="absolute inset-y-0 -start-px h-6 w-4 text-gray-200 rtl:rotate-180" viewBox="0 0 20 20" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="0 0 20 10 0 20"></polyline>
+    </svg>
+    <span class="block h-6 pr-4 pl-6 leading-6 transition-colors min-w-0">
+    <span class="font-semibold truncate block">{{ upload.description }}</span>
+    </span>
+</li>
+{# Sidebar description #}
+{% include "components/uploads/sidebar-details.html.j2" %}
+{% endif %}

@@ -1,5 +1,9 @@
 {% extends "components/layout/base.html.j2" %}
 
+{% block page_title %}
+{% include "uploads/partials/page_title.html.j2" %}
+{% endblock %}
+
 {% block content %}
 <div class="flex flex-row grow mb-4">
     {% include "uploads/partials/view-frame.html.j2" %}
