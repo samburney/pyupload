@@ -43,6 +43,25 @@ CLEAN_DB=false
 DEV_MODE=false
 DB_ONLY=false
 SEED_DB=false
+TAILWIND_PID=""
+CONTAINERS_STARTED=false
+
+cleanup() {
+    local exit_code=$?
+    [ $exit_code -eq 0 ] && return
+    echo ""
+    echo "Startup failed. Cleaning up..."
+    if [ -n "$TAILWIND_PID" ] && kill -0 "$TAILWIND_PID" 2>/dev/null; then
+        echo "Stopping Tailwind CSS watcher..."
+        kill "$TAILWIND_PID" 2>/dev/null || true
+        rm -f "$TAILWIND_PID_FILE"
+    fi
+    if [ "$CONTAINERS_STARTED" = true ]; then
+        echo "Stopping containers..."
+        "${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" stop 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
 
 # Parse command-line arguments
 for arg in "$@"; do
@@ -93,9 +112,9 @@ check_prerequisites() {
     echo "Checking prerequisites..."
     detect_container_runtime
     export COMPOSE_PROJECT_NAME="$(basename "$APP_DIR")"
-    # Use uv if available, otherwise fallback checks could go here
     if ! command -v uv &> /dev/null; then
-        echo "Warning: 'uv' not found. Ensure you have a python environment manager."
+        echo "Error: 'uv' is required but not installed. See https://docs.astral.sh/uv/"
+        exit 1
     fi
 
     # Check for Node/npm for Tailwind CSS and icons sprite
@@ -115,6 +134,13 @@ check_prerequisites() {
             exit 1
         fi
     fi
+
+    echo "Checking Python dependencies..."
+    if [ "$DEV_MODE" = true ]; then
+        uv sync --frozen --all-extras
+    else
+        uv sync --frozen
+    fi
 }
 
 start_database() {
@@ -132,12 +158,26 @@ start_database() {
         echo "Created local files directory: $FILES_DIR"
     fi
 
+    # Track whether containers were already running so cleanup only stops what we started
+    if [ "$DOCKER_CMD" = "podman" ]; then
+        _running=$($DOCKER_CMD ps \
+            --filter label=com.docker.compose.project="${COMPOSE_PROJECT_NAME}" \
+            --filter label=com.docker.compose.service=db \
+            --format '{{.ID}}')
+    else
+        _running=$("${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" ps -q db 2>/dev/null || true)
+    fi
+    [ -z "$_running" ] && CONTAINERS_STARTED=true
+
     "${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" up -d db adminer
-    
+
     # Wait for health check
     if [ "$DOCKER_CMD" = "podman" ]; then
         # podman ps with label filter is reliable; avoids parsing compose ps table output
-        DB_CONTAINER=$($DOCKER_CMD ps --filter label=com.docker.compose.service=db --format '{{.ID}}' | head -1)
+        DB_CONTAINER=$($DOCKER_CMD ps \
+            --filter label=com.docker.compose.project="${COMPOSE_PROJECT_NAME}" \
+            --filter label=com.docker.compose.service=db \
+            --format '{{.ID}}' | head -1)
     else
         DB_CONTAINER=$("${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" ps -q db)
     fi
@@ -148,7 +188,13 @@ start_database() {
     echo "Waiting for database to be ready..."
     MAX_WAIT=120
     ELAPSED=0
-    until [ "$($DOCKER_CMD inspect --format='{{.State.Health.Status}}' "$DB_CONTAINER")" = "healthy" ]; do
+    while true; do
+        health=$($DOCKER_CMD inspect --format='{{.State.Health.Status}}' "$DB_CONTAINER" 2>/dev/null) || {
+            echo ""
+            echo "Error: Could not inspect database container (it may have crashed)."
+            exit 1
+        }
+        [ "$health" = "healthy" ] && break
         sleep 2
         ELAPSED=$((ELAPSED + 2))
         if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
