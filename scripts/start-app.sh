@@ -32,6 +32,8 @@ print_help() {
 # Common variables
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT_DIR="${APP_DIR}/scripts"
+# shellcheck source=lib/container-runtime.sh
+source "${SCRIPT_DIR}/lib/container-runtime.sh"
 FILES_DIR="${APP_DIR}/data/files"
 TAILWIND_PID_FILE="/tmp/pyupload-tailwind.pid"
 ICONS_PID_FILE="/tmp/pyupload-icons.pid"
@@ -89,10 +91,8 @@ check_config() {
 # Check prerequisites are available
 check_prerequisites() {
     echo "Checking prerequisites..."
-    if ! command -v docker &> /dev/null; then
-        echo "Error: Docker is not installed."
-        exit 1
-    fi
+    detect_container_runtime
+    export COMPOSE_PROJECT_NAME="$(basename "$APP_DIR")"
     # Use uv if available, otherwise fallback checks could go here
     if ! command -v uv &> /dev/null; then
         echo "Warning: 'uv' not found. Ensure you have a python environment manager."
@@ -118,11 +118,11 @@ check_prerequisites() {
 }
 
 start_database() {
-    echo "Starting database in Docker..."
+    echo "Starting database container..."
 
     if [ "$CLEAN_DB" = true ]; then
         echo "Cleaning database volume and local files..."
-        docker compose --project-directory "$APP_DIR" down --volumes
+        "${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" down --volumes
         rm -rf "$FILES_DIR"
     fi
 
@@ -132,13 +132,30 @@ start_database() {
         echo "Created local files directory: $FILES_DIR"
     fi
 
-    docker compose --project-directory "$APP_DIR" up -d db adminer
+    "${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" up -d db adminer
     
     # Wait for health check
-    DB_CONTAINER=$(docker compose --project-directory "$APP_DIR" ps -q db)
+    if [ "$DOCKER_CMD" = "podman" ]; then
+        # podman ps with label filter is reliable; avoids parsing compose ps table output
+        DB_CONTAINER=$($DOCKER_CMD ps --filter label=com.docker.compose.service=db --format '{{.ID}}' | head -1)
+    else
+        DB_CONTAINER=$("${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" ps -q db)
+    fi
+    if [ -z "$DB_CONTAINER" ]; then
+        echo "Error: Could not find database container."
+        exit 1
+    fi
     echo "Waiting for database to be ready..."
-    until [ "$(docker inspect --format='{{.State.Health.Status}}' "$DB_CONTAINER")" == "healthy" ]; do
+    MAX_WAIT=120
+    ELAPSED=0
+    until [ "$($DOCKER_CMD inspect --format='{{.State.Health.Status}}' "$DB_CONTAINER")" = "healthy" ]; do
         sleep 2
+        ELAPSED=$((ELAPSED + 2))
+        if [ "$ELAPSED" -ge "$MAX_WAIT" ]; then
+            echo ""
+            echo "Error: Timed out waiting for database to become healthy after ${MAX_WAIT}s."
+            exit 1
+        fi
         echo -n "."
     done
     echo " Database is ready."
