@@ -52,19 +52,24 @@ if [ -f "$TAILWIND_PID_FILE" ]; then
     rm "$TAILWIND_PID_FILE"
 fi
 
-echo "Stopping Docker services..."
-docker compose --project-directory "$APP_DIR" stop
+# shellcheck source=lib/container-runtime.sh
+source "${APP_DIR}/scripts/lib/container-runtime.sh"
+detect_container_runtime
+export COMPOSE_PROJECT_NAME="$(basename "$APP_DIR")"
+
+echo "Stopping container services..."
+"${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" stop
 
 if [ "$CLEAN_DB" = true ]; then
     echo "Removing containers, volumes, and local files..."
-    docker compose --project-directory "$APP_DIR" down --volumes
+    "${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" down --volumes
     if [ -d "$FILES_DIR" ]; then
         echo "Removing local files directory: $FILES_DIR"
         rm -rf "$FILES_DIR"
     fi
 else
     # Just remove containers, keep volumes
-    docker compose --project-directory "$APP_DIR" down
+    "${DOCKER_COMPOSE_CMD[@]}" -f "$APP_DIR/docker-compose.yaml" down
 fi
 
 echo "Environment stopped."
