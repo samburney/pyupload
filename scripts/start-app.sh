@@ -44,6 +44,7 @@ DEV_MODE=false
 DB_ONLY=false
 SEED_DB=false
 TAILWIND_PID=""
+ICONS_PID=""
 CONTAINERS_STARTED=false
 
 cleanup() {
@@ -55,6 +56,11 @@ cleanup() {
         echo "Stopping Tailwind CSS watcher..."
         kill "$TAILWIND_PID" 2>/dev/null || true
         rm -f "$TAILWIND_PID_FILE"
+    fi
+    if [ -n "$ICONS_PID" ] && kill -0 "$ICONS_PID" 2>/dev/null; then
+        echo "Stopping icons sprite watcher..."
+        kill "$ICONS_PID" 2>/dev/null || true
+        rm -f "$ICONS_PID_FILE"
     fi
     if [ "$CONTAINERS_STARTED" = true ]; then
         echo "Stopping containers..."
